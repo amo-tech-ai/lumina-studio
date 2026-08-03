@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+<<<<<<< HEAD
+=======
+import { canonicalUrl } from "@/lib/site";
+>>>>>>> origin/main
 import {
   ArrowRight, CheckCircle, Camera, BarChart3, Layers, Target, Zap, ShieldCheck,
   Image as ImageIcon, Layout, Eye, Package, Grid3X3, TrendingUp,
@@ -11,6 +15,10 @@ import { FAQ } from "@/components/marketing/faq";
 export const metadata: Metadata = {
   title: "Amazon Photography",
   description: "Amazon photography and listing optimization. AI-planned product images.",
+<<<<<<< HEAD
+=======
+  alternates: { canonical: canonicalUrl("/services/amazon") },
+>>>>>>> origin/main
   openGraph: {
     title: "Amazon Photography | iPix — AI-Planned Listing Images",
     description: "Amazon photography and listing optimization. AI-planned product images.",

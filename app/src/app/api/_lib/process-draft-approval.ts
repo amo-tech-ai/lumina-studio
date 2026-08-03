@@ -1,16 +1,61 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+<<<<<<< HEAD
+=======
+import {
+  DRAFT_ACTION_DOMAIN,
+  DRAFT_ACTION_MESSAGES,
+} from "@/lib/brand/draft-action-errors";
+>>>>>>> origin/main
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 export const PENDING_DRAFT_STATUS = "pending_approval";
 
 /** Brand already promoted/discarded — safe to continue without rolling back draft row. */
+<<<<<<< HEAD
 const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
+=======
+const IDEMPOTENT_DRAFT_STATE_ERROR = DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY;
+
+/** Intentional product / already-sanitized helper messages — never raw PostgREST. */
+const SAFE_DRAFT_ACTION_ERRORS = new Set<string>([
+  DRAFT_ACTION_DOMAIN.NO_DRAFT,
+  DRAFT_ACTION_DOMAIN.INVALID_DNA,
+  DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY,
+  DRAFT_ACTION_MESSAGES.NOT_FOUND,
+  DRAFT_ACTION_MESSAGES.FORBIDDEN,
+  DRAFT_ACTION_MESSAGES.CONFLICT,
+]);
+>>>>>>> origin/main
 
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
 
+<<<<<<< HEAD
+=======
+/**
+ * Never forward raw Supabase/PostgREST strings to API / Server Action / UI callers.
+ * Known domain messages pass through; everything else becomes a generic product error.
+ */
+export function sanitizeDraftActionError(
+  operation: "promote" | "discard",
+  brandId: string,
+  error?: string,
+): string {
+  if (error && SAFE_DRAFT_ACTION_ERRORS.has(error)) {
+    return error;
+  }
+  console.error(`[process-draft-approval] ${operation} failed`, {
+    brandId,
+    error: error ?? null,
+  });
+  return operation === "promote"
+    ? "Unable to approve Brand DNA right now"
+    : "Unable to reject Brand DNA right now";
+}
+
+>>>>>>> origin/main
 async function rollbackDraftRow(draftId: string) {
   const { error } = await createSupabaseAdminClient()
     .from("brand_intake_drafts")
@@ -27,6 +72,94 @@ async function rollbackDraftRow(draftId: string) {
   }
 }
 
+<<<<<<< HEAD
+=======
+/** Same outcome as a successful first approve/reject when the draft was already processed. */
+async function resolveIdempotentApproval(params: {
+  sb: ReturnType<typeof createSupabaseAdminClient>;
+  runId: string;
+  approved: boolean;
+  operatorId: string;
+  expectedBrandId?: string;
+}): Promise<ProcessDraftApprovalResult> {
+  const { sb, runId, approved, operatorId, expectedBrandId } = params;
+  const targetStatus = approved ? "approved" : "rejected";
+
+  let query = sb
+    .from("brand_intake_drafts")
+    .select("id, brand_id, user_id, status")
+    .eq("draft_profile->>_workflow_run_id", runId)
+    .eq("status", targetStatus);
+  if (expectedBrandId) {
+    query = query.eq("brand_id", expectedBrandId);
+  }
+  const { data: existing, error: existingErr } = await query.maybeSingle();
+  if (existingErr) {
+    console.error("[process-draft-approval] idempotent draft lookup", existingErr);
+    return { ok: false, error: "Failed to load draft" };
+  }
+  if (!existing) {
+    return { ok: false, error: "No pending draft found for this workflow run" };
+  }
+  if (existing.user_id !== operatorId) {
+    return { ok: false, error: "Forbidden" };
+  }
+
+  const { data: brand, error: brandErr } = await sb
+    .from("brands")
+    .select("intake_status")
+    .eq("id", existing.brand_id)
+    .maybeSingle();
+  if (brandErr) {
+    console.error("[process-draft-approval] idempotent brand lookup", brandErr);
+    return { ok: false, error: "Failed to load brand status" };
+  }
+  if (!brand) {
+    return { ok: false, error: "Brand not found" };
+  }
+
+  if (approved) {
+    if (brand.intake_status === "ready") {
+      return { ok: true, approved: true, brandId: existing.brand_id };
+    }
+    // Draft row already approved but promote never landed — retry once, never
+    // report success until intake_status is durably ready.
+    const promoteResult = await promoteBrandDraft(sb, existing.brand_id);
+    if (promoteResult.ok) {
+      return { ok: true, approved: true, brandId: existing.brand_id };
+    }
+    return {
+      ok: false,
+      error: sanitizeDraftActionError(
+        "promote",
+        existing.brand_id,
+        promoteResult.error,
+      ),
+    };
+  }
+
+  // Reject path: draft row may already be `rejected` while discard is still
+  // in flight (or failed + rolled back). Never report success until the brand
+  // is no longer waiting on draft_ready — and never treat a lookup failure as
+  // “already discarded”.
+  if (brand.intake_status !== "draft_ready") {
+    return { ok: true, approved: false, brandId: existing.brand_id };
+  }
+  const discardResult = await discardBrandDraft(sb, existing.brand_id);
+  if (discardResult.ok) {
+    return { ok: true, approved: false, brandId: existing.brand_id };
+  }
+  return {
+    ok: false,
+    error: sanitizeDraftActionError(
+      "discard",
+      existing.brand_id,
+      discardResult.error,
+    ),
+  };
+}
+
+>>>>>>> origin/main
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
 export async function processBrandIntelligenceDraftApproval(params: {
   runId: string;
@@ -46,8 +179,33 @@ export async function processBrandIntelligenceDraftApproval(params: {
     draftQuery = draftQuery.eq("brand_id", expectedBrandId);
   }
   const { data: draft, error: lookupErr } = await draftQuery.single();
+<<<<<<< HEAD
   if (lookupErr || !draft) {
     return { ok: false, error: "No pending draft found for this workflow run" };
+=======
+  if (lookupErr) {
+    // PGRST116 = no pending row — only then try the already-processed path.
+    if (lookupErr.code === "PGRST116") {
+      return resolveIdempotentApproval({
+        sb,
+        runId,
+        approved,
+        operatorId,
+        expectedBrandId,
+      });
+    }
+    console.error("[process-draft-approval] pending draft lookup", lookupErr);
+    return { ok: false, error: "Failed to load draft" };
+  }
+  if (!draft) {
+    return resolveIdempotentApproval({
+      sb,
+      runId,
+      approved,
+      operatorId,
+      expectedBrandId,
+    });
+>>>>>>> origin/main
   }
   if (draft.user_id !== operatorId) {
     return { ok: false, error: "Forbidden" };
@@ -69,20 +227,49 @@ export async function processBrandIntelligenceDraftApproval(params: {
     .select("id")
     .single();
   if (updateErr || !updatedDraft) {
+<<<<<<< HEAD
     return { ok: false, error: "Draft already processed — possible duplicate approve request" };
+=======
+    // Concurrent CAS miss (PGRST116 / no row) — check durable brand outcome.
+    if (updateErr && updateErr.code !== "PGRST116") {
+      console.error("[process-draft-approval] draft status update", updateErr);
+      return { ok: false, error: "Failed to update draft" };
+    }
+    return resolveIdempotentApproval({
+      sb,
+      runId,
+      approved,
+      operatorId,
+      expectedBrandId: expectedBrandId ?? draft.brand_id,
+    });
+>>>>>>> origin/main
   }
 
   if (approved) {
     const promoteResult = await promoteBrandDraft(sb, draft.brand_id);
     if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
+<<<<<<< HEAD
       return { ok: false, error: promoteResult.error };
+=======
+      return {
+        ok: false,
+        error: sanitizeDraftActionError("promote", draft.brand_id, promoteResult.error),
+      };
+>>>>>>> origin/main
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
     if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
+<<<<<<< HEAD
       return { ok: false, error: discardResult.error };
+=======
+      return {
+        ok: false,
+        error: sanitizeDraftActionError("discard", draft.brand_id, discardResult.error),
+      };
+>>>>>>> origin/main
     }
   }
 

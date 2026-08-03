@@ -51,6 +51,13 @@ export function SignOutButton({ showLabel = false }: Props) {
       const res = await fetch("/auth/signout", {
         method: "POST",
         credentials: "same-origin",
+<<<<<<< HEAD
+=======
+        // IPI-915: keepalive so a concurrent navigation (or tab close) cannot
+        // abort the logout mid-flight — otherwise the Set-Cookie session
+        // deletions never reach the browser and the session survives.
+        keepalive: true,
+>>>>>>> origin/main
       });
 
       if (res.redirected && res.url) {

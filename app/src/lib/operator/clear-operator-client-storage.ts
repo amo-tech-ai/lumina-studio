@@ -17,7 +17,15 @@ export const OPERATOR_CLIENT_STORAGE_EXACT_KEYS = [
  * Prefixes removed from localStorage + sessionStorage on Sign Out.
  * Keep in sync with IPI-634 thread key: `ipix:copilot:thread:v1:{userId}:{agentId}:{host}`
  */
+<<<<<<< HEAD
 export const OPERATOR_CLIENT_STORAGE_PREFIXES = ["ipix:copilot:"] as const;
+=======
+export const OPERATOR_CLIENT_STORAGE_PREFIXES = [
+  "ipix:copilot:",
+  // IPI-835 · B1 — onboarding idempotency / resume key
+  "ipix:onboarding:",
+] as const;
+>>>>>>> origin/main
 
 /** Keys that must survive Sign Out (marketing / public site). */
 export const OPERATOR_CLIENT_STORAGE_NEVER = new Set(["ipix_anon_id"]);

@@ -10,7 +10,11 @@
  */
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
+<<<<<<< HEAD
 import { dirname, join, resolve } from "node:path";
+=======
+import { dirname, join, relative, resolve } from "node:path";
+>>>>>>> origin/main
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
@@ -189,14 +193,28 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
 
 function sanitizeNetworkUrl(url) {
   try {
+<<<<<<< HEAD
     const u = new URL(url);
     return {
       host: u.host,
+=======
+    let u = new URL(url);
+    // blob:https://host/uuid → host "" and pathname is the inner absolute URL.
+    if (u.protocol === "blob:" && /^https?:\/\//i.test(u.pathname)) {
+      u = new URL(u.pathname);
+    }
+    return {
+      host: u.host || null,
+>>>>>>> origin/main
       path: u.pathname,
       // Never retain query — login/auth leaks have appeared in automation URLs.
     };
   } catch {
+<<<<<<< HEAD
     return { host: null, path: url.split("?")[0] };
+=======
+    return { host: null, path: String(url).split("?")[0] };
+>>>>>>> origin/main
   }
 }
 
@@ -333,6 +351,13 @@ async function main() {
       page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
     );
     await page.waitForSelector("#email", { timeout: 20000 });
+<<<<<<< HEAD
+=======
+    // IPI-915: let the JS bundle settle before interacting — a click before
+    // React hydrates performs a native GET form submit (credentials land in
+    // the URL query and the Supabase sign-in never runs); seen on slow networks.
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+>>>>>>> origin/main
     await page.fill("#email", email);
     await page.fill("#password", password);
     await Promise.all([
@@ -616,6 +641,7 @@ async function main() {
       page.getByText(/sign out|log out/i),
     ];
     let uiSignOut = false;
+<<<<<<< HEAD
     for (const loc of signOutCandidates) {
       if (await loc.first().isVisible().catch(() => false)) {
         await loc.first().click();
@@ -629,6 +655,61 @@ async function main() {
       uiSignOut
         ? "clicked Sign out control"
         : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
+=======
+    let signoutStatus = null;
+    let signoutLocation = null;
+    let signoutSetCookie = false;
+    let signoutRequestObserved = false;
+    let signoutCandidatesProbed = 0;
+    let sbCookiesBefore = 0;
+    let sbCookiesAfter = 0;
+    let sbCookieNamesAfter = [];
+    for (const loc of signOutCandidates) {
+      if (await loc.first().isVisible().catch(() => false)) {
+        // IPI-915: register the response listener BEFORE the click so the logout
+        // POST cannot be missed, then wait for the response BEFORE any page
+        // navigation — a goto issued right after the click aborts the in-flight
+        // fetch, the Set-Cookie session deletions never reach the browser, and
+        // the anonymous /info check below then sees 200 instead of 401 (CI flake).
+        sbCookiesBefore = (await context.cookies()).filter((c) => c.name.startsWith("sb-")).length;
+        const signoutResponsePromise = page
+          .waitForResponse(
+            (res) => res.request().method() === "POST" && res.url().includes("/auth/signout"),
+            { timeout: 15000 },
+          )
+          .catch(() => null);
+        await loc.first().click();
+        const signoutResponse = await signoutResponsePromise;
+        signoutCandidatesProbed++;
+        if (!signoutResponse) {
+          // CodeRabbit: a visible control may not fire a logout request (e.g.
+          // decorative "sign out" text or an inert element). Do not declare a
+          // successful click — try the next candidate instead.
+          continue;
+        }
+        // Only mark UI sign-out success after POST /auth/signout is observed.
+        uiSignOut = true;
+        signoutRequestObserved = true;
+        signoutStatus = signoutResponse.status();
+        signoutLocation = signoutResponse.headers()["location"] ?? null;
+        // CodeRabbit: Response.headers() intentionally omits Set-Cookie —
+        // read it via headerValues() to actually detect the deletion header.
+        signoutSetCookie = (await signoutResponse.headerValues("set-cookie")).length > 0;
+        // Cookie poll runs once after /login navigation (authoritative).
+        break;
+      }
+    }
+    // Codex P2: uiSignOut is only set after a /auth/signout response, so the
+    // "clicked but no request" branch was unreachable. Use probe count instead.
+    mark(
+      "12_signout_ui",
+      uiSignOut && signoutRequestObserved,
+      uiSignOut && signoutRequestObserved
+        ? "clicked Sign out control; /auth/signout request observed"
+        : signoutCandidatesProbed > 0
+          ? `visible Sign out / Log out control clicked but NO /auth/signout request fired (probed ${signoutCandidatesProbed} candidate(s)) — session left intact; anonymous checks below will fail`
+          : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
+>>>>>>> origin/main
     );
 
     // 13. Anonymous /info 401 (session clear if no UI)
@@ -643,9 +724,34 @@ async function main() {
         }
       });
     }
+<<<<<<< HEAD
     await withTransientRetry("post-logout navigate", () =>
       page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
     );
+=======
+    // The app navigates to /login itself once the logout POST completes
+    // (window.location.assign on the 303) — wait for that navigation instead of
+    // racing it: a competing goto aborts the app's own navigation (ERR_ABORTED)
+    // and, pre-fix, aborted the in-flight logout POST entirely.
+    await page.waitForURL(/\/login/, { timeout: 20000 }).catch(() => null);
+    if (!page.url().includes("/login")) {
+      await withTransientRetry("post-logout navigate", () =>
+        page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
+      );
+    }
+    // CodeRabbit P1: authoritative cookie check. The app only navigated to
+    // /login after the logout POST completed, so the Set-Cookie deletion
+    // headers have been processed by now — no race with the early poll above.
+    const finalDeadline = Date.now() + 2000;
+    do {
+      sbCookieNamesAfter = (await context.cookies())
+        .filter((c) => c.name.startsWith("sb-"))
+        .map((c) => c.name);
+      if (sbCookieNamesAfter.length === 0) break;
+      await new Promise((r) => setTimeout(r, 100));
+    } while (Date.now() < finalDeadline);
+    sbCookiesAfter = sbCookieNamesAfter.length;
+>>>>>>> origin/main
     const anonInfo = await page.evaluate(async (base) => {
       const r = await fetch(`${base}/api/copilotkit/info`, {
         credentials: "include",
@@ -659,8 +765,136 @@ async function main() {
       `status=${anonInfo.status}`,
       { status: anonInfo.status },
     );
+<<<<<<< HEAD
     await page.screenshot({ path: join(SHOTS, "04-signout.png"), fullPage: false });
 
+=======
+    if (uiSignOut) {
+      // CodeRabbit P1: accept ONLY the documented success path. The route
+      // signals a failed remote revoke via 303 -> /app?signoutError=1 (local
+      // session still cleared, remote not); a bare status<400 would mask it.
+      let signoutRedirectToLogin = false;
+      if (signoutLocation) {
+        try {
+          const loc = new URL(signoutLocation, PREVIEW);
+          signoutRedirectToLogin =
+            loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
+        } catch {
+          signoutRedirectToLogin = false;
+        }
+      }
+      mark(
+        "13c_signout_request",
+        signoutStatus !== null &&
+          signoutStatus >= 300 &&
+          signoutStatus < 400 &&
+          signoutRedirectToLogin,
+        signoutStatus === null
+          ? "NO POST /auth/signout response within 15s — logout request never completed"
+          : `POST /auth/signout -> ${signoutStatus}${signoutLocation ? ` location=${signoutLocation}` : " (no Location)"} — requires 3xx redirect to /login without signoutError`,
+        {
+          status: signoutStatus,
+          location: signoutLocation,
+          redirect_to_login: signoutRedirectToLogin,
+          cookie_deletion_headers_present: signoutSetCookie,
+          sb_cookies_before: sbCookiesBefore,
+          sb_cookies_after: sbCookiesAfter,
+          sb_cookie_names_after: sbCookieNamesAfter,
+        },
+      );
+      mark(
+        "13d_sb_cookies_cleared",
+        sbCookiesAfter === 0,
+        sbCookiesAfter === 0
+          ? "no sb-* session cookies remain after sign-out"
+          : `sb-* cookies remain: ${sbCookieNamesAfter.join(", ")}`,
+        { sb_cookies_before: sbCookiesBefore, sb_cookies_after: sbCookiesAfter },
+      );
+    }
+    await page.screenshot({ path: join(SHOTS, "04-signout.png"), fullPage: false });
+
+    if (uiSignOut) {
+      // 13e. Refresh stays logged out — a reload must not resurrect the session
+      // (no middleware re-auth, no client-side re-hydration from storage).
+      try {
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
+        const anonInfoAfterReload = await page.evaluate(async (base) => {
+          const r = await fetch(`${base}/api/copilotkit/info`, {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          });
+          return { status: r.status };
+        }, PREVIEW);
+        mark(
+          "13e_refresh_logged_out",
+          anonInfoAfterReload.status === 401,
+          `status after reload=${anonInfoAfterReload.status}`,
+          { status_after_reload: anonInfoAfterReload.status },
+        );
+      } catch (e) {
+        mark("13e_refresh_logged_out", false, `reload error: ${String(e?.message || e)}`);
+      }
+
+      // 13f. Logout is idempotent — a second POST /auth/signout while already
+      // logged out must still 3xx to /login (not the signoutError → /app → /login
+      // chain that redirect:"follow" would disguise as a clean /login landing).
+      try {
+        const idempotent = await page.evaluate(async () => {
+          const r = await fetch("/auth/signout", {
+            method: "POST",
+            credentials: "same-origin",
+            redirect: "manual",
+          });
+          return {
+            status: r.status,
+            location: r.headers.get("location"),
+            type: r.type,
+          };
+        });
+        let redirectToLogin = false;
+        let locationPath = null;
+        if (idempotent.location) {
+          try {
+            const loc = new URL(idempotent.location, PREVIEW);
+            locationPath = loc.pathname;
+            redirectToLogin =
+              loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
+          } catch {
+            redirectToLogin = false;
+          }
+        }
+        mark(
+          "13f_signout_idempotent",
+          idempotent.status >= 300 &&
+            idempotent.status < 400 &&
+            redirectToLogin,
+          `status=${idempotent.status} location=${idempotent.location ?? "none"} path=${locationPath ?? "n/a"}`,
+          {
+            status: idempotent.status,
+            location: idempotent.location,
+            location_path: locationPath,
+            redirect_to_login: redirectToLogin,
+          },
+        );
+      } catch (e) {
+        mark(
+          "13f_signout_idempotent",
+          false,
+          `second signout error: ${String(e?.message || e)}`,
+        );
+      }
+
+      // Browser storage state after sign-out — evidence only; the anonymous 401
+      // contract depends on cookies, so Supabase localStorage session keys are
+      // reported here rather than gated as a hard AC.
+      const storageAfter = await page.evaluate(() => {
+        const keys = Object.keys(localStorage);
+        return { keys, supabase_session_keys: keys.filter((k) => k.startsWith("sb-")) };
+      });
+      criteria["13_anon_info_401"].storage_after_signout = storageAfter;
+    }
+
+>>>>>>> origin/main
     // Protected route redirect check (bonus evidence)
     const appRes = await page.goto(`${PREVIEW}/app`, {
       waitUntil: "domcontentloaded",
@@ -706,7 +940,12 @@ async function main() {
     worker:
       targetHost === defaultPreviewHost ? "ipix-operator-preview" : `host:${targetHost}`,
     verify_readonly: READONLY,
+<<<<<<< HEAD
     evidence_out: OUT,
+=======
+    // Repo-relative so artifacts do not embed machine/user absolute paths.
+    evidence_out: relative(REPO_ROOT, OUT) || ".",
+>>>>>>> origin/main
     ...deploymentIdentity,
     cf_ray_health: healthCfRay,
     region_guess: region,

@@ -18,6 +18,10 @@ import {
   extractProfile,
   fanOutEnrichment,
   saveDraftAndWait,
+<<<<<<< HEAD
+=======
+  startCrawl,
+>>>>>>> origin/main
   validateBrand,
 } from "./brand-intelligence-workflow";
 
@@ -542,16 +546,86 @@ describe("validate-brand authorization", () => {
 
 // The old schema was `userId: z.string()`, which happily accepted the operator-gate
 // fallback string. Requiring a UUID makes that class of bug unrepresentable.
+<<<<<<< HEAD
+=======
+describe("start-crawl (IPI-817 service-role + actorId)", () => {
+  const ACTOR = "55555555-5555-4555-8555-555555555555";
+  const BRAND = "00000000-0000-0000-0000-000000000202";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("calls start-brand-crawl with service-role Authorization and actorId body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, data: { crawlId: "crawl-1" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.mocked(createClient).mockReturnValue({
+      from: () => ({
+        update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+      }),
+    } as never);
+
+    const result = await startCrawl.execute({
+      inputData: { brandId: BRAND, brandUrl: "https://brand.example", brandName: "Brand" },
+      runId: "run-1",
+      getInitData: () => ({ actorId: ACTOR }),
+    } as never);
+
+    expect(result).toEqual({ crawlId: "crawl-1" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/functions/v1/start-brand-crawl");
+    expect(init.headers).toMatchObject({
+      Authorization: "Bearer test-service-role-key",
+    });
+    expect(init.headers).not.toHaveProperty("apikey");
+    const body = JSON.parse(String(init.body));
+    expect(body).toEqual({
+      brandId: BRAND,
+      url: "https://brand.example",
+      actorId: ACTOR,
+      workflowId: "run-1",
+    });
+    expect(body).not.toHaveProperty("accessToken");
+  });
+
+  it("throws a descriptive error when SUPABASE_SERVICE_ROLE_KEY is missing", async () => {
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    await expect(
+      startCrawl.execute({
+        inputData: { brandId: BRAND, brandUrl: "https://brand.example", brandName: "Brand" },
+        runId: "run-1",
+        getInitData: () => ({ actorId: ACTOR }),
+      } as never),
+    ).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY is not set.*IPI-817/);
+  });
+});
+
+>>>>>>> origin/main
 describe("workflow input schema", () => {
   it("rejects the dev-unauthenticated fallback as actorId", () => {
     const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
       brandId: "00000000-0000-0000-0000-000000000202",
       actorId: "dev-unauthenticated",
+<<<<<<< HEAD
       accessToken: "jwt",
+=======
+>>>>>>> origin/main
     });
     expect(parsed.success).toBe(false);
   });
 
+<<<<<<< HEAD
   it("accepts a real UUID actorId", () => {
     const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
       brandId: "00000000-0000-0000-0000-000000000202",
@@ -559,5 +633,23 @@ describe("workflow input schema", () => {
       accessToken: "jwt",
     });
     expect(parsed.success).toBe(true);
+=======
+  it("accepts a real UUID actorId without accessToken (IPI-817)", () => {
+    const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
+      brandId: "00000000-0000-0000-0000-000000000202",
+      actorId: "55555555-5555-4555-8555-555555555555",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).not.toHaveProperty("accessToken");
+    }
+  });
+
+  it("does not require accessToken in the workflow input schema", () => {
+    const shape = brandIntelligenceWorkflow.inputSchema.shape;
+    expect(shape).not.toHaveProperty("accessToken");
+    expect(shape).toHaveProperty("brandId");
+    expect(shape).toHaveProperty("actorId");
+>>>>>>> origin/main
   });
 });

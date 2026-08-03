@@ -3,6 +3,13 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import {
+<<<<<<< HEAD
+=======
+  normalizeBrandUrl,
+  sameBrandWebsite,
+} from "../_shared/brand-url.ts";
+import {
+>>>>>>> origin/main
   type CrawlRawData,
   formatCrawlForPrompt,
   isCrawlThin,
@@ -41,6 +48,7 @@ import {
   safeErrorMessage,
 } from "../_shared/response.ts";
 
+<<<<<<< HEAD
 // Private/internal IP ranges — block to prevent SSRF
 const PRIVATE_HOST_PATTERNS = [
   /^localhost$/i,
@@ -87,6 +95,8 @@ function normalizeBrandUrl(value: string): string {
   }
 }
 
+=======
+>>>>>>> origin/main
 function buildUrlList(baseUrl: string): string[] {
   const origin = new URL(baseUrl).origin;
   return [baseUrl, `${origin}/about`, `${origin}/collections`, `${origin}/lookbook`].slice(0, 4);
@@ -186,6 +196,10 @@ async function loadCrawlRow(
   requestUrl: string,
 ) {
   const requestOrigin = normalizeBrandUrl(requestUrl);
+<<<<<<< HEAD
+=======
+  if (!requestOrigin) return null;
+>>>>>>> origin/main
   const crawlSelect =
     "id, brand_id, raw_data, pages_crawled, job_status, source_url";
 
@@ -199,7 +213,11 @@ async function loadCrawlRow(
       !error &&
       data &&
       data.brand_id === brandId &&
+<<<<<<< HEAD
       normalizeBrandUrl(data.source_url) === requestOrigin
+=======
+      sameBrandWebsite(data.source_url, requestOrigin)
+>>>>>>> origin/main
     ) {
       return data;
     }
@@ -215,7 +233,11 @@ async function loadCrawlRow(
 
   if (error || !rows?.length) return null;
   return rows.find(
+<<<<<<< HEAD
     (row) => normalizeBrandUrl(row.source_url) === requestOrigin,
+=======
+    (row) => sameBrandWebsite(row.source_url, requestOrigin),
+>>>>>>> origin/main
   ) ?? null;
 }
 
@@ -335,7 +357,11 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     failureBrandId = brandId;
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
+<<<<<<< HEAD
     if (!url || !isValidHttpUrl(url)) {
+=======
+    if (!url || normalizeBrandUrl(url) === null) {
+>>>>>>> origin/main
       return errorResponse(
         "validation_error",
         "A valid http(s) url is required",

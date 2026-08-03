@@ -19,11 +19,20 @@
     "supabase:verify": "node scripts/verify-supabase.mjs",
     "supabase:verify-rls": "node scripts/verify-rls.mjs",
     "supabase:verify-booking-gate": "node scripts/verify-booking-gate.mjs",
+<<<<<<< HEAD
+=======
+    "supabase:ipi-894-materialize-race": "node scripts/ipi-894-materialize-race.mjs",
+>>>>>>> origin/main
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-edge-inventory": "node scripts/check-edge-inventory.mjs",
     "supabase:verify-edge-inventory:self-check": "node scripts/check-edge-inventory.mjs --self-check",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
+<<<<<<< HEAD
     "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts _shared/llm/cloudflare-client.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts capture-lead/handler.test.ts firecrawl-webhook/handler.test.ts start-brand-crawl/handler.test.ts",
+=======
+    "sync:brand-url": "cp supabase/functions/_shared/brand-url.ts app/src/lib/brand/brand-url.ssot.ts",
+    "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/brand-url.test.ts _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts _shared/llm/cloudflare-client.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts capture-lead/handler.test.ts firecrawl-webhook/handler.test.ts start-brand-crawl/handler.test.ts",
+>>>>>>> origin/main
     "supabase:verify-edge-groq": "npm run supabase:verify-edge-unit",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs",
     "worktree:audit": "node scripts/worktree-audit.mjs",

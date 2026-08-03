@@ -99,6 +99,12 @@ export interface PlannerTask {
   assigneeUserId: string | null;
   assigneeRole: string | null;
   sortOrder: number;
+<<<<<<< HEAD
+=======
+  // IPI-582 — CAS token for updateTask/shiftTask. Optional on in-memory
+  // fixtures; Workspace reads always populate it from planner.tasks.updated_at.
+  updatedAt?: string;
+>>>>>>> origin/main
 }
 
 export interface PlannerDependency {

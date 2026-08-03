@@ -1,0 +1,395 @@
+/* IPI-579 · PLN-S1B — read-only Timeline (SCR-32 parity). All colors map to
+   app/src/styles/tokens.css — never hex — and all status hues reuse the
+   repo's semantic tokens (Approved green / Review amber / Blocked red /
+   ink action), matching the DNA-compliance palette in AGENTS.md. */
+
+.scroll {
+  overflow-x: auto;
+}
+
+.card {
+  min-width: 760px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-card);
+}
+
+/* ---------- header ---------- */
+
+.header {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+}
+
+.headerLabel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 9px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-right: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-subtle);
+}
+
+.weekStrip {
+  position: relative;
+  display: flex;
+}
+
+.weekCell {
+  flex: 1;
+  min-width: 72px;
+  padding: 9px 10px;
+}
+
+.weekCell + .weekCell {
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.weekLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.weekDate {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- phase rows ---------- */
+
+/* Single native <button> per row (AC-E: no custom click surfaces) — the
+   whole row selects the phase. Reset button chrome; the row keeps the
+   180px / 1fr grid from SCR-32. */
+.row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  height: 46px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover .labelCell {
+  background: var(--color-bg-subtle);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: -2px;
+}
+
+.labelCell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  height: 100%;
+  min-width: 0;
+  border-right: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-card);
+}
+
+.labelCellSelected {
+  background: var(--color-bg-muted);
+}
+
+.bandRow:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: -2px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lockIcon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.barCell {
+  position: relative;
+  height: 100%;
+}
+
+/* ---------- bars & markers ---------- */
+
+.bar {
+  position: absolute;
+  top: 10px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.barSelected {
+  outline: 2px solid var(--color-action);
+  outline-offset: 1.5px;
+}
+
+.barText {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progressFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+
+.barDone {
+  border-color: var(--color-approved);
+  background: color-mix(in srgb, var(--color-approved) 10%, transparent);
+}
+
+.barDone .barText {
+  color: var(--color-approved);
+}
+
+.barInProgress {
+  border-color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+}
+
+.barInProgress .barText {
+  color: var(--color-text-primary);
+}
+
+.barBlocked {
+  border-color: var(--color-blocked);
+  background: var(--color-blocked-bg);
+}
+
+.barBlocked .barText {
+  color: var(--color-blocked);
+}
+
+.barAtRisk {
+  border-color: var(--color-review);
+  background: color-mix(in srgb, var(--color-review) 10%, transparent);
+}
+
+.barAtRisk .barText {
+  color: var(--color-review);
+}
+
+.barTodo {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-card);
+}
+
+.barTodo .barText {
+  color: var(--color-text-muted);
+}
+
+.dotDone {
+  background: var(--color-approved);
+}
+
+.dotInProgress {
+  background: var(--color-text-primary);
+}
+
+.dotBlocked {
+  background: var(--color-blocked);
+}
+
+.dotAtRisk {
+  background: var(--color-review);
+}
+
+.dotTodo {
+  background: var(--color-text-muted);
+}
+
+.gate {
+  position: absolute;
+  top: 16px;
+  width: 13px;
+  height: 13px;
+  transform: rotate(45deg);
+  border: 1.6px solid;
+  z-index: 2;
+}
+
+.gateApproved {
+  border-color: var(--color-approved);
+  background: color-mix(in srgb, var(--color-approved) 25%, transparent);
+}
+
+.gateReady {
+  border-color: var(--color-review);
+  background: color-mix(in srgb, var(--color-review) 25%, transparent);
+}
+
+.gateLocked {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-card);
+}
+
+.milestone {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  display: flex;
+  color: var(--color-action);
+}
+
+.gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border-subtle);
+}
+
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-action);
+  opacity: 0.4;
+  z-index: 3;
+}
+
+.todayBadge {
+  position: absolute;
+  top: 6px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-action-text);
+  background: var(--color-action);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  z-index: 4;
+}
+
+.rowTodayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-action);
+  opacity: 0.28;
+}
+
+/* ---------- unscheduled / invalid bands ---------- */
+
+.band {
+  margin-top: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.bandRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bandRow:last-child {
+  border-bottom: none;
+}
+
+.bandRow:hover {
+  background: var(--color-bg-subtle);
+}
+
+.bandRowInvalid .name {
+  color: var(--color-blocked);
+}
+
+.invalidIcon {
+  color: var(--color-blocked);
+  flex-shrink: 0;
+}
+
+.bandTag {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* ---------- empty state ---------- */
+
+.empty {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  padding: 40px;
+  text-align: center;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.emptyBody {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}

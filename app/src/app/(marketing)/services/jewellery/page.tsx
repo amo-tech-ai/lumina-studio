@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+<<<<<<< HEAD
+=======
+import { canonicalUrl } from "@/lib/site";
+>>>>>>> origin/main
 import {
   Sparkles, Eye, Package, ShoppingBag, Monitor, Megaphone, Layers, FileCheck,
   CheckCircle, Zap, Search, Focus, Image as ImageIcon,
@@ -11,6 +15,10 @@ import { FAQ } from "@/components/marketing/faq";
 export const metadata: Metadata = {
   title: "Jewellery Photography",
   description: "Precision jewellery photography. AI-planned macro, lifestyle, and ecommerce shots.",
+<<<<<<< HEAD
+=======
+  alternates: { canonical: canonicalUrl("/services/jewellery") },
+>>>>>>> origin/main
   openGraph: {
     title: "Jewellery Photography | iPix — Precision Macro & Lifestyle",
     description: "Precision jewellery photography. AI-planned macro, lifestyle, and ecommerce shots.",

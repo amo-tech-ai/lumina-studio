@@ -4,6 +4,10 @@ import {
   matchesBrandListFilter,
   brandListCountLabel,
   isAnalysingIntakeStatus,
+<<<<<<< HEAD
+=======
+  isDurableIntakeReady,
+>>>>>>> origin/main
 } from "./brand-list-filters";
 
 describe("brand-list-filters", () => {
@@ -13,6 +17,16 @@ describe("brand-list-filters", () => {
     expect(matchesBrandListFilter("active", "ready", false)).toBe(false);
   });
 
+<<<<<<< HEAD
+=======
+  it("treats ready and scores_complete as durable intake ready", () => {
+    expect(isDurableIntakeReady("ready")).toBe(true);
+    expect(isDurableIntakeReady("scores_complete")).toBe(true);
+    expect(isDurableIntakeReady("draft_ready")).toBe(false);
+    expect(isDurableIntakeReady(null)).toBe(false);
+  });
+
+>>>>>>> origin/main
   it("maps analysing filter to pipeline statuses", () => {
     expect(isAnalysingIntakeStatus("crawl_running")).toBe(true);
     expect(matchesBrandListFilter("analysing", "analysis_running", false)).toBe(true);

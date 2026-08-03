@@ -60,7 +60,11 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[brand-intelligence/approve]", e);
     return NextResponse.json(
+<<<<<<< HEAD
       { error: e instanceof Error ? e.message : "Internal error" },
+=======
+      { error: "We could not complete this action. Please try again." },
+>>>>>>> origin/main
       { status: 500 },
     );
   }

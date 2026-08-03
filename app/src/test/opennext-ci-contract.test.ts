@@ -71,6 +71,16 @@ describe("OpenNext CI contract (IPI-472)", () => {
       resolve(__dirname, "../app/(operator)/layout.tsx"),
       "utf8",
     );
+<<<<<<< HEAD
+=======
+    const authenticatedCopilotProvider = readFileSync(
+      resolve(
+        __dirname,
+        "../components/copilot/authenticated-copilot-provider.tsx",
+      ),
+      "utf8",
+    );
+>>>>>>> origin/main
     expect(nextConfig).toMatch(/"@copilotkit\/web-inspector"\s*:\s*webInspectorStub/);
     expect(nextConfig).toMatch(/cf-web-inspector-stub\.mjs/);
     expect(wrangler).toMatch(
@@ -91,9 +101,16 @@ describe("OpenNext CI contract (IPI-472)", () => {
         ɵCpkThreadDetails: expect.any(Object),
       }),
     );
+<<<<<<< HEAD
     // Official CopilotKit disable — props must live on the <CopilotKit> opening tag
     // (comments above the JSX also mention these strings; loose match is insufficient)
     expect(operatorLayout).toMatch(
+=======
+    // IPI-927 — layout delegates to session-aware client provider; official
+    // CopilotKit disable props must live on that provider's <CopilotKit> tag.
+    expect(operatorLayout).toMatch(/AuthenticatedCopilotProvider/);
+    expect(authenticatedCopilotProvider).toMatch(
+>>>>>>> origin/main
       /<CopilotKit\b(?=[^>]*\benableInspector=\{false\})(?=[^>]*\bshowDevConsole=\{false\})[^>]*>/,
     );
   });

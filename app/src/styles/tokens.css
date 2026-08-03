@@ -407,6 +407,22 @@
   .onb-blink {
     animation: none;
   }
+<<<<<<< HEAD
+=======
+
+  /* IPI-417 · MOB-01 — Vaul injects transform transitions (and often inline
+     transition while snapping). Tailwind motion-reduce utilities lose to that
+     cascade; !important wins so reduced-motion users get no spring. Keep
+     transform itself — snap detents are position via translate. */
+  [data-vaul-drawer] {
+    transition: none !important;
+    animation: none !important;
+  }
+  [data-vaul-overlay] {
+    transition: opacity var(--duration-normal, 200ms) ease !important;
+    animation: none !important;
+  }
+>>>>>>> origin/main
 }
 
 /* ============================================================

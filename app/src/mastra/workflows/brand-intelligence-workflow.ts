@@ -20,7 +20,16 @@ const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+<<<<<<< HEAD
   if (!url || !key) throw new Error("Supabase service-role env vars not set");
+=======
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+  if (!key) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set — brand-intelligence start-crawl requires the service-role key after IPI-817 (operator JWTs are no longer passed into the workflow)",
+    );
+  }
+>>>>>>> origin/main
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -82,7 +91,10 @@ export const validateBrand = createStep({
   inputSchema: z.object({
     brandId: z.string().uuid(),
     actorId: z.string().uuid(),
+<<<<<<< HEAD
     accessToken: z.string(),
+=======
+>>>>>>> origin/main
   }),
   outputSchema: z.object({
     brandId: z.string(),
@@ -135,8 +147,15 @@ export const validateBrand = createStep({
   },
 });
 
+<<<<<<< HEAD
 // Step 2: start Firecrawl crawl, pass runId as workflowId for webhook resume
 const startCrawl = createStep({
+=======
+// Step 2: start Firecrawl crawl, pass runId as workflowId for webhook resume.
+// Uses the service-role credential + verified actorId (IPI-817) — never the
+// operator JWT, which Mastra would otherwise persist in workflow snapshots.
+export const startCrawl = createStep({
+>>>>>>> origin/main
   id: "start-crawl",
   inputSchema: z.object({
     brandId: z.string(),
@@ -145,18 +164,40 @@ const startCrawl = createStep({
   }),
   outputSchema: z.object({ crawlId: z.string() }),
   execute: async ({ inputData, runId, getInitData }) => {
+<<<<<<< HEAD
     const { accessToken } = getInitData<{ accessToken: string }>();
     try {
+=======
+    const { actorId } = getInitData<{ actorId: string }>();
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) {
+      throw new Error(
+        "SUPABASE_SERVICE_ROLE_KEY is not set — start-crawl calls start-brand-crawl with the service-role credential + actorId after IPI-817",
+      );
+    }
+    try {
+      // Mirror extract-profile: Bearer service key only — do not send anon apikey
+      // alongside it (gateway rejects conflicting API keys on this project).
+      // adminClient() is the local helper above (not @/lib/supabase/admin).
+>>>>>>> origin/main
       const res = await fetch(edgeFnUrl("start-brand-crawl"), {
         method: "POST",
         signal: AbortSignal.timeout(30_000),
         headers: {
           "Content-Type": "application/json",
+<<<<<<< HEAD
           Authorization: `Bearer ${accessToken}`,
+=======
+          Authorization: `Bearer ${serviceKey}`,
+>>>>>>> origin/main
         },
         body: JSON.stringify({
           brandId: inputData.brandId,
           url: inputData.brandUrl,
+<<<<<<< HEAD
+=======
+          actorId,
+>>>>>>> origin/main
           workflowId: runId,
         }),
       });
@@ -164,9 +205,20 @@ const startCrawl = createStep({
         const msg = await res.text().catch(() => res.statusText);
         throw new Error(`start-brand-crawl failed ${res.status}: ${msg}`);
       }
+<<<<<<< HEAD
       const data = (await res.json()) as { crawlId: string };
       if (!data.crawlId) throw new Error("start-brand-crawl returned no crawlId");
       return { crawlId: data.crawlId };
+=======
+      const body = (await res.json()) as {
+        crawlId?: string;
+        data?: { crawlId?: string };
+      };
+      // Edge returns `{ ok: true, data: { crawlId } }`; tolerate a flat shape too.
+      const crawlId = body.data?.crawlId ?? body.crawlId;
+      if (!crawlId) throw new Error("start-brand-crawl returned no crawlId");
+      return { crawlId };
+>>>>>>> origin/main
     } catch (err) {
       // Reset status so the brand isn't permanently locked in crawl_running
       await adminClient()
@@ -455,9 +507,15 @@ export const brandIntelligenceWorkflow = createWorkflow({
     brandId: z.string().uuid(),
     // Verified JWT subject. Must be a real UUID — the old `userId: z.string()`
     // accepted the "dev-unauthenticated" operator-gate fallback (IPI-812).
+<<<<<<< HEAD
     actorId: z.string().uuid(),
     brandUrl: z.string().optional(),
     accessToken: z.string(),
+=======
+    // No accessToken: start-crawl uses SUPABASE_SERVICE_ROLE_KEY + actorId (IPI-817).
+    actorId: z.string().uuid(),
+    brandUrl: z.string().optional(),
+>>>>>>> origin/main
   }),
   outputSchema: z.object({ status: z.string() }),
   steps: [validateBrand, startCrawl, waitForCrawl, extractProfile, fanOutEnrichment, saveDraftAndWait, commitOrReject],

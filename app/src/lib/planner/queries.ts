@@ -469,6 +469,10 @@ function toTask(row: TaskRow): PlannerTask {
     assigneeUserId: row.assignee_user_id,
     assigneeRole: row.assignee_role,
     sortOrder: row.sort_order,
+<<<<<<< HEAD
+=======
+    updatedAt: row.updated_at,
+>>>>>>> origin/main
   };
 }
 
@@ -529,7 +533,11 @@ function toViewConfig(row: ViewConfigRow): PlannerViewConfig {
 // PlannerInstance/PlannerTask consume.
 const INSTANCE_DETAIL_COLUMNS =
   "id, org_id, workflow_id, entity_type, entity_id, name, status, planned_start, planned_end, owner_user_id, " +
+<<<<<<< HEAD
   "tasks(id, instance_id, phase_id, parent_task_id, title, description, start_date, end_date, duration_days, status, priority, assignee_user_id, assignee_role, sort_order)";
+=======
+  "tasks(id, instance_id, phase_id, parent_task_id, title, description, start_date, end_date, duration_days, status, priority, assignee_user_id, assignee_role, sort_order, updated_at)";
+>>>>>>> origin/main
 
 // getEffectivePermissions (permissions.ts) throws if its underlying RPC call
 // fails — this wraps it so getInstanceDetail/listDependencies can honor

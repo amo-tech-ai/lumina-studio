@@ -4,10 +4,17 @@
 -- Same pre-merge pattern as 007_org_tenant_isolation.sql: apply the migration DDL
 -- inside begin…rollback so CI passes before supabase:push lands the real objects.
 --
+<<<<<<< HEAD
 -- Plan math: 17 asserts
 --   unique(2) + check(1) + RLS shape(1) + stranger deny(1) + owner allow(1)
 --   + null-auth(1) + invoker(1) + grants(3) + success/replay/status/org/brand(5)
 --   + atomic fail(2)
+=======
+-- Plan math: 22 asserts
+--   unique(2) + check(1) + RLS shape(1) + stranger deny(1) + owner allow(1)
+--   + null-auth(1) + invoker(1) + grants(3) + success/replay/status/screen/org/brand(6)
+--   + atomic fail(3) + heal stuck screen on replay(1) + heal tenant deny(2)
+>>>>>>> origin/main
 
 set search_path to public, extensions;
 
@@ -107,6 +114,15 @@ begin
   end if;
 
   if v_session.status = 'materialized' then
+<<<<<<< HEAD
+=======
+    if v_session.current_screen < 12 then
+      perform set_config('app.onboarding_materializing', 'on', true);
+      update public.onboarding_sessions
+         set current_screen = 12
+       where id = v_session.id;
+    end if;
+>>>>>>> origin/main
     return jsonb_build_object('organization_id', v_session.organization_id,
                               'brand_id',        v_session.brand_id);
   end if;
@@ -127,7 +143,12 @@ begin
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
+<<<<<<< HEAD
          brand_id = v_brand_id
+=======
+         brand_id = v_brand_id,
+         current_screen = 12
+>>>>>>> origin/main
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
@@ -136,7 +157,11 @@ end $$;
 revoke execute on function public.materialize_onboarding_session(text, text, text) from public, anon;
 grant  execute on function public.materialize_onboarding_session(text, text, text) to authenticated;
 
+<<<<<<< HEAD
 select plan(17);
+=======
+select plan(22);
+>>>>>>> origin/main
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000c01', 'ipi832-owner@test.local'),
@@ -309,6 +334,17 @@ select is(
   'successful materialize sets status = materialized'
 );
 
+<<<<<<< HEAD
+=======
+select is(
+  (select current_screen from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-ok'),
+  12::smallint,
+  'successful materialize persists analysis screen (12)'
+);
+
+>>>>>>> origin/main
 reset role;
 
 select is(
@@ -364,8 +400,81 @@ select is(
   'forced brand-insert failure leaves 0 organizations (RPC is atomic)'
 );
 
+<<<<<<< HEAD
 drop trigger if exists _ipi832_fail_brand_insert on public.brands;
 drop function if exists public._ipi832_fail_brand_insert();
 
+=======
+select is(
+  (select current_screen from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-atomic'),
+  1::smallint,
+  'failed materialize leaves session before analysis screen (current_screen = 1)'
+);
+
+drop trigger if exists _ipi832_fail_brand_insert on public.brands;
+drop function if exists public._ipi832_fail_brand_insert();
+
+-- ── 20–22) heal stuck screen on replay + stranger cannot enter heal branch ──────────────────
+insert into public.onboarding_sessions (
+  user_id, idempotency_key, status, current_screen, organization_id, brand_id
+)
+select
+  '00000000-0000-4000-8000-000000000c01',
+  'ipi832-key-heal',
+  'materialized',
+  11,
+  o.id,
+  b.id
+from public.organizations o
+join public.brands b on b.org_id = o.id
+where o.name = 'IPI832 Happy Brand'
+limit 1;
+
+-- Tenant isolation on the heal/replay path (lookup is owner-scoped by auth.uid()).
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000c02","role":"authenticated"}';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000c02';
+set local role authenticated;
+
+select throws_ok(
+  $$ select public.materialize_onboarding_session(
+       'ipi832-key-heal', 'IPI832 Happy Brand', 'https://happy.test'
+     ) $$,
+  'P0002',
+  null,
+  'stranger cannot heal another user materialized session'
+);
+
+reset role;
+
+select is(
+  (select current_screen from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-heal'),
+  11::smallint,
+  'stranger materialize attempt leaves owner stuck screen unchanged'
+);
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000c01","role":"authenticated"}';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000c01';
+set local role authenticated;
+
+-- Replay path (no new org/brand); heals current_screen in the same call.
+select public.materialize_onboarding_session(
+  'ipi832-key-heal', 'IPI832 Happy Brand', 'https://happy.test'
+);
+
+reset role;
+
+select is(
+  (select current_screen from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-heal'),
+  12::smallint,
+  'replay heals materialized session stuck at screen 11 to analysis screen 12'
+);
+
+>>>>>>> origin/main
 select * from finish();
 rollback;

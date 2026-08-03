@@ -104,6 +104,28 @@ describe("SignOutButton — IPI-725", () => {
     expect(fetchMock.mock.calls[0][1]).not.toMatchObject({ redirect: "manual" });
   });
 
+<<<<<<< HEAD
+=======
+  it("sends keepalive so a navigation cannot abort the logout POST (IPI-915)", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        redirected: true,
+        url: "http://localhost:3002/login",
+        status: 200,
+      } as Response),
+    );
+    vi.stubGlobal("location", { ...window.location, assign: vi.fn() });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<SignOutButton />);
+    fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ keepalive: true });
+  });
+
+>>>>>>> origin/main
   it("navigates to the followed redirect URL (login on success)", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });

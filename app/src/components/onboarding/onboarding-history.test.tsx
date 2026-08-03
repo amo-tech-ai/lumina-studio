@@ -9,6 +9,60 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
+<<<<<<< HEAD
+=======
+// Slice C: progress screen unit-tested separately — auto-complete when brandId set.
+vi.mock("./analysis-progress-screen", async () => {
+  const React = await import("react");
+  return {
+    AnalysisProgressScreen: ({
+      onComplete,
+      brandId,
+    }: {
+      onComplete: () => void;
+      brandId: string | null;
+    }) => {
+      React.useEffect(() => {
+        if (!brandId) return;
+        const timer = setTimeout(onComplete, 20);
+        return () => clearTimeout(timer);
+      }, [brandId, onComplete]);
+      return (
+        <div data-testid="onboarding-card">
+          <p data-testid="analysis-status" aria-live="polite">
+            Preparing your workspace…
+          </p>
+        </div>
+      );
+    },
+  };
+});
+
+// Slice D: DNA approve tested in brand-dna-payoff-screen.test.tsx.
+vi.mock("./brand-dna-payoff-screen", async () => {
+  const React = await import("react");
+  return {
+    BrandDnaPayoffScreen: ({
+      brandId,
+      onReadyChange,
+    }: {
+      brandId: string | null;
+      onReadyChange?: (ready: boolean) => void;
+    }) => {
+      React.useEffect(() => {
+        onReadyChange?.(Boolean(brandId));
+      }, [brandId, onReadyChange]);
+      return (
+        <div data-testid="onboarding-card">
+          <h1>Your Brand DNA</h1>
+          <p data-testid="dna-status">Review ready</p>
+        </div>
+      );
+    },
+  };
+});
+
+>>>>>>> origin/main
 import { OnboardingFlow } from "./onboarding-flow";
 
 /**
@@ -139,8 +193,19 @@ describe("mixed in-page and browser navigation", () => {
     expect(window.location.hash).toBe("#6");
   });
 
+<<<<<<< HEAD
   it("deep-linked #13 Back skips the transient analysis screen", () => {
     mount("#13", <OnboardingFlow />);
+=======
+  it("deep-linked #13 without a brand bounces before analysis (IPI-903)", () => {
+    mount("#13", <OnboardingFlow />);
+    expect(currentScreen()).toBe("11");
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+  });
+
+  it("deep-linked #13 with a brand Back skips the transient analysis screen", () => {
+    mount("#13", <OnboardingFlow initialBrandId="brand-test" />);
+>>>>>>> origin/main
     clickVisibleBack();
 
     expect(currentScreen()).toBe("11");
@@ -148,6 +213,7 @@ describe("mixed in-page and browser navigation", () => {
     expect(screen.queryByTestId("analysis-status")).toBeNull();
   });
 
+<<<<<<< HEAD
   it("deep-linked #12 completion does not restart analysis when Back is pressed", () => {
     vi.useFakeTimers();
     try {
@@ -159,6 +225,22 @@ describe("mixed in-page and browser navigation", () => {
       });
       act(() => {
         vi.advanceTimersByTime(700);
+=======
+  it("deep-linked #12 without a brand never starts analysis (IPI-903)", () => {
+    mount("#12", <OnboardingFlow />);
+    expect(currentScreen()).toBe("11");
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+  });
+
+  it("deep-linked #12 completion does not restart analysis when Back is pressed", () => {
+    vi.useFakeTimers();
+    try {
+      mount("#12", <OnboardingFlow initialBrandId="brand-test" />);
+      expect(currentScreen()).toBe("12");
+
+      act(() => {
+        vi.advanceTimersByTime(20);
+>>>>>>> origin/main
       });
       expect(currentScreen()).toBe("13");
 
