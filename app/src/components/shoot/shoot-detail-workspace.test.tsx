@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from "vitest";
+import { useEffect } from "react";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
 vi.mock("./shoot-detail.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -19,6 +20,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 import { ShootDetailWorkspace } from "./shoot-detail-workspace";
 import { ShootLoadStateProvider, useShootLoadState } from "./shoot-load-state";
+import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import type { ShootDetailPayload } from "@/lib/shoot/get-shoot-detail";
 import type { ShootLoadState } from "./shoot-load-state";
 
@@ -30,7 +32,9 @@ afterEach(() => {
 function renderWorkspace(data: ShootDetailPayload | null, fetchError: string | null) {
   return render(
     <ShootLoadStateProvider>
-      <ShootDetailWorkspace data={data} fetchError={fetchError} />
+      <ActiveBrandProvider>
+        <ShootDetailWorkspace data={data} fetchError={fetchError} />
+      </ActiveBrandProvider>
     </ShootLoadStateProvider>,
   );
 }
@@ -227,8 +231,10 @@ describe("ShootDetailWorkspace — reports real load state to the operator shell
     }
     const view = render(
       <ShootLoadStateProvider>
-        <Probe />
-        <ShootDetailWorkspace data={data} fetchError={fetchError} />
+        <ActiveBrandProvider>
+          <Probe />
+          <ShootDetailWorkspace data={data} fetchError={fetchError} />
+        </ActiveBrandProvider>
       </ShootLoadStateProvider>,
     );
     return { ...view, readState: () => state };
@@ -253,8 +259,10 @@ describe("ShootDetailWorkspace — reports real load state to the operator shell
     function Host({ mounted }: { mounted: boolean }) {
       return (
         <ShootLoadStateProvider>
-          <Probe />
-          {mounted && <ShootDetailWorkspace data={payload()} fetchError={null} />}
+          <ActiveBrandProvider>
+            <Probe />
+            {mounted && <ShootDetailWorkspace data={payload()} fetchError={null} />}
+          </ActiveBrandProvider>
         </ShootLoadStateProvider>
       );
     }
@@ -262,5 +270,47 @@ describe("ShootDetailWorkspace — reports real load state to the operator shell
     expect(state).toEqual({ loaded: true, failed: false });
     rerender(<Host mounted={false} />);
     expect(state).toEqual({ loaded: false, failed: false });
+  });
+});
+
+describe("ShootDetailWorkspace — active brand follows the open shoot (IPI-927 review)", () => {
+  function renderWithBrandProbe(
+    data: ShootDetailPayload | null,
+    fetchError: string | null,
+    seedStaleBrand = false,
+  ) {
+    let current: string | null = null;
+    function Probe() {
+      const { activeBrandId, setActiveBrandId } = useActiveBrand();
+      current = activeBrandId;
+      useEffect(() => {
+        if (seedStaleBrand) setActiveBrandId("stale-brand");
+      }, [setActiveBrandId]);
+      return null;
+    }
+    const view = render(
+      <ShootLoadStateProvider>
+        <ActiveBrandProvider>
+          <Probe />
+          <ShootDetailWorkspace data={data} fetchError={fetchError} />
+        </ActiveBrandProvider>
+      </ShootLoadStateProvider>,
+    );
+    return { ...view, readBrand: () => current };
+  }
+
+  it("aligns the active brand with the shoot's brand when data loads", () => {
+    const { readBrand } = renderWithBrandProbe(payload(), null);
+    expect(readBrand()).toBe("brand-1");
+  });
+
+  it("overrides a stale global brand when a shoot loads (no contradiction for agents)", () => {
+    const { readBrand } = renderWithBrandProbe(payload(), null, true);
+    expect(readBrand()).toBe("brand-1");
+  });
+
+  it("does not touch the active brand when the shoot failed to load", () => {
+    const { readBrand } = renderWithBrandProbe(null, "Unable to load this shoot.", true);
+    expect(readBrand()).toBe("stale-brand");
   });
 });

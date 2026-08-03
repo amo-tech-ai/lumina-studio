@@ -96,12 +96,28 @@ export type PageContextIdentity = { client: SupabaseClient; orgId: string };
 type ShootRow = { id: string; brand_id: string | null };
 type BrandRow = { id: string; org_id: string | null };
 
+/** Fail-closed conversion: entries carrying ID claims are stripped of value. */
+function stripUnverified(
+  available: boolean,
+  claims: { entry: PageContextEntry; claims: IdClaims }[],
+): VerifiedPageContextResult {
+  return {
+    available,
+    contexts: claims.map(({ entry, claims: c }) =>
+      hasClaims(c) ? { ...entry, value: {}, verified: false } : { ...entry, verified: true },
+    ),
+  };
+}
+
 /**
  * Org-verification for browser-supplied context claims. Batches all `shoot_id`
  * claims through `shoot_portfolio_view` (RLS user-scoped) cross-checked against
- * `brands.org_id`, and all `brand_id` claims directly against `brands.org_id` —
- * the same belt-and-suspenders pattern as planner/queries.ts
- * `listEligibleEntities`. Any DB error fails closed (claims → unverified).
+ * the operator's full `brands.org_id` membership, and every `brand_id` claim
+ * directly against that same membership — the same belt-and-suspenders pattern
+ * as planner/queries.ts `listEligibleEntities`. The org brand set is loaded
+ * wholesale (not just the claimed IDs) so a shoot-only claim can still resolve
+ * its own brand: a shoot the operator can see is only trustworthy when its
+ * brand belongs to their org. Any DB error fails closed (claims → unverified).
  */
 export async function verifyPageContextClaims(
   result: PageContextResult,
@@ -117,21 +133,9 @@ export async function verifyPageContextClaims(
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  const brandIds = [
-    ...new Set(
-      claims
-        .map((c) => c.claims.brandId)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
 
   if (!identity) {
-    return {
-      available: result.available,
-      contexts: claims.map(({ entry, claims: c }) =>
-        hasClaims(c) ? { ...entry, value: {}, verified: false } : { ...entry, verified: true },
-      ),
-    };
+    return stripUnverified(result.available, claims);
   }
 
   const [shootsRes, brandsRes] = await Promise.all([
@@ -141,22 +145,11 @@ export async function verifyPageContextClaims(
           .select("id, brand_id")
           .in("id", shootIds)
       : Promise.resolve({ data: [] as ShootRow[], error: null }),
-    brandIds.length
-      ? identity.client
-          .from("brands")
-          .select("id, org_id")
-          .in("id", brandIds)
-          .eq("org_id", identity.orgId)
-      : Promise.resolve({ data: [] as BrandRow[], error: null }),
+    identity.client.from("brands").select("id, org_id").eq("org_id", identity.orgId),
   ]);
 
   if (shootsRes.error || brandsRes.error) {
-    return {
-      available: result.available,
-      contexts: claims.map(({ entry, claims: c }) =>
-        hasClaims(c) ? { ...entry, value: {}, verified: false } : { ...entry, verified: true },
-      ),
-    };
+    return stripUnverified(result.available, claims);
   }
 
   const orgBrandIds = new Set((brandsRes.data ?? []).map((row) => row.id));

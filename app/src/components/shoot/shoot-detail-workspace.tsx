@@ -22,10 +22,12 @@ import { DeliverablesTab } from "./shoot-detail-tabs/deliverables-tab";
 import { ActivityTab } from "./shoot-detail-tabs/activity-tab";
 import { useShootDetailContext } from "./shoot-detail-context";
 import { useShootLoadState } from "./shoot-load-state";
+import { useActiveBrand } from "@/context/active-brand-context";
 import styles from "./shoot-detail.module.css";
 
 /** Injects CopilotKit context when shoot payload is present (including empty shot list). */
 function ShootDetailAgentContext({ data }: { data: ShootDetailPayload }) {
+  const { setActiveBrandId } = useActiveBrand();
   useShootDetailContext({
     shootId: data.shoot.id,
     shootName: data.shoot.name,
@@ -38,6 +40,11 @@ function ShootDetailAgentContext({ data }: { data: ShootDetailPayload }) {
     dnaScore: data.shoot.dna_score,
     hasBrief: Boolean(data.shoot.brief?.trim()),
   });
+  // Align the global active-brand with the shoot's actual brand so a stale
+  // selection (previous brand page, etc.) can never contradict the open shoot.
+  useEffect(() => {
+    setActiveBrandId(data.brand.id);
+  }, [data.brand.id, setActiveBrandId]);
   return null;
 }
 

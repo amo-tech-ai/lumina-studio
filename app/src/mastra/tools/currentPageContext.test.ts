@@ -118,15 +118,13 @@ function mockSupabaseClient(opts: {
   };
   const brandsQuery = {
     select: vi.fn().mockReturnValue({
-      in: vi.fn().mockReturnValue({
-        eq: vi
-          .fn()
-          .mockResolvedValue(
-            opts.error
-              ? { data: null, error: opts.error }
-              : { data: opts.brands ?? [], error: null },
-          ),
-      }),
+      eq: vi
+        .fn()
+        .mockResolvedValue(
+          opts.error
+            ? { data: null, error: opts.error }
+            : { data: opts.brands ?? [], error: null },
+        ),
     }),
   };
   return {
@@ -198,6 +196,65 @@ describe("verifyPageContextClaims — org verification of browser-supplied IDs",
     const client = mockSupabaseClient({
       shoots: [{ id: "shoot-1", brand_id: "brand-2" }],
       brands: [{ id: "brand-1", org_id: "org-1" }],
+    });
+    const result = await verifyPageContextClaims(
+      { available: true, contexts: [SHOOT_DETAIL_ENTRY] },
+      identity(client),
+    );
+    expect(result.contexts[0].verified).toBe(false);
+    expect(result.contexts[0].value).toEqual({});
+  });
+
+  it("verifies a shoot-only claim (no brand_id) when the shoot's brand belongs to the org", async () => {
+    // Regression for the review finding: orgBrandIds used to contain only the
+    // *claimed* brand IDs, so a shoot-only claim (wizard before brand commit,
+    // shoot detail without brand) was stripped even though the shoot was
+    // visible to the operator and its brand is org-owned.
+    const shootOnlyEntry = {
+      description: 'Shoot wizard — operator is planning "SS26".',
+      value: { surface: "shoot-wizard", shoot_id: "shoot-1", shoot_name: "SS26" },
+    };
+    const client = mockSupabaseClient({
+      shoots: [{ id: "shoot-1", brand_id: "brand-2" }],
+      brands: [
+        { id: "brand-1", org_id: "org-1" },
+        { id: "brand-2", org_id: "org-1" },
+      ],
+    });
+    const result = await verifyPageContextClaims(
+      { available: true, contexts: [shootOnlyEntry] },
+      identity(client),
+    );
+    expect(result.contexts[0].verified).toBe(true);
+    expect(result.contexts[0].value).toEqual(shootOnlyEntry.value);
+  });
+
+  it("strips a shoot-only claim when the shoot's brand is not org-owned (data anomaly)", async () => {
+    const shootOnlyEntry = {
+      description: "Shoot detail — operator is viewing a shoot.",
+      value: { surface: "shoot-detail", shoot_id: "shoot-1" },
+    };
+    const client = mockSupabaseClient({
+      shoots: [{ id: "shoot-1", brand_id: "brand-999" }],
+      brands: [{ id: "brand-1", org_id: "org-1" }],
+    });
+    const result = await verifyPageContextClaims(
+      { available: true, contexts: [shootOnlyEntry] },
+      identity(client),
+    );
+    expect(result.contexts[0].verified).toBe(false);
+    expect(result.contexts[0].value).toEqual({});
+  });
+
+  it("strips a claimed brand that is org-owned but not the shoot's actual brand", async () => {
+    // Both brands are org-owned; only the row-level check can reject the
+    // mismatch between the claimed brand and the shoot's real brand.
+    const client = mockSupabaseClient({
+      shoots: [{ id: "shoot-1", brand_id: "brand-2" }],
+      brands: [
+        { id: "brand-1", org_id: "org-1" },
+        { id: "brand-2", org_id: "org-1" },
+      ],
     });
     const result = await verifyPageContextClaims(
       { available: true, contexts: [SHOOT_DETAIL_ENTRY] },
