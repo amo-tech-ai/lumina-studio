@@ -46,6 +46,9 @@ export function AuthenticatedCopilotProvider({
   useEffect(() => {
     let cancelled = false;
     let hasToken = false;
+    // Terminal: rejected/error getSession — do not soft-settle after AUTH_HYDRATE_MS.
+    let hydrateFailed = false;
+    let hydrateTimer: ReturnType<typeof setTimeout> | undefined;
     // Bumped only on decisive SIGNED_OUT so in-flight getSession cannot remount
     // CopilotKit with a stale bearer after cross-tab / concurrent logout.
     let logoutEpoch = 0;
@@ -75,7 +78,9 @@ export function AuthenticatedCopilotProvider({
     };
 
     const failHydrate = () => {
-      if (cancelled || hasToken) return;
+      if (cancelled || hasToken || hydrateFailed) return;
+      hydrateFailed = true;
+      if (hydrateTimer !== undefined) clearTimeout(hydrateTimer);
       setAccessToken(null);
       setPhase("error");
     };
@@ -144,9 +149,9 @@ export function AuthenticatedCopilotProvider({
 
     void readSession("wait");
 
-    const timer = setTimeout(() => {
-      // Never clear an already-applied access token.
-      if (cancelled || hasToken) return;
+    hydrateTimer = setTimeout(() => {
+      // Never clear an already-applied access token or a terminal hydrate error.
+      if (cancelled || hasToken || hydrateFailed) return;
       // Soft-settle immediately so a hanging getSession (e.g. Supabase network
       // timeout) cannot leave the operator on infinite loading. A later token
       // from this read or onAuthStateChange may still promote.
@@ -156,7 +161,7 @@ export function AuthenticatedCopilotProvider({
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      if (hydrateTimer !== undefined) clearTimeout(hydrateTimer);
       subscription.unsubscribe();
     };
   }, [hydrateAttempt]);

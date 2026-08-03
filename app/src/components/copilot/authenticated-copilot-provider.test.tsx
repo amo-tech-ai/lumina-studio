@@ -281,6 +281,37 @@ describe("AuthenticatedCopilotProvider", () => {
     expect(document.body.textContent).not.toContain("session read failed");
   });
 
+  it("keeps error UI after AUTH_HYDRATE_MS when initial getSession rejected (no timeout retry)", async () => {
+    vi.useFakeTimers();
+    getSession.mockRejectedValue(new Error("session read failed"));
+    const { AUTH_HYDRATE_MS, AuthenticatedCopilotProvider } = await import(
+      "./authenticated-copilot-provider"
+    );
+
+    render(
+      <AuthenticatedCopilotProvider>
+        <span>workspace</span>
+      </AuthenticatedCopilotProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("copilot-auth-error")).toBeTruthy();
+    expect(getSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTH_HYDRATE_MS);
+    });
+
+    expect(screen.getByTestId("copilot-auth-error")).toBeTruthy();
+    expect(screen.queryByTestId("copilot-auth-signed-out")).toBeNull();
+    expect(screen.getByTestId("copilot-auth-retry")).toBeTruthy();
+    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(copilotKitMock).not.toHaveBeenCalled();
+  });
+
   it("shows error UI when getSession resolves with error (refresh failure)", async () => {
     getSession.mockResolvedValue({
       data: { session: null },
