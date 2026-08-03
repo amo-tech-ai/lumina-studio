@@ -6,6 +6,8 @@
  */
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+import { buildShotListFromReferences } from "@/lib/shoot/shot-list-from-references";
+import { queryShotReferences } from "@/lib/shoot/query-shot-references";
 
 const DeliverableSchema = z.object({
   id: z.string().optional(),
@@ -21,6 +23,7 @@ const ShotSchema = z.object({
   lighting: z.string(),
   deliverable_ids: z.array(z.string()),
   notes: z.string().optional(),
+  reference_id: z.string().optional(),
 });
 
 const BudgetSchema = z.object({
@@ -132,26 +135,23 @@ const shotListGateStep = createStep({
   }),
   execute: async ({ inputData, resumeData, suspend }) => {
     if (!resumeData?.approved) {
-      let shotCounter = 0;
-      const shots: z.infer<typeof ShotSchema>[] = inputData.approved_deliverables.flatMap((d) => {
-        const count = Math.max(1, Math.ceil(d.quantity / 3));
-        return Array.from({ length: count }, (_, si) => ({
-          shot_number: ++shotCounter,
-          description: `${d.channel} ${d.format ?? ""} — hero product`,
-          angle: si === 0 ? "front" : si === 1 ? "3/4 angle" : "detail",
-          lighting: d.channel.includes("feed") ? "natural window light" : "studio strobe",
-          deliverable_ids: [d.id ?? d.channel],
-        }));
-      });
-      const coveredIds = new Set(shots.flatMap((s) => s.deliverable_ids));
-      const uncovered = inputData.approved_deliverables
-        .filter((d) => !coveredIds.has(d.id ?? d.channel))
-        .map((d) => `Deliverable ${d.channel}/${d.format ?? ""} has no shots`);
+      // ponytail: wizard input has no product category yet — clothing default for fashion shoots
+      const referenceShotTypes = await queryShotReferences("clothing", inputData.channels);
+      if (!referenceShotTypes.length) {
+        throw new Error(
+          "No shot references found for these channels — lookupShotReferences returned empty; cannot invent angles",
+        );
+      }
+      const { shots, uncovered_deliverable_warnings } = buildShotListFromReferences(
+        inputData.approved_deliverables,
+        referenceShotTypes,
+      );
       return await suspend({
         shots,
-        uncovered_warnings: uncovered,
+        uncovered_warnings: uncovered_deliverable_warnings,
         total_shots: shots.length,
-        message: "Review shot list. All deliverables must be covered before approving.",
+        message:
+          "Review shot list grounded in the reference library. Approve before budget — angles are from lookupShotReferences, not invented.",
       });
     }
     return {
