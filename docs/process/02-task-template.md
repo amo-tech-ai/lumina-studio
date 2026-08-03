@@ -50,13 +50,22 @@ Product surfaces: Brand Hub, Command Center, Assets DNA, shoots, booking, agents
 
 ## Install in Linear
 
-1. IPI team → Settings → Templates → New  
-2. Paste `templates/linear-issue-body.md`  
-3. Set as default for team members ([Linear docs](https://linear.app/docs/issue-templates))
+See **[`templates/LINEAR-DEFAULT-INSTALL.md`](./templates/LINEAR-DEFAULT-INSTALL.md)**.
+
+1. IPI team → Settings → Templates → New → paste `templates/linear-issue-body.md`  
+2. Set as default for team members ([Linear docs](https://linear.app/docs/issue-templates))  
+3. Sync rewritten specs when key available:
+   `infisical run --env=dev -- node scripts/linear-sync-issue-body.mjs`
 
 ## Done when
 
 - [x] Reusable template published under `docs/process/templates/`
 - [x] Skill `linear-spec-template.md` points at the same format
-- [ ] Linear team default template updated (manual — Linear MCP needsAuth)
-- [ ] Next 5 active issues rewritten to this shape
+- [ ] Linear team default template updated (**blocked here:** MCP needsAuth in Cloud; use UI install kit)
+- [x] Next 5 active issues rewritten to this shape (local SSOT):
+  - IPI-209 · SHOOT-DETAIL-001
+  - IPI-536 · PLN-009
+  - IPI-542 · PLN-010
+  - IPI-575 · PLN-DATA-001C
+  - IPI-533 · CF-AI-019
+- [ ] Linear descriptions synced (run `linear-sync-issue-body.mjs` after auth)
