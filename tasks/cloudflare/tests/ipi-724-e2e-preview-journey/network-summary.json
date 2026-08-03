@@ -212,8 +212,8 @@
       "retries": 0
     },
     {
-      "host": "",
-      "path": "https://ipix-operator-preview.sk-498.workers.dev/895b6bda-3c8b-4b4d-95ef-20b8d2766151",
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/895b6bda-3c8b-4b4d-95ef-20b8d2766151",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
@@ -1842,8 +1842,8 @@
       "retries": 0
     },
     {
-      "host": "",
-      "path": "https://ipix-operator-preview.sk-498.workers.dev/43d85b76-c728-4391-82c8-2971234a623a",
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/43d85b76-c728-4391-82c8-2971234a623a",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
@@ -2172,8 +2172,8 @@
       "retries": 0
     },
     {
-      "host": "",
-      "path": "https://ipix-operator-preview.sk-498.workers.dev/0ca4503f-6710-4d85-9de1-3355d2ab6fff",
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/0ca4503f-6710-4d85-9de1-3355d2ab6fff",
       "method": "GET",
       "status": 200,
       "resourceType": "script",

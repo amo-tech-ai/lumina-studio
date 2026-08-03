@@ -1,9 +1,9 @@
 {
-  "task": "IPI-724 · CF-UJ-018 — End-to-End Preview User Journey Validation",
+  "task": "IPI-724 \u00b7 CF-UJ-018 \u2014 End-to-End Preview User Journey Validation",
   "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
   "worker": "ipix-operator-preview",
   "verify_readonly": false,
-  "evidence_out": "/home/sk/wt-ipi-915-signout/tasks/cloudflare/tests/ipi-724-e2e-preview-journey",
+  "evidence_out": "tasks/cloudflare/tests/ipi-724-e2e-preview-journey",
   "worker_version_id": "50bd2987-b728-4b9c-a8da-f2a1e66841d5",
   "deployment_id": "675f8f91-7073-439c-bef8-3ecaff596e49",
   "worker_version_created_on": "2026-08-02T04:46:48.574511Z",
@@ -39,7 +39,7 @@
       "service": "ai-gateway"
     }
   },
-  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 — redeploy HEAD before claiming current.",
+  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 \u2014 redeploy HEAD before claiming current.",
   "criteria": {
     "01_login": {
       "pass": true,
@@ -187,7 +187,7 @@
     },
     "13c_signout_request": {
       "pass": true,
-      "note": "POST /auth/signout -> 303 location=https://ipix-operator-preview.sk-498.workers.dev/login — requires 3xx redirect to /login without signoutError",
+      "note": "POST /auth/signout -> 303 location=https://ipix-operator-preview.sk-498.workers.dev/login \u2014 requires 3xx redirect to /login without signoutError",
       "status": 303,
       "location": "https://ipix-operator-preview.sk-498.workers.dev/login",
       "redirect_to_login": true,
@@ -223,7 +223,7 @@
   "hard_ac_pass": true,
   "recommendation": "Done",
   "evidence_policy": {
-    "har": "minimal + content omit + urlFilter **/api/**; deleted after run — never commit",
+    "har": "minimal + content omit + urlFilter **/api/**; deleted after run \u2014 never commit",
     "preferred": "network-summary.json (host/path/method/status/latency/cf-ray only)",
     "ignoreHTTPSErrors": false
   }

@@ -10,7 +10,7 @@
  */
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
@@ -189,14 +189,18 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
 
 function sanitizeNetworkUrl(url) {
   try {
-    const u = new URL(url);
+    let u = new URL(url);
+    // blob:https://host/uuid → host "" and pathname is the inner absolute URL.
+    if (u.protocol === "blob:" && /^https?:\/\//i.test(u.pathname)) {
+      u = new URL(u.pathname);
+    }
     return {
-      host: u.host,
+      host: u.host || null,
       path: u.pathname,
       // Never retain query — login/auth leaks have appeared in automation URLs.
     };
   } catch {
-    return { host: null, path: url.split("?")[0] };
+    return { host: null, path: String(url).split("?")[0] };
   }
 }
 
@@ -659,19 +663,7 @@ async function main() {
         // CodeRabbit: Response.headers() intentionally omits Set-Cookie —
         // read it via headerValues() to actually detect the deletion header.
         signoutSetCookie = (await signoutResponse.headerValues("set-cookie")).length > 0;
-        // Cookie deletions land with the response — poll briefly for them to apply.
-        // The AUTHORITATIVE check runs again after the /login navigation below
-        // (the app only navigates once the logout POST has completed, so the
-        // deletion headers have been processed by then).
-        const deadline = Date.now() + 3000;
-        do {
-          sbCookieNamesAfter = (await context.cookies())
-            .filter((c) => c.name.startsWith("sb-"))
-            .map((c) => c.name);
-          if (sbCookieNamesAfter.length === 0) break;
-          await new Promise((r) => setTimeout(r, 100));
-        } while (Date.now() < deadline);
-        sbCookiesAfter = sbCookieNamesAfter.length;
+        // Cookie poll runs once after /login navigation (authoritative).
         break;
       }
     }
@@ -801,32 +793,45 @@ async function main() {
       }
 
       // 13f. Logout is idempotent — a second POST /auth/signout while already
-      // logged out must still redirect to /login and not error.
-      // CodeRabbit (Major): guard against page.evaluate() throwing (network
-      // error) or an opaque/empty Response.url() failing URL parsing — either
-      // would previously abort main() before writeEvidence() ever ran.
+      // logged out must still 3xx to /login (not the signoutError → /app → /login
+      // chain that redirect:"follow" would disguise as a clean /login landing).
       try {
         const idempotent = await page.evaluate(async () => {
           const r = await fetch("/auth/signout", {
             method: "POST",
             credentials: "same-origin",
-            redirect: "follow",
+            redirect: "manual",
           });
-          return { status: r.status, finalUrl: r.url, ok: r.ok };
+          return {
+            status: r.status,
+            location: r.headers.get("location"),
+            type: r.type,
+          };
         });
-        let finalPath = null;
-        try {
-          finalPath = new URL(idempotent.finalUrl, PREVIEW).pathname;
-        } catch {
-          finalPath = null;
+        let redirectToLogin = false;
+        let locationPath = null;
+        if (idempotent.location) {
+          try {
+            const loc = new URL(idempotent.location, PREVIEW);
+            locationPath = loc.pathname;
+            redirectToLogin =
+              loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
+          } catch {
+            redirectToLogin = false;
+          }
         }
-        // Require the follow-redirect landing on /login — a bare 200 at
-        // /auth/signout (r.ok) must not pass as idempotent logout success.
         mark(
           "13f_signout_idempotent",
-          finalPath === "/login",
-          `status=${idempotent.status} final=${finalPath ?? "unparseable"} ok=${idempotent.ok}`,
-          { status: idempotent.status, final_path: finalPath, ok: idempotent.ok },
+          idempotent.status >= 300 &&
+            idempotent.status < 400 &&
+            redirectToLogin,
+          `status=${idempotent.status} location=${idempotent.location ?? "none"} path=${locationPath ?? "n/a"}`,
+          {
+            status: idempotent.status,
+            location: idempotent.location,
+            location_path: locationPath,
+            redirect_to_login: redirectToLogin,
+          },
         );
       } catch (e) {
         mark(
@@ -891,7 +896,8 @@ async function main() {
     worker:
       targetHost === defaultPreviewHost ? "ipix-operator-preview" : `host:${targetHost}`,
     verify_readonly: READONLY,
-    evidence_out: OUT,
+    // Repo-relative so artifacts do not embed machine/user absolute paths.
+    evidence_out: relative(REPO_ROOT, OUT) || ".",
     ...deploymentIdentity,
     cf_ray_health: healthCfRay,
     region_guess: region,
