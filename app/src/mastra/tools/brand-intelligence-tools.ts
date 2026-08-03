@@ -269,6 +269,82 @@ export const approveDraftTool = createTool({
   },
 });
 
+const similarBrandSchema = z.object({
+  brandId: z.string().uuid(),
+  brandName: z.string(),
+  similarity: z.number(),
+  sharedNodes: z
+    .array(z.object({ node_type: z.string(), label: z.string() }))
+    .nullable(),
+});
+
+export const searchSimilarBrands = createTool({
+  id: "searchSimilarBrands",
+  description:
+    "Find brands semantically similar to the current brand via pgvector search_brands RPC. " +
+    "Use when the operator asks for comparable brands, competitive peers, or who looks like this brand. " +
+    "Only cite neighbors returned by this tool — never invent brand names or similarity scores.",
+  inputSchema: z.object({
+    brandId: z.string().uuid(),
+    limit: z.number().int().min(1).max(20).optional().default(5),
+  }),
+  outputSchema: z.object({
+    sourceBrandId: z.string().uuid(),
+    sourceBrandName: z.string(),
+    asOf: z.string(),
+    neighbors: z.array(similarBrandSchema),
+    message: z.string().optional(),
+  }),
+  execute: async ({ brandId, limit }) => {
+    const sb = adminClient();
+    const { data: brand, error: brandErr } = await sb
+      .from("brands")
+      .select("id, name, embedding")
+      .eq("id", brandId)
+      .single();
+    if (brandErr || !brand) throw new Error(`Brand not found: ${brandId}`);
+
+    const asOf = new Date().toISOString();
+    if (!brand.embedding) {
+      return {
+        sourceBrandId: brand.id,
+        sourceBrandName: brand.name,
+        asOf,
+        neighbors: [],
+        message:
+          "This brand has no embedding yet — run brand analysis first, then retry similar-brand search.",
+      };
+    }
+
+    const { data, error } = await sb.rpc("search_brands", {
+      p_embedding: brand.embedding,
+      p_limit: limit,
+      p_exclude_brand_id: brandId,
+    });
+    if (error) throw new Error(`search_brands failed: ${error.message}`);
+
+    const neighbors = (data ?? []).map((row) => ({
+      brandId: row.brand_id,
+      brandName: row.brand_name,
+      similarity: Number(row.similarity),
+      sharedNodes: Array.isArray(row.shared_nodes)
+        ? (row.shared_nodes as { node_type: string; label: string }[])
+        : null,
+    }));
+
+    return {
+      sourceBrandId: brand.id,
+      sourceBrandName: brand.name,
+      asOf,
+      neighbors,
+      message:
+        neighbors.length === 0
+          ? "No similar brands with embeddings were found in the catalog."
+          : undefined,
+    };
+  },
+});
+
 export const startBrandAnalysis = createTool({
   id: "startBrandAnalysis",
   description:
@@ -296,6 +372,7 @@ export const brandIntelligenceTools = {
   getBrandProfile,
   getBrandScores,
   explainPillar: explainPillarTool,
+  searchSimilarBrands,
   approveDraft: approveDraftTool,
   startBrandAnalysis,
 } as const;
