@@ -1,116 +1,62 @@
 # 02 · Task Template
 
-**Goal:** Every Linear IPI issue is clear, real-world, and executable as a multistep agent prompt.
+**Goal:** Every Linear IPI issue uses one reusable format — real business value, platform-first, fewer PR errors, faster MVP.
 
-**Depends on:** [01](./01-development-standards.md)  
-**Reuse:** `.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md` + `linear-prompt-engineering.md`  
-**Do not:** invent a second SSOT — extend the existing template sections below.
+**Canonical files**
+| File | Use |
+|------|-----|
+| [`templates/linear-issue-body.md`](./templates/linear-issue-body.md) | Paste into Linear team template + `docs/linear/issues/` |
+| [`templates/README.md`](./templates/README.md) | Install + quality gate + research notes |
+| [`templates/linear-task-example.md`](./templates/linear-task-example.md) | Filled DNA/Assets example |
+| Skill SSOT | `.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md` |
 
----
-
-## Required sections (every issue)
-
-| # | Section | What to write |
-|---|---------|---------------|
-| 1 | Purpose | One sentence outcome |
-| 2 | Real-world iPix example | Named screen / persona / workflow (Brand Hub, Planner, booking…) |
-| 3 | User journey | Before → during → after |
-| 4 | Business value | Why launch care |
-| 5 | MVP stage | **Core MVP** · **Post-MVP** · **Advanced** |
-| 6 | Dependencies | Blocks / blocked-by / parallel OK? |
-| 7 | Platform-first plan | Dashboard → CLI → docs → examples → reuse → custom |
-| 8 | AI research prompt | Paste from [03](./03-ai-research-playbook.md) |
-| 9 | Implementation prompt | Multistep A→E with `proof:` commands |
-| 10 | Tests | Unit / typecheck / verify matrix rows |
-| 11 | Real-world validation | Local :3002 + ipix.co + Chrome/Playwright |
-| 12 | Quality score | Priority · complexity · risk · user value · launch value (1–5) |
-| 13 | Merge checklist | One concern · CI green · no secrets · docs/code split |
-
-**Title format:** `IPI-NNN · SPEC — Plain English real-world title`  
-Bad: `Fix embeddings` · Good: `IPI-492 · CF-AI-004c — Clear errors when brand-matching embeddings fail`
+**Depends on:** [01](./01-development-standards.md) · [03](./03-ai-research-playbook.md) · [04](./04-testing-qa-playbook.md)
 
 ---
 
-## Grade before coding
+## Title
 
-| Question | Fail → |
-|----------|--------|
-| Essential for launch? | Defer |
-| Already exists in repo/dashboard? | Close / reuse |
-| Over-engineering? | Cut scope |
-| Duplicate Linear issue? | Merge |
-| Better GitHub/template/SDK? | Platform-first |
+`IPI-NNN · TASK-ID — Real-world operator title`
 
----
+## Must include
 
-## Multistep prompt — rewrite one Linear issue
+Purpose · Real-world iPix example · User journey · Business value · MVP stage (Core / Launch Blocker / Post-MVP / Advanced) · Dependencies · Research checklist · Platform-first plan · Multi-step implementation prompt · Stack · Skills/agents/hooks/commands · Tests · Real-world validation · Risks/rollback · AC · PR evidence · Quality scores
+
+## Platform-first
+
+```text
+Dashboard → CLI → Existing code → Official docs → SDK → GitHub → Templates
+  → Smallest custom code → Tests → Browser → PR
+```
+
+## Multistep prompt — create/rewrite one issue
 
 ```xml
-<role>You rewrite Linear issues into executable iPix agent prompts.</role>
-
+<role>You create or rewrite one iPix Linear issue using the reusable task template.</role>
 <context>
-Product: iPix / Lumina Studio — fashion/DTC operators on /app.
-Stack: Next.js app/, Supabase remote-only, Mastra, CopilotKit v2.
-Naming: IPI-NNN · SPEC — Plain English title.
-SSOT: docs/linear/issues/IPI-*.md
+Template: docs/process/templates/linear-issue-body.md
+Product surfaces: Brand Hub, Command Center, Assets DNA, shoots, booking, agents.
 </context>
-
 <task>
-1. Load issue IPI-NNN (Linear MCP or docs/linear/issues).
-2. Score: priority, complexity, risk, user value, launch value (1–5). Classify MVP stage.
-3. Rewrite title to real-world operator language.
-4. Fill all 13 template sections; keep short.
-5. Add Mermaid: current vs proposed flow + failure points.
-6. Mark parallel / blocked / launch-blocker.
-7. Sync docs/linear/issues + Linear description (script or MCP).
+1. Research: current code, official docs, GitHub examples, Dashboard/CLI options.
+2. Run quality checks; set MVP stage + scores; defer if not needed.
+3. Fill every required section; keep short tables.
+4. Write A→E with proof commands; include local :3002 + journey + agent tests if relevant.
+5. Write docs/linear/issues/IPI-NNN-….md; sync Linear when MCP/API available.
 </task>
-
-<constraints>
-- One concern per issue/PR.
-- Custom code last on platform-first ladder.
-- No bare IDs in titles without SPEC + English.
-- Output length: scannable tables, not essays.
-</constraints>
-
-<output_format>
-Verdict · Scores table · Rewritten issue markdown · Mermaid · Open questions
-</output_format>
+<constraints>One concern. Custom code last. No bare IDs. Concise.</constraints>
+<output_format>Verdict · scores · full issue markdown · open questions</output_format>
 ```
 
----
+## Install in Linear
 
-## Multistep prompt — batch triage backlog
-
-```xml
-<task>
-1. List open IPI issues (P0/P1).
-2. For each: MVP stage + parallelizable? + launch blocker?
-3. Flag over-engineered or duplicate.
-4. Propose next 5 ship order.
-</task>
-<output_format>| ID · Title | Stage | Parallel | Blocker | Action |</output_format>
-```
-
----
-
-## Mermaid — task quality gate
-
-```mermaid
-flowchart TD
-  A[Draft issue] --> B{Real-world title?}
-  B -->|no| B1[Rewrite title]
-  B -->|yes| C{13 sections complete?}
-  C -->|no| C1[Fill gaps]
-  C -->|yes| D{Essential + MVP tagged?}
-  D -->|Advanced only| E[Park]
-  D -->|Core/Post| F{Platform-first checked?}
-  F -->|custom-first| F1[Replan]
-  F -->|ok| G[Ready for research prompt]
-```
-
----
+1. IPI team → Settings → Templates → New  
+2. Paste `templates/linear-issue-body.md`  
+3. Set as default for team members ([Linear docs](https://linear.app/docs/issue-templates))
 
 ## Done when
 
-- [ ] Template linked from Linear project / skill Phase 1
+- [x] Reusable template published under `docs/process/templates/`
+- [x] Skill `linear-spec-template.md` points at the same format
+- [ ] Linear team default template updated (manual — Linear MCP needsAuth)
 - [ ] Next 5 active issues rewritten to this shape
