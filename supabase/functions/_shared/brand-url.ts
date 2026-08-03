@@ -28,7 +28,8 @@ export const PRIVATE_HOST_PATTERNS: RegExp[] = [
   /^::$/,
   /^::1$/,
   /^::ffff:/i,
-  /^fc00:/i,
+  // RFC 4193 unique local (ULA) fc00::/7 = fc00::/8 (unassigned, e.g. cjdns) + fd00::/8
+  /^fc[0-9a-f]{2}:/i,
   /^fd[0-9a-f]{2}:/i,
   /^fe[89ab][0-9a-f]:/i,
   /\.local$/i,
