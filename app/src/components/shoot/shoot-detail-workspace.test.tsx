@@ -9,6 +9,10 @@ vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (
 
 vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={props.alt} /> }));
 
+vi.mock("@copilotkit/react-core/v2", () => ({
+  useAgentContext: () => {},
+}));
+
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
