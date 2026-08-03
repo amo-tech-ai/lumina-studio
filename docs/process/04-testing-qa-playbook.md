@@ -97,7 +97,7 @@ Copy into Linear § Tests / Real-world validation:
 ### Journey — IPI-NNN
 **Persona:** Operator | Engineer  
 **Scenario:** <e.g. Open shoot from /app/shoots and confirm brief loads>  
-** creds:** qa@ipix.test via Infisical (QA_PASSWORD)  
+**Creds:** qa@ipix.test via Infisical (QA_PASSWORD)  
 **Browsers:** Chromium (required) · Safari/Firefox if UI-critical  
 **Sizes:** 375×812 · 1280×800  
 
