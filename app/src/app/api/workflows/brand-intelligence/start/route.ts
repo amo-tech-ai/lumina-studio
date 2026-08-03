@@ -40,7 +40,9 @@ export async function POST(request: Request) {
   if (!actor.ok) {
     return NextResponse.json({ error: actor.error }, { status: actor.status });
   }
-  const { userId: actorId, accessToken, client: userSb } = actor;
+  // accessToken is used only for the RLS-scoped brand/role checks below — never
+  // passed into Mastra (IPI-817: snapshots must not store login credentials).
+  const { userId: actorId, client: userSb } = actor;
 
   // Visibility via RLS (brands_select_org). Check `error` before `!brand` so a real
   // DB/RLS failure is not reported as "not found".
@@ -88,16 +90,12 @@ export async function POST(request: Request) {
     // start (not startAsync): await through the first suspend so checkpoint
     // persistence completes before the response. startAsync returns early (IPI-803).
     // actorId is the verified JWT subject — never the operator-gate fallback (IPI-812).
-    // accessToken is still required: start-crawl (step 2) calls the start-brand-crawl
-    // edge function, whose resolveAuth() does auth.getUser(token) and records
-    // started_by — a service-role key would 401 there. It is persisted in
-    // mastra.mastra_workflow_snapshot for the life of the run; scrubbing that is
-    // tracked separately (see PR notes).
+    // Only brandId + actorId enter Mastra — start-crawl uses the service-role
+    // credential + actorId against the dual-auth edge (IPI-817 / PR-E).
     await run.start({
       inputData: {
         brandId,
         actorId,
-        accessToken,
       },
     });
     return NextResponse.json({ runId: run.runId });
