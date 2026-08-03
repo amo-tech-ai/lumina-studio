@@ -49,6 +49,8 @@ export class PlannerEngine {
         assigneeUserId: null,
         assigneeRole: null,
         sortOrder: phase.orderIndex,
+        // ponytail: proposed schedule only — real updated_at comes from DB after persist
+        updatedAt: "",
       });
 
       if (prevTaskId) {

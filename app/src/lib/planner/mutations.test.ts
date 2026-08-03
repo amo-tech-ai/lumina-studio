@@ -229,6 +229,7 @@ const BASE_TASK = {
   assigneeUserId: "u1",
   assigneeRole: null,
   sortOrder: 0,
+  updatedAt: "2026-07-10T00:00:00.000Z",
 };
 
 function instanceDetailOk(tasks: typeof BASE_TASK[]) {
