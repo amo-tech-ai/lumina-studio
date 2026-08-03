@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ONBOARDING_AUTH_REQUIRED,
+  ONBOARDING_AUTH_TRANSIENT,
   ONBOARDING_BRAND_NAME_REQUIRED,
+  isOnboardingAuthError,
+  isOnboardingAuthTransient,
   toUserFacingOnboardingError,
 } from "./onboarding-errors";
 
@@ -18,5 +22,20 @@ describe("toUserFacingOnboardingError", () => {
     expect(toUserFacingOnboardingError(new Error(ONBOARDING_BRAND_NAME_REQUIRED))).toMatch(
       /brand name/i,
     );
+  });
+
+  it("maps Auth session missing to a sign-in prompt", () => {
+    expect(toUserFacingOnboardingError(new Error("Auth session missing!"), "session")).toMatch(
+      /sign in/i,
+    );
+    expect(isOnboardingAuthError(new Error(ONBOARDING_AUTH_REQUIRED))).toBe(true);
+  });
+
+  it("maps transient auth refresh to try-again (not sign-in)", () => {
+    expect(toUserFacingOnboardingError(new Error(ONBOARDING_AUTH_TRANSIENT), "session")).toMatch(
+      /try again/i,
+    );
+    expect(isOnboardingAuthTransient(new Error(ONBOARDING_AUTH_TRANSIENT))).toBe(true);
+    expect(isOnboardingAuthError(new Error(ONBOARDING_AUTH_TRANSIENT))).toBe(false);
   });
 });
