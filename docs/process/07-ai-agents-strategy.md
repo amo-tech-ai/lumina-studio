@@ -14,7 +14,7 @@
 
 ## 1. Executive summary
 
-iPix already has **9 product agents** (+ `default` = durable Production Planner). CopilotKit v2 is the chat surface. Two Mastra workflows (`shoot-wizard`, `brand-intelligence`) encode fixed HITL processes. Heavy DB/crawl work stays in **Supabase Edge Functions**. AI inference routes through **Cloudflare AI Gateway**; the app itself is still on Vercel.
+iPix already has **8 distinct product agents** plus a **`default` alias** of `production-planner` (**9 registry keys**). CopilotKit v2 is the chat surface. Two Mastra **workflows** (`shoot-wizard`, `brand-intelligence`) — not registry agents — encode fixed HITL processes. Heavy DB/crawl work stays in **Supabase Edge Functions**. AI inference routes through **Cloudflare AI Gateway** (`AI_ROUTING_MODE` / per-agent flags where configured); the app itself is still on Vercel.
 
 **What works:** Planner → deliverables → shot list → budget with HITL; Brand Intelligence crawl/draft approve; Booking draft-only; CRM search/move/draft with won/lost HITL; Creative Director DNA evidence on assets; Model Match filter shortlist; Visual Identity + Social Discovery specialists.
 
@@ -77,7 +77,7 @@ flowchart TB
 
 **Legend:** **Keep** existing ID · **Hat** = capability on an existing agent (no new ID) · **New** only if justified · Class = MVP / Post-MVP / Advanced
 
-For every role below: problem → iPix example → user → expertise → I/O → tools/data → RAG → memory → HITL → runtime → security → failure → tests · class.
+For every role below (where applicable): problem → iPix example → user → expertise → I/O → tools/data → RAG → memory → HITL → runtime → security → failure → tests · class.
 
 ### 3.1 Keep — existing registry (deepen, don't clone)
 
@@ -271,7 +271,7 @@ Every agent earns trust by:
 - Stale: flag `as_of` > 90 days in UI; agent must say “based on crawl from …”.  
 - Low quality: low confidence from tools → ask human, don't invent.
 
-**Tenant isolation:** `resourceId` = `org:{orgId}::user:{userId}`; threads `org/workspace/entity`; all SQL under RLS.
+**Tenant isolation:** Derive `orgId` / `userId` from **authenticated server claims** (session/JWT) and enforce via RLS — never trust client-supplied `resourceId` alone. Set `resourceId` = `org:{orgId}::user:{userId}` on the server; threads `org/workspace/entity`; all SQL under RLS.
 
 ---
 
@@ -299,7 +299,7 @@ sequenceDiagram
 | Read / explain | Auto OK |
 | Draft (email, shot list, quote) | Show draft; no side effect |
 | Shortlist / log note | Explicit ask or button |
-| Create shoot / send booking / approve DNA / won-lost | **Page HITL or confirmed tool flag** |
+| Create shoot / send booking / approve DNA / won-lost | **Page HITL or confirmed tool flag** — server validates approver, tenant, action, entity version, and one-time token; never a client boolean alone |
 | Re-crawl / re-audit DNA | Explicit only; block if already running |
 
 ---

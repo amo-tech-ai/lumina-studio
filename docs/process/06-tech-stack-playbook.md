@@ -94,18 +94,18 @@ For each tool: **Purpose · Current setup · Core · Advanced · Latest updates 
 | Field | Content |
 |-------|---------|
 | **Purpose** | Edge AI routing, future app hosting, DB pooling for Mastra storage |
-| **Current setup (✅)** | App on **Vercel**. Custom Worker `services/cloudflare-worker/` is **production AI path**, frozen for new features (delete last via IPI-592). Native path: `env.AI.run()` + gateway `ipix-prod`. Hyperdrive `HYPERDRIVE_FRESH` / `ipix-supabase-fresh` in Wrangler; organic traffic still mostly `MASTRA_STORAGE_MODE=noop`. Cutover ~70% arch/preview; safety gates ~0% (IPI-708/709/707/763). |
+| **Current setup (✅)** | App on **Vercel**. Custom Worker `services/cloudflare-worker/` is **production AI path**, frozen for new features (delete last via **IPI-592 · CF-MIG-820 — Delete Custom AI Gateway Worker**). Native path: `env.AI.run()` + gateway `ipix-prod`. Hyperdrive `HYPERDRIVE_FRESH` / `ipix-supabase-fresh` in Wrangler; organic traffic still mostly `MASTRA_STORAGE_MODE=noop`. Cutover ~70% arch/preview; safety gates ~0% (**IPI-708 · CF-ROLLBACK-001**, **IPI-709 · CF-OBS-001**, **IPI-707 · CF-SMOKE-001**, **IPI-763 · CF-CI-001**). |
 | **Core features** | Workers bindings, AI Gateway logging/caching/limits, Wrangler, OpenNext preview |
 | **Advanced** | Dynamic model routes, Unified Billing, DO/Queues for agents, full DNS cutover |
 | **Latest (Aug 2026, docs ✅)** | Unified AI Gateway REST; spend limits; Workers AI catalog adds Kimi K2.6/K2.7, Gemma 4, GLM flash, tool-calling models |
 | **Benefits / limits** | Gateway observability without rewriting agents; OpenNext cutover still blocked on rollback/obs/smoke/protection |
-| **Security / cost** | Gateway auth (IPI-595 evidence exists); Workers AI + Gemini spend via gateway; don't expose CF tokens client-side |
-| **Gaps** | Cutover gates; Hyperdrive organic; per-agent native flips need `getCloudflareContext().env` (IPI-750 note) |
+| **Security / cost** | Gateway auth (**IPI-595 · AI Gateway auth** evidence exists); Workers AI + Gemini spend via gateway; don't expose CF tokens client-side |
+| **Gaps** | Cutover gates; Hyperdrive organic; per-agent native flips need `getCloudflareContext().env` (**IPI-750 · W0 — Attach cfEnv; zero agents flipped** note) |
 | **Best use cases** | Proxy all LLM calls; cache marketing `fast`; pool Mastra Postgres via Hyperdrive |
 | **Integrations** | Mastra `resolveModel` + `AI_ROUTING_AGENT_*`; Infisical secret sync workflow |
 | **Docs / GitHub** | [Workers](https://developers.cloudflare.com/workers/) · [AI Gateway](https://developers.cloudflare.com/ai-gateway/) · [Workers AI models](https://developers.cloudflare.com/workers-ai/models/) · [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) · [OpenNext CF](https://opennext.js.org/cloudflare) |
 | **Class** | Gateway = **MVP** · Cutover completion = **MVP** · Full Workers AI fleet = **Post-MVP** · Queues/DO agents = **Advanced** |
-| **Rec** | **Keep** gateway path · **Improve** cutover + Hyperdrive · **Replace** custom Worker only after native parity (IPI-592 last) · **Remove** nothing until cutover |
+| **Rec** | **Keep** gateway path · **Improve** cutover + Hyperdrive · **Replace** custom Worker only after native parity (**IPI-592 · CF-MIG-820 — Delete Custom AI Gateway Worker** last) · **Remove** nothing until cutover |
 
 **Best Cloudflare AI models per iPix agent (🟡 recommendation — validate with smoke before flipping flags):**
 
@@ -459,7 +459,7 @@ Ordered by launch leverage (platform-first):
 | Chatwoot | Support + WhatsApp without custom inbox | Post-MVP CRM |
 | Postiz (MCP) | Social publish from approved drafts | Post-MVP social |
 | Cloudflare Queue | Async brand jobs if Edge timeouts hurt | Advanced |
-| **Avoid now** | Apify (unless Firecrawl gap), OpenClaw in product, second vector DB |
+| **Avoid now** | Apify (unless Firecrawl gap), OpenClaw in product, second vector DB | — |
 
 ---
 

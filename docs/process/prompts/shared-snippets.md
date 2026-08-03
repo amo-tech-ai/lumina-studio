@@ -7,7 +7,8 @@ Copy into Linear issues or chat. Keep responses short (tables + verdict).
 ```xml
 <instructions>
 Research first. Do not write production code until you output a recommendation.
-Follow: official docs → GitHub examples → templates/recipes → iPix code → Dashboard/CLI → small custom.
+Follow: official docs → GitHub examples → templates/recipes → graphify query → targeted rg → trace real flow → iPix code → Dashboard/CLI → small custom.
+Do not broad-read source before graphify orients you (unless editing a known single file).
 </instructions>
 ```
 
@@ -34,7 +35,8 @@ One concern per PR. Never mix docs and production code.
 
 ```xml
 <validation>
-After code: test on localhost:3002 with qa@ipix.test; smoke ipix.co if safe;
+After code: test on localhost:3002 with qa@ipix.test;
+production smoke on ipix.co is read-only (no mutations) unless the user explicitly approves a specific write;
 exercise agent if relevant; list Problems · Improvements · Suggestions.
 </validation>
 ```

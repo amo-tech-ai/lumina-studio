@@ -1,10 +1,10 @@
 # Linear issue spec template (iPix)
 
-**Canonical reusable body (Linear + spec md):** [`docs/process/templates/linear-issue-body.md`](../../../../docs/process/templates/linear-issue-body.md)  
+**Canonical reusable body (Linear + spec md):** [`docs/process/templates/linear-issue-body.md`](../../../../docs/process/templates/linear-issue-body.md) — **SSOT paste body; edit there first.**  
 **Guide + install:** [`docs/process/templates/README.md`](../../../../docs/process/templates/README.md) · Playbook [02](../../../../docs/process/02-task-template.md)  
 **Prompt rules:** [linear-prompt-engineering.md](linear-prompt-engineering.md) · **A–E detail:** [linear-issue-steps.md](linear-issue-steps.md) · **Skills:** [domain-skill-routing.md](domain-skill-routing.md)
 
-Use one format for every executable IPI issue. Prefer the paste body above; this file is the skill entrypoint for Phase 1.
+This file is a **thin skill entrypoint / mirror** for Phase 1. Do not duplicate section text here — link to `linear-issue-body.md`.
 
 ---
 
@@ -81,7 +81,7 @@ Defer Advanced + launch value ≤2, or when Dashboard/CLI already solves it.
 | Field | Value |
 |-------|--------|
 | **MVP stage** | Core · Launch Blocker · Post-MVP · Advanced |
-| **Parallel** | OK / Must wait on IPI-… |
+| **Parallel** | OK / Must wait on **IPI-NNN · SPEC — Plain English title** (never bare `IPI-NNN`) |
 | **Blocked by** | … · **Unblocks:** … |
 | **Track** | Platform · UI · DNA · AI · Commerce · Media |
 | **Skills** | ipix-task-lifecycle · <domain> · worktrees · pr-workflow |

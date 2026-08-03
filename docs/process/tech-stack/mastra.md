@@ -5,8 +5,9 @@
 | | |
 |--|--|
 | **Purpose** | Server-side agents, tools, workflows, memory for `/app` |
-| **Current (✅)** | 9 agents + `default`; `@mastra/core` ~1.41; memory alpha; pg + observability packages |
-| **Core** | Registry, tools, `resolveModel`, org `resourceId` | **Advanced** | Evals, RAG modules, agent networks |
+| **Current (✅)** | 8 distinct product agents + `default` alias of `production-planner` (9 registry keys); `@mastra/core` ~1.41; memory alpha; pg + observability packages |
+| **Core** | Registry, tools, `resolveModel`, org `resourceId` |
+| **Advanced** | Evals, RAG modules, agent networks |
 | **Class** | Agents/tools/memory harden = **MVP** · Evals depth = **Post-MVP** |
 | **Rec** | **Keep** as only product agent runtime · **Improve** obs + Hyperdrive storage · no OpenClaw in product |
 

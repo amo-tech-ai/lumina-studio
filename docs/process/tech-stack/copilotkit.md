@@ -6,7 +6,8 @@
 |--|--|
 | **Purpose** | Operator chat, AG-UI stream, actions, shared state, human approval |
 | **Current (✅)** | v2 (~1.61) + `@ag-ui/mastra`; custom HITL on shoot wizard + brand-intelligence approve |
-| **Core** | Chat, actions, agent ids | **Advanced** | `useHumanInTheLoop`, generative UI |
+| **Core** | Chat, actions, agent ids |
+| **Advanced** | `useHumanInTheLoop`, generative UI |
 | **Class** | Chat/actions = **MVP** · Unify HITL on CK primitives = **Post-MVP** |
 | **Rec** | **Keep** v2 · **Improve** brand/shoot shared state · never v1 imports |
 

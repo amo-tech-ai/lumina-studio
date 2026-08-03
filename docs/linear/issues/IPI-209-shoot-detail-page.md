@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|--------|
 | **MVP stage** | Core · Launch Blocker |
-| **Parallel** | OK with DNA gallery (IPI-151) after shell stable; wait on auth/RLS-only PRs touching same RPC |
+| **Parallel** | OK with **IPI-151 · SHOOT-AI-004 — Auto-tag shoot photos + AI gallery** after shell stable; wait on auth/RLS-only PRs touching same RPC |
 | **Blocked by** | — |
 | **Unblocks** | Tab-fill follow-ups, DNA gallery, shoot edit actions |
 | **Track** | UI · Platform |
@@ -73,7 +73,7 @@ Shoot ops is a Core MVP path — list→detail is how brands run production in i
 | Tests → browser → PR | Below |
 
 **Do NOT:** Rebuild Vite shoot pages · mix DNA gallery into this PR  
-**Out of scope:** Full DNA gallery (IPI-151) · booking wizard · Vite `src/`
+**Out of scope:** Full **IPI-151 · SHOOT-AI-004 — Auto-tag shoot photos + AI gallery** · booking wizard · Vite `src/`
 
 ---
 

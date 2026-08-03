@@ -94,7 +94,7 @@ Path-conditional commands: always use **verify-matrix**.
 Copy into Linear § Tests / Real-world validation:
 
 ```markdown
-### Journey — IPI-NNN
+### Journey — IPI-NNN · SPEC — Plain-English title
 **Persona:** Operator | Engineer  
 **Scenario:** <e.g. Open shoot from /app/shoots and confirm brief loads>  
 **Creds:** qa@ipix.test via Infisical (QA_PASSWORD)  

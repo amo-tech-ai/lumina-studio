@@ -1,7 +1,7 @@
 # Research report template
 
 ```markdown
-## Research report — IPI-NNN · TASK-ID — Title (YYYY-MM-DD)
+## Research report — IPI-NNN · SPEC — Plain English title (YYYY-MM-DD)
 
 **User outcome:** <persona> on <surface> can <result>
 **MVP stage:** Core | Post-MVP | Advanced

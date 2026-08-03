@@ -13,7 +13,7 @@
 | **Track** | Platform · AI |
 | **Skills** | `ipix-task-lifecycle` · `cloudflare-workflow` · `pr-workflow` · `worktrees` |
 | **Agents / hooks / commands** | `/task` · Cloudflare MCP docs · worker tests |
-| **Stack** | `services/cloudflare-worker` · Zod (if already in worker deps) · Vitest |
+| **Stack** | `services/cloudflare-worker` · schema validation (Zod or worker-local validator) · Vitest |
 
 **Quality scores (1–5):** P4 · C2 · R3 · UV3 · LV4  
 **Linear:** https://linear.app/amo100/issue/IPI-533
@@ -22,7 +22,7 @@
 
 ## 1. Purpose
 
-Validate `buildEffectiveRegistry()` overrides with Zod so bad config falls back safely.
+Validate `buildEffectiveRegistry()` overrides with schema validation (Zod or worker-local validator) so bad config falls back safely.
 
 ## 2. Real-world iPix example
 
@@ -45,7 +45,7 @@ Prevents gateway misconfig from looking like a product outage during brand/agent
 
 - [x] Required for reliable AI path  
 - [x] Not duplicate of embed validation tasks  
-- [x] Reuse Zod if present; else minimal schema in worker  
+- [x] Reuse Zod if present; else minimal worker-local validator  
 - [x] Parallel OK outside registry file  
 
 **Verdict:** Ship — small worker hardening.
@@ -67,7 +67,7 @@ Prevents gateway misconfig from looking like a product outage during brand/agent
 | Dashboard | Optional: document override shape in CF notes |
 | CLI | `vitest` in worker package |
 | Existing | `DEFAULT_REGISTRY`, `buildEffectiveRegistry` |
-| Custom | Zod schema + integrate + tests |
+| Custom | Schema validation + tests |
 
 **Do NOT:** Change routing policy beyond validation · mix OpenNext cutover  
 **Out of scope:** New providers · UI for registry editing  
@@ -79,7 +79,7 @@ Prevents gateway misconfig from looking like a product outage during brand/agent
 ```xml
 <role>Implement IPI-533 · CF-AI-019 in cloudflare-worker only. One concern.</role>
 <task>
-1. Research current registry + Zod availability.
+1. Research current registry + validation approach (Zod if already in worker deps).
 2. Add schema; validate overrides; fallback to DEFAULT_REGISTRY on error.
 3. tool-calling requires function-calling capability.
 4. Tests for valid/invalid cases; run worker vitest.
@@ -115,6 +115,20 @@ Prevents gateway misconfig from looking like a product outage during brand/agent
 - **C:** tool-calling without function-calling rejected  
 - **E:** Unrelated embed/routing tests still pass  
 
-## 10–12. Tests / risks / PR evidence
+## 10. Tests & real-world validation
 
-Worker unit tests primary · Risk: over-strict schema blocking legit overrides → start with known providers enum from code · Rollback: revert PR · One concern: worker validation only.
+Worker unit tests primary (`services/cloudflare-worker` vitest). No browser required for infra-only change.
+
+## 11. Risks & rollback
+
+| Risk | Failure | Rollback |
+|------|---------|----------|
+| Over-strict schema blocks legit overrides | Deploy blocked on valid config | Start with known providers enum from code; revert PR |
+| Validation too loose | Bad override reaches prod | Tighten schema in follow-up PR |
+
+## 12. PR evidence required
+
+- [ ] One concern: worker validation only  
+- [ ] Title: `IPI-533 · CF-AI-019 — …`  
+- [ ] Proof: worker vitest + CI `cloudflare-worker-tests` green  
+- [ ] Residual risks named  

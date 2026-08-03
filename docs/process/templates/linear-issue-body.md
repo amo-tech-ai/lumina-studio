@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|--------|
 | **MVP stage** | Core · Launch Blocker · Post-MVP · Advanced |
-| **Parallel** | OK / Must wait on IPI-… |
+| **Parallel** | OK / Must wait on **IPI-NNN · SPEC — Plain English title** (never bare `IPI-NNN`) |
 | **Blocked by** | … |
 | **Unblocks** | … |
 | **Track** | Platform · UI · DNA · AI · Commerce · Media |
@@ -118,7 +118,7 @@
 - [ ] **E3** Preview (if deployed) — proof: URL + result  
 - [ ] **E4** Production-safe smoke on ipix.co (read-only unless approved) — proof: notes  
 - [ ] **E5** User journey + AI agent validation (if agents touched) — proof: prompts + outcomes  
-- [ ] **E6** PR evidence + Linear Done — proof: PR # · CI green  
+- [ ] **E6** PR merged (or explicit waiver) + Linear Done — proof: PR # · merged / waiver note · CI green  
 
 ---
 

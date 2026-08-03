@@ -31,9 +31,9 @@ description: >
 | Architecture / new tool / vendor | Full report + MVP stage |
 | Migration / RLS / auth | Full report + safety risks |
 | Debugging “how should we fix” | Short report: reuse vs patch |
-| User says implement immediately | Still 5-line verdict unless ≤3-file known pattern |
+| User says implement immediately | Still 5-line verdict unless all skip-rule conditions met (see above) |
 
-Skip full report only when: ≤3 files, known pattern, no Supabase/RLS/edge/Mastra/new vendor.
+Skip full report only when **all** of: ≤3 files **and** known pattern **and** no Supabase/RLS/edge/Mastra/new vendor **and** concrete wiring plan exists.
 
 ---
 

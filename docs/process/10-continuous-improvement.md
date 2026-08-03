@@ -46,12 +46,13 @@ Failure clusters · Fixes · Before-push checklist · Hook candidates
 
 ```xml
 <task>
+0. Verify not on `main`; worktree/branch matches the issue (`ipi/<id>-<slug>`).
 1. git diff — one concern only? docs vs code split?
 2. Run verify-matrix rows for touched paths.
 3. Confirm Linear title format + AC still true.
 4. Confirm platform-first decision recorded.
 5. Confirm real-world test notes or explicit N/A.
-6. Push; open/update PR with plain-English body.
+6. Push (never `--no-verify` except docs-only with no app code); open/update PR with plain-English body.
 </task>
 ```
 

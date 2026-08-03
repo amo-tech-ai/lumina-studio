@@ -5,10 +5,10 @@
 **Canonical files**
 | File | Use |
 |------|-----|
-| [`templates/linear-issue-body.md`](./templates/linear-issue-body.md) | Paste into Linear team template + `docs/linear/issues/` |
+| [`templates/linear-issue-body.md`](./templates/linear-issue-body.md) | **SSOT paste body** — Linear team template + `docs/linear/issues/` |
 | [`templates/README.md`](./templates/README.md) | Install + quality gate + research notes |
 | [`templates/linear-task-example.md`](./templates/linear-task-example.md) | Filled DNA/Assets example |
-| Skill SSOT | `.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md` |
+| [`.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md`](../.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md) | **Thin entrypoint / mirror** — links to `linear-issue-body.md`; do not fork section text |
 
 **Depends on:** [01](./01-development-standards.md) · [03](./03-ai-research-playbook.md) · [04](./04-testing-qa-playbook.md)
 
@@ -16,7 +16,7 @@
 
 ## Title
 
-`IPI-NNN · TASK-ID — Real-world operator title`
+`IPI-NNN · SPEC — Real-world operator title`
 
 ## Must include
 
@@ -60,7 +60,7 @@ See **[`templates/LINEAR-DEFAULT-INSTALL.md`](./templates/LINEAR-DEFAULT-INSTALL
 ## Done when
 
 - [x] Reusable template published under `docs/process/templates/`
-- [x] Skill `linear-spec-template.md` points at the same format
+- [x] Skill `linear-spec-template.md` mirrors canonical paste body (links to `linear-issue-body.md`)
 - [ ] Linear team default template updated (**blocked here:** MCP needsAuth in Cloud; use UI install kit)
 - [x] Next 5 active issues rewritten to this shape (local SSOT):
   - IPI-209 · SHOOT-DETAIL-001

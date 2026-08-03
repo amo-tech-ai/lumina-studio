@@ -6,7 +6,8 @@
 |--|--|
 | **Purpose** | Auth, Postgres+RLS, Edge Functions, Storage — operator data plane |
 | **Current (✅)** | Remote-only; PKCE login; Edge crawl/DNA/leads; verify scripts for RLS/edge/BI |
-| **Core** | Auth, RLS, migrations, Edge | **Advanced** | Realtime, Queues, Cron |
+| **Core** | Auth, RLS, migrations, Edge |
+| **Advanced** | Realtime, Queues, Cron |
 | **Class** | Auth/RLS/Edge = **MVP** · Realtime crawl UX = **Post-MVP** |
 | **Rec** | **Keep** · **Improve** Realtime progress + advisors habit · never local Docker as SSOT |
 

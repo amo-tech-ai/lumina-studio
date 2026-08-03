@@ -1,7 +1,7 @@
 # iPix Linear Task Template (reusable)
 
 **SSOT for paste into Linear + `docs/linear/issues/IPI-*.md`.**  
-**Agents:** load via `ipix-task-lifecycle` Phase 1 · mirrors [linear-spec-template](../../.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md).
+**Agents:** load via `ipix-task-lifecycle` Phase 1 · mirrors [linear-spec-template](../../../.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md).
 
 ## Research (before this template)
 

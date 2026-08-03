@@ -16,7 +16,23 @@ For IPI work, run **`ai-research`** (or `/research IPI-NNN`) and paste the repor
 | **Entry** | Spec or issue exists AND ≥1 of: unfamiliar module, external API unknown, RLS/migration impact, dependency drift, security unclear. |
 | **Exit** | Audit note saved (spec md `## Research notes` or `docs/audits/<date>-<topic>.md`). Risks ranked. Decision: **green-light** / **blocked** / **replan**. |
 
-Skip when: ≤3 file edits, no Supabase/RLS, wiring plan fully concrete.
+Skip when **all** of: ≤3 file edits **and** known pattern **and** no Supabase/RLS/edge/Mastra/new vendor **and** concrete wiring plan exists.
+
+---
+
+## `/research` report → Phase 2 `## Research notes` adapter
+
+The **`ai-research`** report (User outcome, MVP stage, Verdict, evidence table) is the primary artifact from `/research`. Before Phase 3, fold it into the issue spec under `## Research notes`:
+
+| Report field | Research notes section |
+|--------------|------------------------|
+| User outcome | **Question** |
+| Evidence column | **Sources** |
+| Finding rows (table) | **Findings** |
+| Risks and blockers + assumptions | **Risks** / **Assumptions** |
+| Verdict + Next | **Decision** |
+
+Do not duplicate prose — migrate once, then implement from the folded note.
 
 ---
 

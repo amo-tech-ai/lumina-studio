@@ -116,7 +116,7 @@ flowchart TD
   D --> E{git push}
   E -->|no pre-push installed| F[CI is first real gate]
   E --> G{mixed docs+code?}
-  G -->|no gate| H[PR #99-class risk]
+  G -->|no gate| H[mixed-concern PR risk]
   F --> I[Protect main CI]
   H --> I
 ```

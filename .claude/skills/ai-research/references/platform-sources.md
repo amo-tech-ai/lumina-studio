@@ -25,5 +25,6 @@ graphify query "<topic>"
 graphify explain "<symbol>"
 gh pr list --search "<topic>" --limit 10
 # vendor CLIs when authenticated:
-# npx wrangler whoami · supabase projects list · infisical secrets --env=dev  # names only
+# npx wrangler whoami · supabase projects list
+# infisical run --env=dev -- <cmd>   # inject secrets into a command — never dump all secrets
 ```

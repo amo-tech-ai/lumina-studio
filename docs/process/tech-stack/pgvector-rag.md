@@ -6,7 +6,8 @@
 |--|--|
 | **Purpose** | Semantic brand/context (later talent/assets) search |
 | **Current (✅)** | `vector(768)`; `search_brands` / context RPCs; model-match still filter-heavy |
-| **Core** | Healthy embeddings + RLS search | **Advanced** | Full RAG chat, rerank, hybrid |
+| **Core** | Healthy embeddings + RLS search |
+| **Advanced** | Full RAG chat, rerank, hybrid |
 | **Class** | Brand search = **MVP** · Domain RAG packs = **Post-MVP** |
 | **Rec** | **Keep** pgvector · **Improve** Brand Hub UX · no second vector product |
 
