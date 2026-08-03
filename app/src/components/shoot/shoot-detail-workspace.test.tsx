@@ -9,8 +9,9 @@ vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (
 
 vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={props.alt} /> }));
 
+const mockUseAgentContext = vi.fn();
 vi.mock("@copilotkit/react-core/v2", () => ({
-  useAgentContext: () => {},
+  useAgentContext: (...args: unknown[]) => mockUseAgentContext(...args),
 }));
 
 const refresh = vi.fn();
@@ -19,7 +20,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 import { ShootDetailWorkspace } from "./shoot-detail-workspace";
 import type { ShootDetailPayload } from "@/lib/shoot/get-shoot-detail";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  mockUseAgentContext.mockClear();
+});
 
 function payload(overrides: Partial<ShootDetailPayload> = {}): ShootDetailPayload {
   return {
@@ -66,6 +70,43 @@ describe("ShootDetailWorkspace — error / empty-shots states", () => {
     render(<ShootDetailWorkspace data={payload({ shots: [] })} fetchError={null} />);
     expect(screen.getByText("Spring Campaign — no shots yet")).toBeDefined();
     expect(screen.queryByRole("tablist")).toBeNull();
+  });
+});
+
+describe("ShootDetailWorkspace — agent context contract", () => {
+  it("forwards shoot/brand ids on populated and empty shot-list branches", () => {
+    const { unmount } = render(<ShootDetailWorkspace data={payload()} fetchError={null} />);
+    expect(mockUseAgentContext).toHaveBeenCalled();
+    const populated = mockUseAgentContext.mock.calls.at(-1)?.[0] as {
+      value: Record<string, unknown>;
+    };
+    expect(populated.value).toMatchObject({
+      surface: "shoot-detail",
+      shoot_id: "shoot-1",
+      brand_id: "brand-1",
+      shot_count: 1,
+      deliverable_count: 0,
+    });
+    unmount();
+    mockUseAgentContext.mockClear();
+
+    render(<ShootDetailWorkspace data={payload({ shots: [] })} fetchError={null} />);
+    const empty = mockUseAgentContext.mock.calls.at(-1)?.[0] as {
+      description: string;
+      value: { suggested_next_actions: string[]; shot_count: number };
+    };
+    expect(empty.value).toMatchObject({
+      shoot_id: "shoot-1",
+      brand_id: "brand-1",
+      shot_count: 0,
+    });
+    expect(empty.description).toMatch(/Shot list is empty/i);
+    expect(empty.value.suggested_next_actions.some((a) => /shot list/i.test(a))).toBe(true);
+  });
+
+  it("does not inject context when shoot data failed to load", () => {
+    render(<ShootDetailWorkspace data={null} fetchError="Unable to load this shoot." />);
+    expect(mockUseAgentContext).not.toHaveBeenCalled();
   });
 });
 
