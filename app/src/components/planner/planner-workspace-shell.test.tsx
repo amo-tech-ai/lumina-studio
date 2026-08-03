@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PlannerTask } from "@/lib/planner/types";
@@ -21,6 +21,11 @@ vi.mock("./adaptive-panel", () => ({
   AdaptivePanel: () => null,
 }));
 
+const setViewConfigAction = vi.fn();
+vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
+  setViewConfigAction: (...args: unknown[]) => setViewConfigAction(...args),
+}));
+
 const setSelection = vi.fn();
 vi.mock("@/lib/planner/use-planner-selection", () => ({
   usePlannerSelection: () => ({
@@ -35,6 +40,11 @@ import { PlannerWorkspaceShell } from "./planner-workspace-shell";
 afterEach(() => {
   cleanup();
   setSelection.mockClear();
+  setViewConfigAction.mockReset();
+});
+
+beforeEach(() => {
+  setViewConfigAction.mockResolvedValue({ ok: true, data: { instanceId: INSTANCE_ID } });
 });
 
 const INSTANCE_ID = "i1";
@@ -237,6 +247,128 @@ describe("PlannerWorkspaceShell", () => {
     it("does not mount the bar without the shared payload — AC-G", () => {
       render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
       expect(screen.queryByTestId("planner-now-next-bar")).toBeNull();
+    });
+  });
+
+  describe("IPI-582 setViewConfig persistence", () => {
+    it("persists timeline/kanban/calendar switches and skips list", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "kanban" });
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      expect(screen.getByRole("tab", { name: /List/ }).getAttribute("aria-selected")).toBe("true");
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(2));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "calendar" });
+    });
+
+    it("no-ops when re-selecting the already-persisted view", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="kanban" />);
+
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      // Still one write — Calendar was already the last persisted value.
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the session view and shows a warning when persistence fails", async () => {
+      const user = userEvent.setup();
+      setViewConfigAction.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." },
+      });
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe("true");
+      await waitFor(() => expect(screen.getByTestId("planner-view-persist-warning")).toBeDefined());
+    });
+
+    it("shows the same warning when setViewConfigAction rejects (transport)", async () => {
+      const user = userEvent.setup();
+      setViewConfigAction.mockRejectedValueOnce(new Error("network down"));
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe("true");
+      await waitFor(() => expect(screen.getByTestId("planner-view-persist-warning")).toBeDefined());
+    });
+
+    it("supersedes an in-flight preference write when the operator returns to the prior tab", async () => {
+      const user = userEvent.setup();
+      let resolveKanban: ((value: unknown) => void) | undefined;
+      setViewConfigAction
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveKanban = resolve;
+            }),
+        )
+        .mockResolvedValue({ ok: true, data: { instanceId: INSTANCE_ID } });
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="timeline" />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "kanban" });
+
+      // Return to Timeline while Kanban write is still pending — must not no-op.
+      await user.click(screen.getByRole("tab", { name: /Timeline/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(2));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "timeline" });
+
+      // Stale Kanban success must not become lastPersisted.
+      resolveKanban?.({ ok: true, data: { instanceId: INSTANCE_ID } });
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(2));
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      await user.click(screen.getByRole("tab", { name: /Timeline/ }));
+      // Timeline is the correct last persisted value — no third write.
+      expect(setViewConfigAction).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("tab", { name: /Timeline/ }).getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("no-ops re-selecting the in-flight target after a session-only detour", async () => {
+      const user = userEvent.setup();
+      let resolveKanban: ((value: unknown) => void) | undefined;
+      setViewConfigAction.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveKanban = resolve;
+          }),
+      );
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="timeline" />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+
+      // List is session-only — must not clear pending kanban.
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      // Still one write — kanban was already the in-flight target.
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe("true");
+
+      resolveKanban?.({ ok: true, data: { instanceId: INSTANCE_ID } });
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+    });
+
+    it("initializes from initialView (getViewConfig)", () => {
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="calendar" />);
+      expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe("true");
     });
   });
 });

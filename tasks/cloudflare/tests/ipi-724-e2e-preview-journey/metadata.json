@@ -2,36 +2,44 @@
   "task": "IPI-724 \u00b7 CF-UJ-018 \u2014 End-to-End Preview User Journey Validation",
   "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
   "worker": "ipix-operator-preview",
-  "worker_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
-  "cf_ray_health": "a1df76eb1ffe0c83-MIA",
+  "verify_readonly": false,
+  "evidence_out": "tasks/cloudflare/tests/ipi-724-e2e-preview-journey",
+  "worker_version_id": "50bd2987-b728-4b9c-a8da-f2a1e66841d5",
+  "deployment_id": "675f8f91-7073-439c-bef8-3ecaff596e49",
+  "worker_version_created_on": "2026-08-02T04:46:48.574511Z",
+  "identity_source": "wrangler deployments list --env preview --json (latest by created_on)",
+  "identity_error": null,
+  "evidence_runner_git_sha": "5a708fa52bb848ec88b29c1556900e492c99bc89",
+  "deployment_git_sha": null,
+  "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
+  "cf_ray_health": "a258283258fd45f2-MIA",
   "region_guess": "MIA",
   "browser": {
     "name": "chromium",
     "version": "149.0.7827.55"
   },
   "playwright_version": "1.61.1",
-  "started_at": "2026-07-20T05:11:10.277Z",
-  "finished_at": "2026-07-20T05:12:57.721Z",
+  "started_at": "2026-08-03T20:43:31.526Z",
+  "finished_at": "2026-08-03T20:45:34.103Z",
   "performance": {
-    "command_center_ms": 7711,
+    "command_center_ms": 14064,
     "command_center_budget_ms": 5000,
-    "copilot_init_ms": 12,
+    "copilot_init_ms": 29,
     "copilot_init_budget_ms": 3000,
-    "first_stream_token_ms": 1338,
+    "first_stream_token_ms": 2589,
     "first_stream_token_budget_ms": 5000
   },
   "ai_health": {
     "status": "ok",
-    "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+    "gatewayUrl": "binding:AI_GATEWAY",
     "hasApiKey": true,
-    "adapterAvailable": true,
     "probeVia": "service_binding",
     "gateway": {
       "status": "ok",
       "service": "ai-gateway"
     }
   },
-  "adapterAvailable_note": "Preview returned adapterAvailable:true at evidence time (cosmetic; removed on main in #512). Redeploy HEAD before claiming current Worker code.",
+  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 \u2014 redeploy HEAD before claiming current.",
   "criteria": {
     "01_login": {
       "pass": true,
@@ -43,23 +51,23 @@
     },
     "03_widgets": {
       "pass": true,
-      "note": "navLinks=9 chatDock=true mainChars=681"
+      "note": "navLinks=9 chatDock=true mainChars=639"
     },
     "perf_command_center": {
       "pass": false,
-      "note": "7711ms (budget 5000ms soft)",
-      "ms": 7711,
+      "note": "14064ms (budget 5000ms soft)",
+      "ms": 14064,
       "budgetMs": 5000,
       "soft": true
     },
     "04_copilot_init": {
       "pass": true,
-      "note": "dock=true composer=true 12ms"
+      "note": "dock=true composer=true 29ms"
     },
     "perf_copilot_init": {
       "pass": true,
-      "note": "12ms (budget 3000ms soft)",
-      "ms": 12,
+      "note": "29ms (budget 3000ms soft)",
+      "ms": 29,
       "budgetMs": 3000,
       "soft": true
     },
@@ -129,20 +137,19 @@
       "status": 200,
       "body": {
         "status": "ok",
-        "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+        "gatewayUrl": "binding:AI_GATEWAY",
         "hasApiKey": true,
-        "adapterAvailable": true,
         "probeVia": "service_binding",
         "gateway": {
           "status": "ok",
           "service": "ai-gateway"
         }
       },
-      "cfRay": "a1df76eb1ffe0c83-MIA"
+      "cfRay": "a258283258fd45f2-MIA"
     },
     "07_chat_send": {
       "pass": true,
-      "note": "POST status=200 ct=text/event-stream firstByte~1338ms"
+      "note": "POST status=200 ct=text/event-stream firstByte~2589ms"
     },
     "08_stream": {
       "pass": true,
@@ -154,55 +161,70 @@
     },
     "perf_first_token": {
       "pass": true,
-      "note": "1338ms (budget 5000ms soft)",
-      "ms": 1338,
+      "note": "2589ms (budget 5000ms soft)",
+      "ms": 2589,
       "budgetMs": 5000,
       "soft": true
     },
     "09_console_network": {
       "pass": true,
-      "note": "blockingConsole=0 criticalFailedApis=0 warnings=16",
+      "note": "blockingConsole=0 criticalFailedApis=0 warnings=15",
       "blockingConsole": [],
       "criticalFailed": []
     },
     "12_signout_ui": {
-      "pass": false,
-      "note": "NO Sign out / Log out control in operator UI \u2014 product gap; using cookie clear for anonymous check"
+      "pass": true,
+      "note": "clicked Sign out control; /auth/signout request observed"
     },
     "13_anon_info_401": {
       "pass": true,
       "note": "status=401",
-      "status": 401
+      "status": 401,
+      "storage_after_signout": {
+        "keys": [],
+        "supabase_session_keys": []
+      }
+    },
+    "13c_signout_request": {
+      "pass": true,
+      "note": "POST /auth/signout -> 303 location=https://ipix-operator-preview.sk-498.workers.dev/login \u2014 requires 3xx redirect to /login without signoutError",
+      "status": 303,
+      "location": "https://ipix-operator-preview.sk-498.workers.dev/login",
+      "redirect_to_login": true,
+      "cookie_deletion_headers_present": true,
+      "sb_cookies_before": 1,
+      "sb_cookies_after": 0,
+      "sb_cookie_names_after": []
+    },
+    "13d_sb_cookies_cleared": {
+      "pass": true,
+      "note": "no sb-* session cookies remain after sign-out",
+      "sb_cookies_before": 1,
+      "sb_cookies_after": 0
+    },
+    "13e_refresh_logged_out": {
+      "pass": true,
+      "note": "status after reload=401",
+      "status_after_reload": 401
+    },
+    "13f_signout_idempotent": {
+      "pass": true,
+      "note": "status=200 final=/login",
+      "status": 200,
+      "final_path": "/login"
     },
     "13b_protected_redirect": {
       "pass": true,
       "note": "url=https://ipix-operator-preview.sk-498.workers.dev/login?redirect=%2Fapp status=200"
     }
   },
-  "overall_pass": false,
+  "overall_pass": true,
   "soft_perf_pass": false,
-  "hard_ac_pass": false,
-  "recommendation": "Needs Fix \u2014 missing Sign out UI (hard AC; blocked on IPI-725 / PR #519)",
+  "hard_ac_pass": true,
+  "recommendation": "Done",
   "evidence_policy": {
     "har": "minimal + content omit + urlFilter **/api/**; deleted after run \u2014 never commit",
     "preferred": "network-summary.json (host/path/method/status/latency/cf-ray only)",
-    "ignoreHTTPSErrors": false,
-    "secret_scan": "assertNoSecrets in run-e2e.mjs before write",
-    "qa_rotation_required": true
-  },
-  "security_note": "No session.har in this PR tip. If any prior full HAR was exposed outside this tip, rotate qa@ipix.test and revoke sessions before treating evidence as safe.",
-  "deployment_id": "9f5a35e4-4721-416a-9b8f-8fe6c9c37117",
-  "worker_version_created_on": "2026-07-20T03:19:43.225217Z",
-  "identity_source": "wrangler deployments list --env preview --json (latest by created_on) \u2014 patched post-audit",
-  "identity_error": null,
-  "evidence_runner_git_sha": "0f73c7d7c58fea1a1737f2cbf88b298cbfa8a1df",
-  "deployment_git_sha": null,
-  "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
-  "evidence_class": "historical_partial \u2014 hard AC failed (missing Sign out UI); regenerate after IPI-725/#519 merges + optional preview redeploy",
-  "runner_audit_fixes": {
-    "har": "minimal + omit + urlFilter **/api/**; always deleted; not in git",
-    "exit_semantics": "process.exit(hard_ac_pass ? 0 : 1) \u2014 no special-case for missing sign-out",
-    "deployment_identity": "resolved via wrangler at run time",
-    "network_summary": "host/path/method/status/latency/cf-ray only (no query, cookies, bodies)"
+    "ignoreHTTPSErrors": false
   }
 }
