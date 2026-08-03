@@ -57,7 +57,8 @@ const SAVE_DEBOUNCE_MS = 400;
 
 type Deps = {
   createClient?: () => SupabaseClient;
-  getIdempotencyKey?: () => string;
+  /** Must be user-scoped (IPI-945). Default: getOrCreateOnboardingIdempotencyKey(userId). */
+  getIdempotencyKey?: (userId: string) => string;
   /** Override auth cookie hydrate wait (tests only). */
   authHydrateTimeoutMs?: number;
 };
@@ -100,7 +101,8 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         });
         // Auth wait can take up to hydrateTimeoutMs — bail if the effect cleaned up.
         if (cancelled) return;
-        const key = getIdempotencyKey();
+        // IPI-945: key is per userId — never reuse a browser-global token across accounts.
+        const key = getIdempotencyKey(user.id);
         const session = await getOrCreateOnboardingSession(supabase, user.id, key);
         if (cancelled) return;
         sessionRef.current = session;

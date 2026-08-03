@@ -20,6 +20,20 @@ import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 export async function middleware(request: NextRequest) {
   const sessionResponse = await updateSession(request);
 
+  const { pathname } = request.nextUrl;
+
+  // IPI-945 · ONB2-ROUTE-001 — legacy operator-shell wizard → standalone v2.
+  // Runs even when the auth gate is off in local `next dev`, so bookmarks never
+  // render the dual UI (3-step form + Copilot chrome).
+  if (pathname === "/app/onboarding" || pathname.startsWith("/app/onboarding/")) {
+    const url = request.nextUrl.clone();
+    url.pathname =
+      pathname.replace(/^\/app\/onboarding/, "/onboarding") || "/onboarding";
+    const redirect = NextResponse.redirect(url);
+    copyResponseCookies(sessionResponse, redirect);
+    return redirect;
+  }
+
   if (!isOperatorAuthEnforced()) {
     return sessionResponse;
   }
@@ -32,7 +46,6 @@ export async function middleware(request: NextRequest) {
   // This is UI protection only. Data authorization stays with RLS and the API
   // route guards (withOperatorAuth / resolveJwtActor); a middleware redirect is
   // not an authorization control.
-  const { pathname } = request.nextUrl;
   const isProtectedRoute =
     pathname === "/app" ||
     pathname.startsWith("/app/") ||

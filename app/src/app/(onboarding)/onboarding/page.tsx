@@ -19,7 +19,7 @@ import { OnboardingFlowLoader } from "./onboarding-flow-loader";
  * `onboarding` class (see onboarding.css). Nothing is loaded twice.
  *
  * IPI-835 · B1+C: real onboarding_sessions draft + screen 12 Realtime crawl progress.
- * Approval (Slice D) comes next. Legacy /app/onboarding stays until Slice E after IPI-836.
+ * IPI-945 · Slice E: `/app` zero-brand + `/app/onboarding` redirect here (legacy page retired).
  *
  * Auth is enforced in src/middleware.ts, which gates /onboarding exactly like
  * /app/*. That is UI protection only — data authorization stays with RLS.
