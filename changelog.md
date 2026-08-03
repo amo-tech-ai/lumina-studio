@@ -135,6 +135,14 @@ iPix process playbooks — development standards organized into 10 docs — plus
 issue specs for the five AI-agent MVP priorities and a script that creates them (Cloud cannot
 OAuth the Linear MCP).
 
+### 2026-08-03 — Planner remembers each user’s preferred view
+
+**IPI-582 · PLN-S1E — Remember Each User’s Preferred Planner View** (PR [#775](https://github.com/amo-tech-ai/lumina-studio/pull/775), `820acdf1` / `d66d55a9`).
+
+Switching Calendar / Board / Timeline on a shoot used to reset on every reload because the tabs only updated local UI state. The shell now calls `setViewConfigAction` after a session-first update: no-op when the preference is unchanged, and never persist `list` as `default_view` (list is not a stored preference). A follow-up hardens against write-generation races so a slower earlier persist cannot overwrite a newer tab click.
+
+Touched: `planner-workspace-shell.tsx`, `planner/[instanceId]/page.tsx`, plus focused Vitest coverage.
+
 ### 2026-08-02 — changelog: catch up 1 commit
 
 **Docs-only.** Clearing the changelog-staleness gate to unblock PRs #720 and #721. Recent commit:

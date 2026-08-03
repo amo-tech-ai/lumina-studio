@@ -3,6 +3,10 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import {
+  normalizeBrandUrl,
+  sameBrandWebsite,
+} from "../_shared/brand-url.ts";
+import {
   type CrawlRawData,
   formatCrawlForPrompt,
   isCrawlThin,
@@ -40,52 +44,6 @@ import {
   jsonResponse,
   safeErrorMessage,
 } from "../_shared/response.ts";
-
-// Private/internal IP ranges — block to prevent SSRF
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  /^0\.0\.0\.0$/i,
-  /^0\./,
-  /^::1$/,
-  /^::ffff:/i,
-  /^fc00:/i,
-  /^fd[0-9a-f]{2}:/i,
-  /^fe[89ab][0-9a-f]:/i,
-  /\.local$/i,
-  /\.internal$/i,
-];
-
-function normalizeHostname(host: string): string {
-  const h = host.toLowerCase();
-  if (h.startsWith("[") && h.endsWith("]")) {
-    return h.slice(1, -1);
-  }
-  return h;
-}
-
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    const hostname = normalizeHostname(parsed.hostname);
-    return !PRIVATE_HOST_PATTERNS.some((p) => p.test(hostname));
-  } catch {
-    return false;
-  }
-}
-
-function normalizeBrandUrl(value: string): string {
-  try {
-    return new URL(value.trim()).origin.toLowerCase();
-  } catch {
-    return value.trim().toLowerCase();
-  }
-}
 
 function buildUrlList(baseUrl: string): string[] {
   const origin = new URL(baseUrl).origin;
@@ -186,6 +144,7 @@ async function loadCrawlRow(
   requestUrl: string,
 ) {
   const requestOrigin = normalizeBrandUrl(requestUrl);
+  if (!requestOrigin) return null;
   const crawlSelect =
     "id, brand_id, raw_data, pages_crawled, job_status, source_url";
 
@@ -199,7 +158,7 @@ async function loadCrawlRow(
       !error &&
       data &&
       data.brand_id === brandId &&
-      normalizeBrandUrl(data.source_url) === requestOrigin
+      sameBrandWebsite(data.source_url, requestOrigin)
     ) {
       return data;
     }
@@ -215,7 +174,7 @@ async function loadCrawlRow(
 
   if (error || !rows?.length) return null;
   return rows.find(
-    (row) => normalizeBrandUrl(row.source_url) === requestOrigin,
+    (row) => sameBrandWebsite(row.source_url, requestOrigin),
   ) ?? null;
 }
 
@@ -335,7 +294,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     failureBrandId = brandId;
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
-    if (!url || !isValidHttpUrl(url)) {
+    if (!url || normalizeBrandUrl(url) === null) {
       return errorResponse(
         "validation_error",
         "A valid http(s) url is required",
