@@ -397,7 +397,8 @@ flowchart LR
 
 ### Priority set (copy-ready bodies)
 
-Index: [`docs/linear/issues/agent-priority-README.md`](../linear/issues/agent-priority-README.md)
+Index: [`docs/linear/issues/agent-priority-README.md`](../linear/issues/agent-priority-README.md)  
+**Create in Linear (Cursor Desktop):** [`CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md`](../linear/issues/CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md)
 
 | Order | Task | Spec |
 |-------|------|------|

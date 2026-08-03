@@ -29,3 +29,15 @@ infisical run --env=dev -- node scripts/linear-sync-issue-body.mjs \
 ```
 
 Script: [`scripts/linear-sync-issue-body.mjs`](../../../scripts/linear-sync-issue-body.mjs) (updates issue description from `docs/linear/issues/IPI-*.md`; does **not** create team templates — Linear GraphQL template APIs are limited; prefer UI for default template).
+
+## Create the five AI-agent priority issues (Cursor Desktop)
+
+Cloud agents cannot OAuth Linear. On **Cursor Desktop**, follow:
+
+→ [`docs/linear/issues/CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md`](../../linear/issues/CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md)
+
+Quick CLI (with Infisical):
+
+```bash
+infisical run --env=dev -- node scripts/linear-create-agent-priority-issues.mjs
+```

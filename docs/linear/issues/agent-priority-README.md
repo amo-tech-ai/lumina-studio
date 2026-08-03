@@ -1,7 +1,10 @@
 # Agent priority Linear issues (copy-ready)
 
 **Source:** AI Agents Strategy — five MVP priorities  
-**Template:** [`docs/process/templates/linear-issue-body.md`](../templates/linear-issue-body.md)  
+**Template:** [`docs/process/templates/linear-issue-body.md`](../../process/templates/linear-issue-body.md)  
+**Create in Linear:** [`CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md`](./CURSOR-DESKTOP-CREATE-LINEAR-ISSUES.md) ← **start here on Cursor Desktop**  
+**Script:** [`scripts/linear-create-agent-priority-issues.mjs`](../../scripts/linear-create-agent-priority-issues.mjs)
+
 **Rules:** One issue · one PR · no new agent IDs · HITL for high-impact writes · stop after thin brand RAG
 
 ## Duplicate / reuse audit (✅)
@@ -22,4 +25,4 @@
 4. [`IPI-156-CAMP-001-creative-director-campaigns.md`](./IPI-156-CAMP-001-creative-director-campaigns.md)  
 5. [`IPI-XXX-AGENT-RAG-001.md`](./IPI-XXX-AGENT-RAG-001.md)  
 
-Paste each file body into Linear (replace `IPI-XXX` when numbers are assigned). Do **not** create Support / Postiz / Apify / OpenClaw agent issues from this set.
+Do **not** create Support / Postiz / Apify / OpenClaw agent issues from this set.
