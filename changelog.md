@@ -17,6 +17,124 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-03 — Onboarding's analysis-to-ready arc lands; Planner gains five views and its first safe edit; the CopilotKit runtime gets a CI verifier
+
+**21 commits across `4c02d744..b2e0eb7b`.** Written 2026-08-03 to clear `changelog-staleness`,
+which measures `main` rather than any one PR — `main` was 20 commits past its last entry (budget 12),
+red on every open PR, including #779's gate run (the ruleset-required gates themselves are green).
+Grouped by theme; every PR listed here has a `merged_at`.
+
+**🧱 Onboarding — the full analysis-to-ready arc, with recovery when it fails**
+
+The `/onboarding` flow is now a real pipeline — brand name in, `ready` brand out — instead of a
+form that stopped at "creating your brand":
+
+- **IPI-835 · ONB2-INT-001b0 — Shared brand analysis progress hook** (PR
+  [#730](https://github.com/amo-tech-ai/lumina-studio/pull/730), `f6640ac1`).
+  `use-brand-analysis-progress` is the single source of truth for crawl/Brand-Intelligence
+  progress. Root cause it kills: the old UI treated a quiet crawl or a dropped websocket as
+  "analysis failed". Terminal success is `intake_status = ready` only; `scores_complete` is
+  mid-pipeline.
+- **IPI-835 slice B1 — Wire `/onboarding` to a real session draft** (PR
+  [#748](https://github.com/amo-tech-ai/lumina-studio/pull/748), `5ccdda7d`). Answers and screen
+  persist in `onboarding_sessions` behind a stable browser key, and the analysis step calls the
+  existing `materialize_onboarding_session` RPC (IPI-832) so a real org + brand shell exists
+  before the deep links.
+- **IPI-903 · ONB2-INT-001b1 — Make materialization safe before analysis and deep links** (PR
+  [#751](https://github.com/amo-tech-ai/lumina-studio/pull/751), `d6825f20`). Screen 12 persists
+  only after materialize succeeds (its "continue" no longer races the RPC), empty brand names are
+  rejected before the RPC, a late success after *Back* is ignored, and raw Supabase/RPC error text
+  is replaced with "try again" copy. Migration
+  `20260802043000_ipi903_materialize_persist_analysis_screen`.
+- **IPI-835 slice C — Realtime progress on screen 12** (PR
+  [#750](https://github.com/amo-tech-ai/lumina-studio/pull/750), `81a1aa88`). Screen 12 starts or
+  reuses a real crawl and shows live page counts from `brand_crawls`; it advances to DNA review
+  only when the server says the draft is ready to review. Offline and server failure are distinct
+  states (client kickoff failure keeps a Retry control; server failure routes to Brand Hub).
+- **IPI-835 slice D — Approve Brand DNA and promote to ready on screen 13** (PR
+  [#756](https://github.com/amo-tech-ai/lumina-studio/pull/756), `6807ef11`). Screen 13 loads the
+  generated DNA; *Approve* goes through the existing Brand Intelligence approve path plus
+  `promoteBrandDraft`, and "Open iPix" stays disabled until the brand is durably `ready`. A refresh
+  resumes on the same brand and screen.
+- **IPI-905 · ONB2-INT-001d — Let a brand continue onboarding after analysis fails** (PR
+  [#767](https://github.com/amo-tech-ai/lumina-studio/pull/767), `8de0ccfa`). Server-side recovery:
+  `POST /api/brands/[id]/restart-analysis` restarts only the failed stage — an active crawl is
+  reused, a completed crawl with failed Brand Intelligence reruns BI only — with duplicate-retry
+  protection so a double tap cannot create duplicate provider jobs, and typed safe errors.
+- **IPI-918 · ONB2-INT-001e — Restart a failed brand from Brand Hub** (PR
+  [#776](https://github.com/amo-tech-ai/lumina-studio/pull/776), `8ac1725c`). The missing
+  **Restart analysis** button on the Brand Hub "Analysis failed" banner (owner/editor only) calls
+  the IPI-905 route instead of forcing a re-onboarding.
+
+**🧬 Onboarding DB — the double-click race is fixed and proven**
+
+- **IPI-916 · ONB2-DB-001d — Fix materialize replay blocked by FOR UPDATE RLS** (PR
+  [#761](https://github.com/amo-tech-ai/lumina-studio/pull/761), `45101920`). The replay branch of
+  `materialize_onboarding_session` never ran. Root cause: **Postgres applies UPDATE RLS to
+  `SELECT … FOR UPDATE`**, and `onboarding_sessions_update_own` allows only `draft` rows — after
+  the first materialize the row became invisible to the lock, so the second call (retry or the
+  double-click loser) returned `session not found` (P0002). Fix
+  (`20260802081000_materialize_onboarding_replay_select`): plain `SELECT` (SELECT RLS) by
+  `user_id` + key first, replay, then `FOR UPDATE`.
+- **IPI-894 · ONB2-DB-001c — Prove double-click Create Brand cannot duplicate accounts** (PR
+  [#762](https://github.com/amo-tech-ai/lumina-studio/pull/762), `0ade955f`). QA-only race harness:
+  two simultaneous materialize calls plus a sequential retry must all return identical org/brand
+  IDs, leaving exactly one session, one org, one brand; repeated 3× on QA, never production.
+
+**📅 Planner — five views, then the first safe mutation** (IPI-579..588 · PLN-S1B–G)
+
+- Read-only views land first: **Timeline** (PR [#755](https://github.com/amo-tech-ai/lumina-studio/pull/755),
+  `6d2133cc`, UTC-safe `planner-date-utils.ts` + phase-normalized `planner-view-model.ts`),
+  **Kanban and List** (PR [#758](https://github.com/amo-tech-ai/lumina-studio/pull/758), `3313d549`),
+  **Calendar** (PR [#759](https://github.com/amo-tech-ai/lumina-studio/pull/759), `f3f4c838`,
+  Monday-first grid, `+N more` overflow, Unscheduled collection), and the **Now & Next priority
+  bar** (PR [#757](https://github.com/amo-tech-ai/lumina-studio/pull/757), `ac55495c` — approvals
+  stay honestly empty until the workflow engine lands).
+- **IPI-582 · PLN-S1E — Editable task detail and updateTask** (PR
+  [#771](https://github.com/amo-tech-ai/lumina-studio/pull/771), `20039e34`). The Planner's first
+  mutation: the task card edits title/description/status/assignee through the existing IPI-649
+  `updateTask` Server Action, with pending state, double-submit protection, field validation, and
+  `STALE_VERSION` recovery ("Reload latest") so two producers editing the same task cannot
+  silently overwrite each other. Stage 1 of 4 — `shiftTask`, `setViewConfig`, and the ApprovalCard
+  remain as planned follow-ups.
+
+**🤖 CopilotKit runtime verification** (IPI-734 · COPILOT-VERIFY-001, PR
+[#742](https://github.com/amo-tech-ai/lumina-studio/pull/742), `2f698beb`; IPI-850 · CF-SMOKE-002,
+PR [#747](https://github.com/amo-tech-ai/lumina-studio/pull/747), `255ee5dc`). One reusable
+`npm run verify:copilot` command preflights `GET /api/copilotkit/info`, then runs the IPI-724
+Chromium journey (login → dashboard → chat → stream → logout) and writes a sanitized
+`summary.json`. CI runs it as `verify-copilot-preview` against the Worker preview URL on every
+push — the same check an operator feels in preview.
+
+**☁️ Cloudflare reliability**
+
+- **IPI-914 · CF-DEPLOY-031 — Fail-fast when build-time `NEXT_PUBLIC_*` env is missing** (PR
+  [#760](https://github.com/amo-tech-ai/lumina-studio/pull/760), `619d8c78`). A deploy from a
+  worktree without `.env.local` shipped a broken Worker — marketing chat hidden,
+  `/api/marketing-lead` 500ing — because Next.js inlines `NEXT_PUBLIC_*` at build time and
+  `opennextjs-cloudflare` uploads succeed regardless. `app/scripts/check-build-env.mjs` now fails
+  the build before `build:cf` when a required build-time env is missing.
+- **IPI-902 — App-owned marketing SEO on Cloudflare** (PR
+  [#749](https://github.com/amo-tech-ai/lumina-studio/pull/749), `032f4cf7`). The Worker previously
+  served Cloudflare's default `robots.txt` with no sitemap or canonical tags. Now app-owned
+  `robots.txt`, `sitemap.xml`, and canonical URLs on all 10 indexable public pages resolve to
+  `https://www.ipix.co`; preview hosts can never leak into metadata.
+
+**🔧 Mastra flakes** (PR [#763](https://github.com/amo-tech-ai/lumina-studio/pull/763), `800a9b79`).
+The two registry/import-chain tests that cold-import the agent registry raised their per-test
+timeout from Vitest's 5s default to 20s (the `durable.test.ts` pattern) — they were flaking under
+full-suite load, not failing on the agent code.
+
+**📱 Mobile primitive** (IPI-417 · MOB-01, PR
+[#752](https://github.com/amo-tech-ai/lumina-studio/pull/752), `b2e0eb7b`). A reusable `BottomSheet`
+(peek/half/full heights, Escape + overlay dismiss, focus trap) on shadcn Drawer (Vaul).
+Deliberately not wired into product screens yet.
+
+**📄 Docs** (PR [#778](https://github.com/amo-tech-ai/lumina-studio/pull/778), `6d05cf89`). The
+iPix process playbooks — development standards organized into 10 docs — plus copy-ready Linear
+issue specs for the five AI-agent MVP priorities and a script that creates them (Cloud cannot
+OAuth the Linear MCP).
+
 ### 2026-08-02 — changelog: catch up 1 commit
 
 **Docs-only.** Clearing the changelog-staleness gate to unblock PRs #720 and #721. Recent commit:
