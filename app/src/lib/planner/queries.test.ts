@@ -574,6 +574,7 @@ describe("getInstanceDetail", () => {
             assigneeUserId: null,
             assigneeRole: null,
             sortOrder: 0,
+            updatedAt: "2026-07-01T00:00:00.000Z",
           },
         ],
       },
@@ -590,6 +591,7 @@ describe("getInstanceDetail", () => {
     expect(selectedColumns).not.toContain("*");
     expect(selectedColumns).toContain("owner_user_id");
     expect(selectedColumns).toContain("tasks(");
+    expect(selectedColumns).toContain("updated_at");
   });
 
   it("sorts tasks by sortOrder rather than trusting PostgREST's embed order", async () => {
