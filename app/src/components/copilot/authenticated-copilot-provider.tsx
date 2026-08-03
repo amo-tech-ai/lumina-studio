@@ -46,6 +46,9 @@ export function AuthenticatedCopilotProvider({
   useEffect(() => {
     let cancelled = false;
     let hasToken = false;
+    // Bumped only on decisive SIGNED_OUT so in-flight getSession cannot remount
+    // CopilotKit with a stale bearer after cross-tab / concurrent logout.
+    let logoutEpoch = 0;
 
     const applyToken = (token: string) => {
       if (cancelled) return;
@@ -54,9 +57,19 @@ export function AuthenticatedCopilotProvider({
       setPhase("authed");
     };
 
-    const applySignedOut = () => {
+    /** Soft settle (timeout null) — late valid session may still promote. */
+    const applySignedOutSoft = () => {
       if (cancelled) return;
       hasToken = false;
+      setAccessToken(null);
+      setPhase("signed-out");
+    };
+
+    /** Decisive logout — invalidate in-flight session reads. */
+    const applySignedOutDecisive = () => {
+      if (cancelled) return;
+      hasToken = false;
+      logoutEpoch += 1;
       setAccessToken(null);
       setPhase("signed-out");
     };
@@ -71,6 +84,7 @@ export function AuthenticatedCopilotProvider({
     try {
       supabase = createSupabaseBrowserClient();
     } catch {
+      // Sync factory only — no async constructor path in @/lib/supabase/client.
       failHydrate();
       return;
     }
@@ -83,7 +97,7 @@ export function AuthenticatedCopilotProvider({
       // Null INITIAL_SESSION is not decisive — cookies may still hydrate (OAuth).
       if (event === "INITIAL_SESSION" && !token) return;
       if (event === "SIGNED_OUT") {
-        applySignedOut();
+        applySignedOutDecisive();
         return;
       }
       if (token) {
@@ -91,43 +105,49 @@ export function AuthenticatedCopilotProvider({
       }
     });
 
-    const readSession = () =>
-      supabase.auth.getSession().then(
-        ({ data: { session } }) => {
-          if (cancelled) return;
-          const token = session?.access_token ?? null;
-          // Late token may arrive after a timeout settled signed-out — still promote.
-          if (token) {
-            applyToken(token);
-            return;
-          }
-          // Null without a prior token: leave loading for timer / SIGNED_OUT.
-        },
+    const handleSessionResult = (
+      startedEpoch: number,
+      result: {
+        data: { session: { access_token?: string } | null };
+        error: { message?: string } | null;
+      },
+      onNullSession: "wait" | "soft-out",
+    ) => {
+      if (cancelled) return;
+      // Drop reads that started before a decisive SIGNED_OUT.
+      if (startedEpoch !== logoutEpoch) return;
+      if (result.error) {
+        failHydrate();
+        return;
+      }
+      const token = result.data.session?.access_token ?? null;
+      if (token) {
+        applyToken(token);
+        return;
+      }
+      if (onNullSession === "soft-out" && !hasToken) {
+        applySignedOutSoft();
+      }
+      // "wait": leave loading for timer / SIGNED_OUT / late auth event.
+    };
+
+    const readSession = (onNullSession: "wait" | "soft-out") => {
+      const startedEpoch = logoutEpoch;
+      return supabase.auth.getSession().then(
+        (result) => handleSessionResult(startedEpoch, result, onNullSession),
         () => {
+          if (cancelled || startedEpoch !== logoutEpoch) return;
           failHydrate();
         },
       );
+    };
 
-    void readSession();
+    void readSession("wait");
 
     const timer = setTimeout(() => {
       // Never clear an already-applied access token.
       if (cancelled || hasToken) return;
-      void supabase.auth.getSession().then(
-        ({ data: { session } }) => {
-          if (cancelled || hasToken) return;
-          const token = session?.access_token ?? null;
-          if (token) {
-            applyToken(token);
-          } else if (!hasToken) {
-            // Soft settle — a later valid getSession / auth event may still promote.
-            applySignedOut();
-          }
-        },
-        () => {
-          failHydrate();
-        },
-      );
+      void readSession("soft-out");
     }, AUTH_HYDRATE_MS);
 
     return () => {

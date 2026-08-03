@@ -256,6 +256,30 @@ describe("AuthenticatedCopilotProvider", () => {
     expect(document.body.textContent).not.toContain("session read failed");
   });
 
+  it("shows error UI when getSession resolves with error (refresh failure)", async () => {
+    getSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: "Invalid Refresh Token" },
+    });
+    const { AuthenticatedCopilotProvider } = await import(
+      "./authenticated-copilot-provider"
+    );
+
+    render(
+      <AuthenticatedCopilotProvider>
+        <span>workspace</span>
+      </AuthenticatedCopilotProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("copilot-auth-error")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("copilot-auth-signed-out")).toBeNull();
+    expect(screen.queryByTestId("copilot-auth-loading")).toBeNull();
+    expect(document.body.textContent).not.toContain("Invalid Refresh Token");
+    expect(copilotKitMock).not.toHaveBeenCalled();
+  });
+
   it("Retry restarts hydration after getSession rejection", async () => {
     getSession
       .mockRejectedValueOnce(new Error("session read failed"))
@@ -410,6 +434,58 @@ describe("AuthenticatedCopilotProvider", () => {
       expect(screen.getByTestId("copilot-auth-signed-out")).toBeTruthy();
     });
     expect(screen.queryByTestId("copilot-kit")).toBeNull();
+  });
+
+  it("does not remount CopilotKit when a stale getSession resolves after SIGNED_OUT", async () => {
+    let authCb:
+      | ((event: string, session: { access_token: string } | null) => void)
+      | null = null;
+    let resolveStale: ((value: unknown) => void) | null = null;
+    let call = 0;
+
+    getSession.mockImplementation(() => {
+      call += 1;
+      if (call === 1) {
+        return new Promise((resolve) => {
+          resolveStale = resolve;
+        });
+      }
+      return Promise.resolve({ data: { session: null }, error: null });
+    });
+    onAuthStateChange.mockImplementation((cb) => {
+      authCb = cb;
+      return { data: { subscription: { unsubscribe } } };
+    });
+
+    const { AuthenticatedCopilotProvider } = await import(
+      "./authenticated-copilot-provider"
+    );
+
+    render(
+      <AuthenticatedCopilotProvider>
+        <span>workspace</span>
+      </AuthenticatedCopilotProvider>,
+    );
+
+    expect(screen.getByTestId("copilot-auth-loading")).toBeTruthy();
+
+    await act(async () => {
+      authCb?.("SIGNED_OUT", null);
+    });
+
+    expect(screen.getByTestId("copilot-auth-signed-out")).toBeTruthy();
+
+    await act(async () => {
+      resolveStale?.({
+        data: { session: { access_token: "stale-pre-logout-token" } },
+        error: null,
+      });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("copilot-auth-signed-out")).toBeTruthy();
+    expect(screen.queryByTestId("copilot-kit")).toBeNull();
+    expect(document.body.textContent).not.toContain("stale-pre-logout-token");
   });
 
   it("promotes when a slow initial getSession returns a token after timeout signed-out", async () => {
