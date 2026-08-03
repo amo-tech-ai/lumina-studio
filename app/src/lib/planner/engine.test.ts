@@ -32,6 +32,7 @@ function makeTask(overrides: Partial<PlannerTask> & { id: string }): PlannerTask
     assigneeUserId: null,
     assigneeRole: null,
     sortOrder: 0,
+    updatedAt: "2026-07-01T00:00:00.000Z",
     ...overrides,
   };
 }

@@ -187,4 +187,26 @@ describe("AnalysisProgressBanner", () => {
     });
     expect(screen.getByText(/Connection lost/)).toBeTruthy();
   });
+
+  // IPI-918 — recovery control is owner/editor only.
+  it("offers Restart analysis on failed when the operator may restart", () => {
+    render(
+      <AnalysisProgressBanner {...props} initialStatus="failed" canRestart />,
+    );
+    expect(screen.getByRole("button", { name: /Restart analysis/i })).toBeTruthy();
+    expect(screen.getByText(/don't need to redo onboarding/i)).toBeTruthy();
+  });
+
+  it("hides Restart analysis from viewers on failed", () => {
+    render(<AnalysisProgressBanner {...props} initialStatus="failed" />);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Restart analysis/i })).toBeNull();
+  });
+
+  it("does not offer Restart analysis while analysis is still running", () => {
+    render(
+      <AnalysisProgressBanner {...props} initialStatus="analysis_running" canRestart />,
+    );
+    expect(screen.queryByRole("button", { name: /Restart analysis/i })).toBeNull();
+  });
 });

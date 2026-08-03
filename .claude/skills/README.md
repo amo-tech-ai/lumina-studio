@@ -9,6 +9,7 @@
 
 | Hub | Use for |
 |-----|---------|
+| [`ai-research`](./ai-research/SKILL.md) | Research before code · `/research` · platform-first report |
 | [`ipix`](./ipix/SKILL.md) | Domain router · workflow map |
 | [`ipix-task-lifecycle`](./ipix-task-lifecycle/SKILL.md) | IPI plan → ship |
 | [`ipix-supabase`](./ipix-supabase/SKILL.md) | Schema, RLS, edge — routes to [`firecrawl`](./firecrawl/SKILL.md). ⚠️ `Skill("ipix-supabase")` may fail with "Unknown skill" — `Read` the file directly until harness gap is fixed. 🔴 6 stale doc links — see inventory. |

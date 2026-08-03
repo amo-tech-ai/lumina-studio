@@ -47,7 +47,7 @@ Last reviewed: **2026-07-06** (Next.js hub consolidation).
 | ⚪ In `archive/` | 29 |
 | **Active (excl. symlinks)** | **34** |
 
-**Active hubs (14):** `ipix` · `ipix-task-lifecycle` · `ipix-supabase` · `design-to-production` ·
+**Active hubs (15):** `ai-research` · `ipix` · `ipix-task-lifecycle` · `ipix-supabase` · `design-to-production` ·
 `fashion-production` · `copilotkit` · `mastra` · `cloudinary` · `cloudflare-ipix` · `infisical` ·
 `firecrawl` · `linear` · `mercur` · `frontend-design`
 
@@ -80,6 +80,7 @@ See [`tasks/skills/jul6-audit.md`](tasks/skills/jul6-audit.md). Remaining deep r
 
 | Skill | Lines | Refs | Health | Note |
 |-------|------:|-----:|:------:|------|
+| `ai-research` | ~90 | 2 | ✅ | Research-before-code · `/research` |
 | `ipix` | 68 | 0 | ✅ | Domain router |
 | `ipix-task-lifecycle` | 270 | 12 | 🔴 | 5-phase IPI orchestrator; missing local README |
 | `ipix-supabase` | 310 | 80 | 🔴 | Schema/RLS/edge hub |
