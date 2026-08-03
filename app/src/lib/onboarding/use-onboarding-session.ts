@@ -18,6 +18,7 @@ import {
 import {
   ONBOARDING_BRAND_NAME_REQUIRED,
   isOnboardingAuthError,
+  isOnboardingAuthTransient,
   toUserFacingOnboardingError,
 } from "./onboarding-errors";
 import {
@@ -183,7 +184,18 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
     let user;
     try {
       user = await resolveOnboardingAuthUser(supabase, { hydrateTimeoutMs: 0 });
-    } catch {
+    } catch (err) {
+      // Transient refresh → let the flow show retryable commit copy.
+      if (isOnboardingAuthTransient(err)) throw err;
+      // Session gone mid-flow — swap the gate to Sign in (not inline commit text).
+      setBootstrap({
+        status: "error",
+        message: toUserFacingOnboardingError(
+          new Error(ONBOARDING_AUTH_REQUIRED),
+          "session",
+        ),
+        authRequired: true,
+      });
       throw new Error(ONBOARDING_AUTH_REQUIRED);
     }
 

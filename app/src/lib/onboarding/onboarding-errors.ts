@@ -1,9 +1,12 @@
-import { ONBOARDING_AUTH_REQUIRED } from "./resolve-onboarding-auth-user";
+import {
+  ONBOARDING_AUTH_REQUIRED,
+  ONBOARDING_AUTH_TRANSIENT,
+} from "./resolve-onboarding-auth-user";
 
 /** Thrown when materialize is attempted without a usable brand name. */
 export const ONBOARDING_BRAND_NAME_REQUIRED = "ONBOARDING_BRAND_NAME_REQUIRED";
 
-export { ONBOARDING_AUTH_REQUIRED };
+export { ONBOARDING_AUTH_REQUIRED, ONBOARDING_AUTH_TRANSIENT };
 
 const SAFE_SETUP_FAILURE =
   "We couldn’t start brand setup. Please try again.";
@@ -23,7 +26,11 @@ export function toUserFacingOnboardingError(
   kind: "session" | "setup" = "setup",
 ): string {
   // Expected signed-out path — don't spam the console as if bootstrap crashed.
-  if (!isOnboardingAuthError(err) && process.env.NODE_ENV === "development") {
+  if (
+    !isOnboardingAuthError(err) &&
+    !isOnboardingAuthTransient(err) &&
+    process.env.NODE_ENV === "development"
+  ) {
     console.error("[onboarding]", err);
   }
   if (err instanceof Error && err.message === ONBOARDING_BRAND_NAME_REQUIRED) {
@@ -31,6 +38,9 @@ export function toUserFacingOnboardingError(
   }
   if (isOnboardingAuthError(err)) {
     return SAFE_AUTH_FAILURE;
+  }
+  if (isOnboardingAuthTransient(err)) {
+    return SAFE_SESSION_FAILURE;
   }
   return kind === "session" ? SAFE_SESSION_FAILURE : SAFE_SETUP_FAILURE;
 }
@@ -43,4 +53,9 @@ export function isOnboardingAuthError(err: unknown): boolean {
     /auth session missing/i.test(err.message) ||
     /not authenticated/i.test(err.message)
   );
+}
+
+/** True when auth refresh failed transiently — show Retry, not Sign in. */
+export function isOnboardingAuthTransient(err: unknown): boolean {
+  return err instanceof Error && err.message === ONBOARDING_AUTH_TRANSIENT;
 }

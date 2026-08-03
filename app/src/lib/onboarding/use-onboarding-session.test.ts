@@ -34,6 +34,8 @@ function makeClient(overrides?: {
   getUserError?: Error | null;
   /** No browser session — bootstrap should land on authRequired. */
   unauthenticated?: boolean;
+  /** getSession failed to refresh — retryable, not Sign in. */
+  sessionRefreshError?: string;
   session?: typeof sessionRow;
   brandIntakeStatus?: string | null;
 }) {
@@ -47,12 +49,17 @@ function makeClient(overrides?: {
     single: () => Promise.resolve({ data: row, error: null }),
   };
   const authUser = { id: USER_ID };
-  const authSession = overrides?.unauthenticated ? null : { user: authUser };
+  const authSession =
+    overrides?.unauthenticated || overrides?.sessionRefreshError
+      ? null
+      : { user: authUser };
   return {
     auth: {
       getSession: vi.fn().mockResolvedValue({
         data: { session: authSession },
-        error: null,
+        error: overrides?.sessionRefreshError
+          ? { message: overrides.sessionRefreshError }
+          : null,
       }),
       getUser: vi.fn().mockResolvedValue(
         overrides?.getUserError
@@ -443,5 +450,106 @@ describe("useOnboardingSession", () => {
       listeners[0]?.("SIGNED_IN", { user: { id: USER_ID } });
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+
+  it("rejects a hydrated user that still fails getUser validation", async () => {
+    const client = makeClient();
+    const listeners: Array<(event: string, session: { user: { id: string } } | null) => void> =
+      [];
+    (client as { auth: { getSession: ReturnType<typeof vi.fn> } }).auth.getSession = vi
+      .fn()
+      .mockResolvedValue({ data: { session: null }, error: null });
+    (client as { auth: { getUser: ReturnType<typeof vi.fn> } }).auth.getUser = vi
+      .fn()
+      .mockResolvedValue({
+        data: { user: null },
+        error: { message: "Auth session missing!" },
+      });
+    (client as { auth: { onAuthStateChange: ReturnType<typeof vi.fn> } }).auth.onAuthStateChange =
+      vi.fn((cb) => {
+        listeners.push(cb);
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      });
+
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+        authHydrateTimeoutMs: 50,
+      }),
+    );
+
+    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+    await act(async () => {
+      listeners[0]?.("SIGNED_IN", { user: { id: USER_ID } });
+    });
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.authRequired).toBe(true);
+  });
+
+  it("keeps Retry (not Sign in) when getSession refresh fails transiently", async () => {
+    const client = makeClient({ sessionRefreshError: "Failed to fetch" });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+        authHydrateTimeoutMs: 20,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.authRequired).toBeFalsy();
+    expect(result.current.message).toMatch(/try again/i);
+    expect(result.current.message).not.toMatch(/sign in/i);
+  });
+
+  it("moves the gate to Sign in when auth dies during materialize", async () => {
+    const client = makeClient();
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    (client as { auth: { getSession: ReturnType<typeof vi.fn> } }).auth.getSession = vi
+      .fn()
+      .mockResolvedValue({ data: { session: null }, error: null });
+    (client as { auth: { getUser: ReturnType<typeof vi.fn> } }).auth.getUser = vi
+      .fn()
+      .mockResolvedValue({
+        data: { user: null },
+        error: { message: "Auth session missing!" },
+      });
+    (client as { auth: { onAuthStateChange: ReturnType<typeof vi.fn> } }).auth.onAuthStateChange =
+      vi.fn((cb) => {
+        queueMicrotask(() => cb("INITIAL_SESSION", null));
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      });
+
+    let materializeErr: unknown;
+    await act(async () => {
+      try {
+        await result.current.materialize({
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: "Scale",
+        });
+      } catch (err) {
+        materializeErr = err;
+      }
+    });
+    expect(materializeErr).toBeInstanceOf(Error);
+    expect((materializeErr as Error).message).toBe("ONBOARDING_AUTH_REQUIRED");
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.authRequired).toBe(true);
+    expect(result.current.message).toMatch(/sign in/i);
   });
 });
