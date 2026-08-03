@@ -2,6 +2,8 @@
 
 import { useAgentContext } from "@copilotkit/react-core/v2";
 
+import { fenceUntrusted } from "@/lib/crm/relationship-evidence";
+
 /**
  * IPI AGENT-CTX-001 — Inject shoot detail into CopilotKit so production-planner
  * knows the open shoot/brand without asking for UUIDs.
@@ -36,7 +38,7 @@ export function useShootDetailContext({
       : ["summarize this shoot", "review shots", "help with approvals"];
 
   useAgentContext({
-    description: `Shoot detail — operator is viewing "${shootName}" for brand ${brandName || "unknown"}. Status: ${shootStatus}. ${shotCount === 0 ? "Shot list is empty." : `${shotCount} shots on the list.`} You already have shootId and brandId — never ask the operator to paste them. You can help with: ${nextActions.join(", ")}.`,
+    description: `Shoot detail — operator is viewing ${fenceUntrusted(shootName)} for brand ${fenceUntrusted(brandName || "unknown")}. Status: ${shootStatus}. ${shotCount === 0 ? "Shot list is empty." : `${shotCount} shots on the list.`} You already have shootId and brandId — never ask the operator to paste them. You can help with: ${nextActions.join(", ")}.`,
     value: {
       surface: "shoot-detail",
       shoot_id: shootId,

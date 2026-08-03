@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight, MoreHorizontal, Share2, WifiOff } from "lucide-react";
 
 import { isDeliverableCover } from "@/lib/cloudinary/url";
@@ -21,6 +21,7 @@ import { ApprovalsTab } from "./shoot-detail-tabs/approvals-tab";
 import { DeliverablesTab } from "./shoot-detail-tabs/deliverables-tab";
 import { ActivityTab } from "./shoot-detail-tabs/activity-tab";
 import { useShootDetailContext } from "./shoot-detail-context";
+import { useShootLoadState } from "./shoot-load-state";
 import styles from "./shoot-detail.module.css";
 
 /** Injects CopilotKit context when shoot payload is present (including empty shot list). */
@@ -77,6 +78,14 @@ type Props = {
 export function ShootDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("overview");
+  const { setShootLoad } = useShootLoadState();
+
+  // Report the REAL load outcome to the shell so chat suggestions key off the
+  // payload, not the URL (a 404/500 must not advertise loaded-shoot actions).
+  useEffect(() => {
+    setShootLoad({ loaded: Boolean(data), failed: Boolean(fetchError) });
+    return () => setShootLoad({ loaded: false, failed: false });
+  }, [data, fetchError, setShootLoad]);
 
   if (fetchError || !data) {
     return (

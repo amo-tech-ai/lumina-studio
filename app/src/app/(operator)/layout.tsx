@@ -1,5 +1,6 @@
 import { CopilotKit } from "@copilotkit/react-core/v2";
 import { OperatorPanel } from "@/components/operator-panel/operator-panel";
+import { ShootLoadStateProvider } from "@/components/shoot/shoot-load-state";
 import { ActiveBrandProvider } from "@/context/active-brand-context";
 import "@copilotkit/react-core/v2/styles.css";
 
@@ -27,7 +28,9 @@ const OperatorLayout = ({
       showDevConsole={false}
     >
       <ActiveBrandProvider>
-        <OperatorPanel>{children}</OperatorPanel>
+        <ShootLoadStateProvider>
+          <OperatorPanel>{children}</OperatorPanel>
+        </ShootLoadStateProvider>
       </ActiveBrandProvider>
     </CopilotKit>
   );
