@@ -437,11 +437,13 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
 
     await user.click(screen.getByTestId("planner-task-shift-confirm"));
     await waitFor(() => expect(shiftTaskAction).toHaveBeenCalledTimes(1));
-    const [instanceId, taskId, deltaDays, idempotencyKey] = shiftTaskAction.mock.calls[0];
+    const [instanceId, taskId, deltaDays, idempotencyKey, expectedUpdatedAt] =
+      shiftTaskAction.mock.calls[0];
     expect(instanceId).toBe("i-1");
     expect(taskId).toBe("t-1");
     expect(deltaDays).toBe(1);
     expect(typeof idempotencyKey).toBe("string");
+    expect(expectedUpdatedAt).toBe("2026-03-01T12:00:00.000Z");
     await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
     expect(refreshMock).toHaveBeenCalled();
   });
@@ -496,5 +498,95 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
       />,
     );
     expect(screen.queryByTestId("planner-task-schedule")).toBeNull();
+  });
+
+  it("requires both start and end dates before enabling schedule shifts", () => {
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: null })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+    expect(screen.getByTestId("planner-task-schedule").textContent).toMatch(/both start and end/i);
+    expect(screen.queryByTestId("planner-task-move-later")).toBeNull();
+  });
+
+  it("resyncs the date picker after a successful shift refresh", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: true,
+      data: { replayed: false, changedTasks: [{ taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" }] },
+    });
+
+    const { rerender } = render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={vi.fn().mockResolvedValue({
+          task: task({
+            startDate: "2026-03-05",
+            endDate: "2026-03-07",
+            updatedAt: "2026-03-02T00:00:00.000Z",
+          }),
+          canUpdateTasks: true,
+          assignees: [],
+        })}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(shiftTaskAction).toHaveBeenCalled());
+
+    rerender(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          startDate: "2026-03-05",
+          endDate: "2026-03-07",
+          updatedAt: "2026-03-02T00:00:00.000Z",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await waitFor(() =>
+      expect((screen.getByTestId("planner-task-shift-date") as HTMLInputElement).value).toBe(
+        "2026-03-05",
+      ),
+    );
+  });
+
+  it("preserves unsaved field edits when schedule refresh advances updatedAt", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Shortlist models" })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await user.clear(screen.getByTestId("planner-task-title"));
+    await user.type(screen.getByTestId("planner-task-title"), "Edited title");
+
+    rerender(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          title: "Shortlist models",
+          startDate: "2026-03-05",
+          endDate: "2026-03-07",
+          updatedAt: "2026-03-02T00:00:00.000Z",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("Edited title");
   });
 });
