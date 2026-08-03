@@ -136,6 +136,34 @@ describe("RestartAnalysisButton", () => {
     expect(screen.queryByText(/Firecrawl/i)).toBeNull();
   });
 
+  it("never renders an inherited Object.prototype member as error copy", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(500, { ok: false, code: "constructor" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+    clickRestart();
+
+    expect(await screen.findByText(/Try again in a minute/i)).toBeTruthy();
+  });
+
+  it("stays locked after a successful restart until the page refresh replaces it", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { ok: true, mode: "crawl_restarted", intakeStatus: "crawl_running" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+    clickRestart();
+
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
+
+    const button = screen.getByRole("button", { name: /Restarting/i });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(button);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("recovers to an enabled button after a network failure", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
 

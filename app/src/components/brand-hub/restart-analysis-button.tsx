@@ -36,10 +36,14 @@ function errorCopyFor(payload: unknown): string {
     payload && typeof payload === "object"
       ? (payload as { code?: unknown }).code
       : undefined;
-  return (
-    (typeof code === "string" ? RESTART_ERROR_COPY[code] : undefined) ??
-    RESTART_ERROR_FALLBACK
-  );
+  // Guard with hasOwnProperty: a plain object literal still inherits
+  // `constructor`/`hasOwnProperty` from Object.prototype, so an unguarded
+  // `RESTART_ERROR_COPY[code]` would return a function instead of falling
+  // back to copy if `code` were ever one of those inherited names.
+  const hasCode =
+    typeof code === "string" &&
+    Object.prototype.hasOwnProperty.call(RESTART_ERROR_COPY, code);
+  return hasCode ? RESTART_ERROR_COPY[code as string] : RESTART_ERROR_FALLBACK;
 }
 
 export type RestartAnalysisButtonProps = {
@@ -82,15 +86,20 @@ export const RestartAnalysisButton = ({ brandId }: RestartAnalysisButtonProps) =
 
       if (!ok) {
         setError(errorCopyFor(payload));
+        inFlight.current = false;
+        setPending(false);
         return;
       }
 
       // Realtime already carries live progress; refresh so the server-rendered
       // page (and this banner's initialStatus) reflect the new intake_status.
+      // Deliberately do NOT clear inFlight/pending here: router.refresh() is
+      // fire-and-forget (no completion promise), so clearing the lock now would
+      // re-enable the button for a window where a second click could fire another
+      // POST before the refreshed page replaces this failed-state banner.
       router.refresh();
     } catch {
       setError(RESTART_ERROR_FALLBACK);
-    } finally {
       inFlight.current = false;
       setPending(false);
     }
