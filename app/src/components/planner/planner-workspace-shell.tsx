@@ -96,13 +96,14 @@ export function PlannerWorkspaceShell({
     // "list" is never a persisted default_view (DB CHECK + adapter contract).
     if (!isPersistedView(nextView)) return;
 
-    // No-op when this view is already persisted, or an in-flight write already
-    // targets it. Do not no-op when lastPersisted matches but a different view
-    // is still pending (Timeline→Kanban→Timeline must re-issue Timeline).
+    // No-op when an in-flight write already targets this view, or when it is
+    // already persisted and nothing else is pending. Do not no-op when
+    // lastPersisted matches but a different view is still pending
+    // (Timeline→Kanban→Timeline must re-issue Timeline).
     if (
-      lastPersistedRef.current === nextView &&
-      (pendingPersistedViewRef.current === null ||
-        pendingPersistedViewRef.current === nextView)
+      pendingPersistedViewRef.current === nextView ||
+      (lastPersistedRef.current === nextView &&
+        pendingPersistedViewRef.current === null)
     ) {
       return;
     }

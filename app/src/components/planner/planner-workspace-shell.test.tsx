@@ -340,6 +340,32 @@ describe("PlannerWorkspaceShell", () => {
       expect(screen.getByRole("tab", { name: /Timeline/ }).getAttribute("aria-selected")).toBe("true");
     });
 
+    it("no-ops re-selecting the in-flight target after a session-only detour", async () => {
+      const user = userEvent.setup();
+      let resolveKanban: ((value: unknown) => void) | undefined;
+      setViewConfigAction.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveKanban = resolve;
+          }),
+      );
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="timeline" />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+
+      // List is session-only — must not clear pending kanban.
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      // Still one write — kanban was already the in-flight target.
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe("true");
+
+      resolveKanban?.({ ok: true, data: { instanceId: INSTANCE_ID } });
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+    });
+
     it("initializes from initialView (getViewConfig)", () => {
       render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="calendar" />);
       expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe("true");
