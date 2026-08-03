@@ -68,6 +68,7 @@ describe("useShootDetailContext", () => {
       value: { suggested_next_actions: string[] };
     };
     expect(arg.description).toMatch(/Shot list is empty/i);
-    expect(arg.value.suggested_next_actions.some((a) => /shot list/i.test(a))).toBe(true);
+    expect(arg.value.suggested_next_actions.some((a) => /plan this shoot/i.test(a))).toBe(true);
+    expect(arg.value.suggested_next_actions.some((a) => /generate a shot list/i.test(a))).toBe(false);
   });
 });

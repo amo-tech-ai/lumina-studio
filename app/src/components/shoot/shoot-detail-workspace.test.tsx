@@ -101,7 +101,7 @@ describe("ShootDetailWorkspace — agent context contract", () => {
       shot_count: 0,
     });
     expect(empty.description).toMatch(/Shot list is empty/i);
-    expect(empty.value.suggested_next_actions.some((a) => /shot list/i.test(a))).toBe(true);
+    expect(empty.value.suggested_next_actions.some((a) => /plan this shoot/i.test(a))).toBe(true);
   });
 
   it("does not inject context when shoot data failed to load", () => {

@@ -32,8 +32,8 @@ export function useShootDetailContext({
 }) {
   const nextActions =
     shotCount === 0
-      ? ["generate a shot list from Brand DNA", "open the shoot wizard", "review deliverables"]
-      : ["summarize this shoot", "review shots", "check budget", "help with approvals"];
+      ? ["plan this shoot from Brand DNA", "open the shoot wizard", "review deliverables"]
+      : ["summarize this shoot", "review shots", "help with approvals"];
 
   useAgentContext({
     description: `Shoot detail — operator is viewing "${shootName}" for brand ${brandName || "unknown"}. Status: ${shootStatus}. ${shotCount === 0 ? "Shot list is empty." : `${shotCount} shots on the list.`} You already have shootId and brandId — never ask the operator to paste them. You can help with: ${nextActions.join(", ")}.`,
