@@ -224,12 +224,37 @@ describe("AuthenticatedCopilotProvider", () => {
     await waitFor(() => {
       expect(screen.getByTestId("copilot-auth-error")).toBeTruthy();
     });
+    expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.queryByTestId("copilot-auth-loading")).toBeNull();
     expect(screen.getByTestId("copilot-auth-retry")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: /sign in/i }).getAttribute("href"),
     ).toBe("/login");
     expect(document.body.textContent).not.toContain("client init failed");
+    expect(copilotKitMock).not.toHaveBeenCalled();
+  });
+
+  it("soft-settles signed-out when getSession hangs past hydrate timeout", async () => {
+    vi.useFakeTimers();
+    getSession.mockReturnValue(new Promise(() => {}));
+    const { AUTH_HYDRATE_MS, AuthenticatedCopilotProvider } = await import(
+      "./authenticated-copilot-provider"
+    );
+
+    render(
+      <AuthenticatedCopilotProvider>
+        <span>workspace</span>
+      </AuthenticatedCopilotProvider>,
+    );
+
+    expect(screen.getByTestId("copilot-auth-loading")).toBeTruthy();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTH_HYDRATE_MS);
+    });
+
+    expect(screen.getByTestId("copilot-auth-signed-out")).toBeTruthy();
+    expect(screen.queryByTestId("copilot-auth-loading")).toBeNull();
     expect(copilotKitMock).not.toHaveBeenCalled();
   });
 

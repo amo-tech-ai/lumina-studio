@@ -147,7 +147,11 @@ export function AuthenticatedCopilotProvider({
     const timer = setTimeout(() => {
       // Never clear an already-applied access token.
       if (cancelled || hasToken) return;
-      void readSession("soft-out");
+      // Soft-settle immediately so a hanging getSession (e.g. Supabase network
+      // timeout) cannot leave the operator on infinite loading. A later token
+      // from this read or onAuthStateChange may still promote.
+      applySignedOutSoft();
+      void readSession("wait");
     }, AUTH_HYDRATE_MS);
 
     return () => {
