@@ -292,6 +292,7 @@ describe("brandIntelligenceTools registry", () => {
       "getBrandProfile",
       "getBrandScores",
       "explainPillar",
+      "searchSimilarBrands",
       "approveDraft",
       "startBrandAnalysis",
     ]);
