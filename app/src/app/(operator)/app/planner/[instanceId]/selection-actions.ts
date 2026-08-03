@@ -4,22 +4,31 @@
 // PlannerSelection (from selection.ts) into the entity it points at. Thin
 // wrapper, same authenticatedClient() shape as settings/actions.ts and this
 // directory's own actions.ts: authenticate first, then delegate to the
-// existing typed reads (getInstanceDetail/listMembers) — never a duplicate
-// access check, since both already fail closed for cross-org/inaccessible/
-// deleted ids.
+// existing typed reads (getInstanceDetail/listMembers/listWorkflowPhases) —
+// never a duplicate access check, since both already fail closed for
+// cross-org/inaccessible/deleted ids.
+//
+// IPI-579 — "phase" now resolves: the phase row comes from the
+// instance's workflow template (listWorkflowPhases) and its tasks from the
+// instance detail, via the shared resolvePhaseSelection (same grouping
+// semantics the Timeline renders). Resolution shares the timeline's
+// permission gate: getInstanceDetail fails closed for anyone without
+// canRead, so a phase selection can never leak task detail.
 //
 // Never throws: the caller's job on any failure here is "fall back to
 // Intelligence mode," not surface a broken Detail panel, so every branch —
 // including an unexpected error — resolves to `{ ok: false }`.
 
-import { getInstanceDetail, listMembers } from "@/lib/planner/queries";
+import { getInstanceDetail, listMembers, listWorkflowPhases } from "@/lib/planner/queries";
+import { resolvePhaseSelection } from "@/lib/planner/planner-phase-selection";
 import type { PlannerSelectionType } from "@/lib/planner/selection";
-import type { PlannerMember, PlannerTask } from "@/lib/planner/types";
+import type { PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ResolvedPlannerSelection =
   | { kind: "task"; task: PlannerTask }
-  | { kind: "member"; member: PlannerMember };
+  | { kind: "member"; member: PlannerMember }
+  | { kind: "phase"; phase: PlannerPhase; tasks: PlannerTask[] };
 
 type ActionResult =
   | { ok: true; data: ResolvedPlannerSelection }
@@ -60,12 +69,22 @@ export async function resolvePlannerSelectionAction(
       return { ok: true, data: { kind: "member", member } };
     }
 
-    // "phase" — always fails closed. There is no per-instance
-    // phase-progress/gate-status data contract yet (out of scope for
-    // IPI-551; owned by a future ticket), so a phase selection can never
-    // resolve. `phase` stays a legal PlannerSelectionType for parsing/
-    // serialization only — resolving one always falls back to Intelligence,
-    // same code path as any other invalid selection.
+    if (selection.type === "phase") {
+      const instanceResult = await getInstanceDetail(instanceId);
+      if (!instanceResult.ok) return { ok: false };
+      const phasesResult = await listWorkflowPhases(instanceResult.data.workflowId);
+      if (!phasesResult.ok) return { ok: false };
+      const resolved = resolvePhaseSelection(
+        phasesResult.data,
+        instanceResult.data.tasks,
+        selection.id,
+      );
+      if (!resolved) return { ok: false };
+      return { ok: true, data: { kind: "phase", ...resolved } };
+    }
+
+    // Any other type — always fails closed, same code path as any other
+    // invalid selection: falls back to Intelligence mode.
     return { ok: false };
   } catch {
     return { ok: false };

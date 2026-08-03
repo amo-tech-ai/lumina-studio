@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ViewType } from "@/lib/planner/types";
+import type { PlannerTask, ViewType } from "@/lib/planner/types";
 
 import { AdaptivePanel } from "./adaptive-panel";
+import { NowNextBar } from "./now-next-bar";
 import styles from "./planner-workspace-shell.module.css";
 
 // Order/labels/icons match SCR-32-Planner-Workspace.dc.html's VIEWS array
@@ -27,8 +28,45 @@ function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }
   );
 }
 
-export function PlannerWorkspaceShell({ instanceId }: { instanceId: string }) {
+export type PlannerWorkspaceShellProps = {
+  instanceId: string;
+  timeline?: ReactNode;
+  kanban?: ReactNode;
+  calendar?: ReactNode;
+  list?: ReactNode;
+  /**
+   * IPI-588 — tasks from the page's getInstanceDetail() payload. When set
+   * with viewerId + today, the Now & Next bar mounts once above all views.
+   */
+  tasks?: PlannerTask[];
+  viewerId?: string;
+  phaseNames?: Record<string, string>;
+  /** YYYY-MM-DD — pass the same today string used for Timeline. */
+  today?: string;
+};
+
+// IPI-579 / IPI-580 / IPI-581 — page passes server-built view nodes.
+// IPI-588 · PLN-S1G — Now & Next mounts once between toolbar and view content.
+export function PlannerWorkspaceShell({
+  instanceId,
+  timeline,
+  kanban,
+  calendar,
+  list,
+  tasks,
+  viewerId,
+  phaseNames = {},
+  today,
+}: PlannerWorkspaceShellProps) {
   const [view, setView] = useState<ViewType>("timeline");
+
+  const contentFor = (key: ViewType, label: string): ReactNode => {
+    if (key === "timeline") return timeline ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "kanban") return kanban ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "calendar") return calendar ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "list") return list ?? <WorkspacePlaceholder view={key} label={label} />;
+    return <WorkspacePlaceholder view={key} label={label} />;
+  };
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -51,9 +89,18 @@ export function PlannerWorkspaceShell({ instanceId }: { instanceId: string }) {
           </TabsList>
         </div>
 
+        {tasks && viewerId && today ? (
+          <NowNextBar
+            tasks={tasks}
+            viewerId={viewerId}
+            phaseNames={phaseNames}
+            today={today}
+          />
+        ) : null}
+
         {VIEWS.map(({ key, label }) => (
           <TabsContent key={key} value={key} style={{ marginTop: "1rem", width: "100%" }}>
-            <WorkspacePlaceholder view={key} label={label} />
+            {contentFor(key, label)}
           </TabsContent>
         ))}
       </Tabs>

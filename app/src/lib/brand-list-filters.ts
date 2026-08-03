@@ -42,6 +42,16 @@ export function isAnalysingIntakeStatus(
   return ANALYSING_INTAKE_STATUSES.includes(status as BrandIntakeStatus);
 }
 
+/**
+ * Durable post-analysis readiness for onboarding “Open iPix” and Hub active state.
+ * Includes legacy edge live-write `scores_complete` alongside HITL `ready`.
+ */
+export function isDurableIntakeReady(
+  status: BrandIntakeStatus | string | null | undefined,
+): boolean {
+  return ACTIVE_INTAKE_STATUSES.includes(status as BrandIntakeStatus);
+}
+
 export function matchesBrandListFilter(
   filter: BrandListFilter,
   intakeStatus: BrandIntakeStatus | string | null | undefined,

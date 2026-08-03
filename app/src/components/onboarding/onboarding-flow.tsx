@@ -59,6 +59,8 @@ export function OnboardingFlow({
   const [brandId, setBrandId] = useState<string | null>(initialBrandId);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
+  /** IPI-835 · D — Open iPix only after durable ready|scores_complete. */
+  const [dnaReady, setDnaReady] = useState(false);
   const draftRef = useRef(onDraftChange);
   draftRef.current = onDraftChange;
   const screenRef = useRef(screen);
@@ -66,6 +68,11 @@ export function OnboardingFlow({
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
   const previousScreenRef = useRef(screen);
+
+  // Avoid stale readiness when brandId changes (resume / rematerialize).
+  useEffect(() => {
+    setDnaReady(false);
+  }, [brandId]);
 
   // Move focus only when the screen value actually changes. Tracking the prior
   // value avoids focusing on initial mount and during StrictMode's repeated
@@ -194,7 +201,9 @@ export function OnboardingFlow({
           />
         );
       case LAST_SCREEN:
-        return <BrandDnaPayoffScreen />;
+        return (
+          <BrandDnaPayoffScreen brandId={brandId} onReadyChange={setDnaReady} />
+        );
       default:
         return <MarketingScreen screen={screen} />;
     }
@@ -232,7 +241,9 @@ export function OnboardingFlow({
             // Skip on screen 4 can clear the name; block commit until it's filled.
             (Boolean(onCommitAnalysis) &&
               nextScreen(screen) === ANALYSIS_SCREEN &&
-              answers.brandName.trim() === "")
+              answers.brandName.trim() === "") ||
+            // Slice D — do not enter the app until Brand DNA is durably ready.
+            (screen === LAST_SCREEN && !dnaReady)
           }
           continueLabel={committing ? "Starting…" : ctaLabel(screen)}
           navigationDisabled={committing}

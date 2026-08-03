@@ -20,9 +20,11 @@ import {
   parseDraftAnswers,
   serializeDraftAnswers,
 } from "./session-draft";
+import { isAnalysisReviewable } from "./kickoff-onboarding-analysis";
 import {
   ANALYSIS_SCREEN,
   FIRST_SCREEN,
+  LAST_SCREEN,
   clampScreen,
   type OnboardingAnswers,
 } from "./navigation";
@@ -95,11 +97,42 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         const session = await getOrCreateOnboardingSession(supabase, user.id, key);
         if (cancelled) return;
         sessionRef.current = session;
+
+        // Materialized sessions cannot autosave current_screen (RLS). Derive
+        // resume screen from brand intake so refresh on DNA review lands on 13.
+        let currentScreen = clampScreen(session.current_screen || FIRST_SCREEN);
+        if (session.brand_id && session.status === "materialized") {
+          const { data: brand, error: brandErr } = await supabase
+            .from("brands")
+            .select("intake_status")
+            .eq("id", session.brand_id)
+            .maybeSingle();
+          if (cancelled) return;
+          if (brandErr) {
+            console.error("[useOnboardingSession] brand intake_status", brandErr);
+            throw brandErr;
+          }
+          const intake =
+            typeof brand?.intake_status === "string" ? brand.intake_status : null;
+          if (isAnalysisReviewable(intake)) {
+            currentScreen = LAST_SCREEN;
+          } else if (
+            intake === "brand_created" ||
+            intake === "crawl_running" ||
+            intake === "crawl_complete" ||
+            intake === "analysis_running" ||
+            intake === "failed"
+          ) {
+            currentScreen = ANALYSIS_SCREEN;
+          }
+        }
+
+        if (cancelled) return;
         setBootstrap({
           status: "ready",
           sessionId: session.id,
           brandId: session.brand_id,
-          currentScreen: clampScreen(session.current_screen || FIRST_SCREEN),
+          currentScreen,
           answers: parseDraftAnswers(session.draft_answers),
         });
       } catch (err) {
