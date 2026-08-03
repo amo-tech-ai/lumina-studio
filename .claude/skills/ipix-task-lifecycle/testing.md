@@ -3,8 +3,9 @@
 Aggregate verification after Phase 3. **Per-task tests already ran in Phase 3** —
 this phase confirms full-matrix coverage and captures ship evidence.
 
+**Playbook:** [`docs/process/04-testing-qa-playbook.md`](../../../docs/process/04-testing-qa-playbook.md) · **Evidence:** [`qa-evidence-template.md`](../../../docs/process/templates/qa-evidence-template.md)  
 Matrix: [references/testing-matrix.md](references/testing-matrix.md) · per-task contract:
-[references/per-task-testing.md](references/per-task-testing.md).
+[references/per-task-testing.md](references/per-task-testing.md) · path commands: [verify-matrix](../pr-workflow/references/verify-matrix.md).
 
 ---
 

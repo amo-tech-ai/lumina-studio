@@ -39,6 +39,8 @@ export type BrandDetailWorkspaceProps = {
   baseScores: BrandScoreDetail[];
   crawlPages?: { pages_crawled: number | null; pages_found: number | null } | null;
   isAuthenticated: boolean;
+  /** IPI-918 — owner/editor may restart a failed analysis; viewers may not. */
+  canRestartAnalysis?: boolean;
 };
 
 function displayHost(url: string | null): string | null {
@@ -84,6 +86,7 @@ export function BrandDetailWorkspace({
   baseScores,
   crawlPages,
   isAuthenticated,
+  canRestartAnalysis = false,
 }: BrandDetailWorkspaceProps) {
   const router = useRouter();
   const [startingAnalysis, setStartingAnalysis] = useState(false);
@@ -200,6 +203,7 @@ export function BrandDetailWorkspace({
             initialStatus={status}
             initialCrawlPages={crawlPages}
             errorMessage={profile._error}
+            canRestart={canRestartAnalysis}
           />
         ) : null}
 
