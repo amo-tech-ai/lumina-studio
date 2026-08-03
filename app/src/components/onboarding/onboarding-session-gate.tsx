@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOnboardingSession } from "@/lib/onboarding/use-onboarding-session";
+
+const LOGIN_HREF = "/login?redirect=/onboarding";
 
 /**
  * IPI-835 · B1 / IPI-903 — loads the real onboarding_sessions draft before mounting the flow.
@@ -33,28 +36,40 @@ export function OnboardingSessionGate() {
   }
 
   if (session.status === "error") {
+    const authRequired = Boolean(session.authRequired);
     return (
       <div
         ref={errorPanelRef}
         className="flex min-h-full items-center justify-center p-6 outline-none"
         role="alert"
         data-testid="onboarding-session-error"
+        data-auth-required={authRequired ? "true" : undefined}
       >
         <div className="max-w-md space-y-3 text-center">
           <h1 className="font-serif text-2xl text-[var(--onboarding-card)]">
-            Couldn’t resume setup
+            {authRequired ? "Sign in to continue" : "Couldn’t resume setup"}
           </h1>
           <p className="font-sans text-sm text-[var(--onboarding-sub)]">
             {session.message}
           </p>
-          <button
-            type="button"
-            onClick={session.retry}
-            data-testid="onboarding-session-retry"
-            className="rounded-full bg-[var(--onboarding-card)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-cta)]"
-          >
-            Try again
-          </button>
+          {authRequired ? (
+            <Link
+              href={LOGIN_HREF}
+              data-testid="onboarding-session-sign-in"
+              className="inline-flex rounded-full bg-[var(--onboarding-card)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-cta)]"
+            >
+              Sign in
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={session.retry}
+              data-testid="onboarding-session-retry"
+              className="rounded-full bg-[var(--onboarding-card)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-cta)]"
+            >
+              Try again
+            </button>
+          )}
         </div>
       </div>
     );

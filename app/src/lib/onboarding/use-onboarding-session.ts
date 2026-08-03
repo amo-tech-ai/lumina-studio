@@ -12,7 +12,12 @@ import {
 } from "@/lib/onboarding";
 import { getOrCreateOnboardingIdempotencyKey } from "./idempotency-key";
 import {
+  ONBOARDING_AUTH_REQUIRED,
+  resolveOnboardingAuthUser,
+} from "./resolve-onboarding-auth-user";
+import {
   ONBOARDING_BRAND_NAME_REQUIRED,
+  isOnboardingAuthError,
   toUserFacingOnboardingError,
 } from "./onboarding-errors";
 import {
@@ -31,7 +36,7 @@ import {
 
 type SessionBootstrap =
   | { status: "loading" }
-  | { status: "error"; message: string }
+  | { status: "error"; message: string; authRequired?: boolean }
   | {
       status: "ready";
       sessionId: string;
@@ -52,6 +57,8 @@ const SAVE_DEBOUNCE_MS = 400;
 type Deps = {
   createClient?: () => SupabaseClient;
   getIdempotencyKey?: () => string;
+  /** Override auth cookie hydrate wait (tests only). */
+  authHydrateTimeoutMs?: number;
 };
 
 /**
@@ -86,13 +93,10 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
           supabaseRef.current = createClient();
         }
         const supabase = supabaseRef.current;
-        const {
-          data: { user },
-          error: authErr,
-        } = await supabase.auth.getUser();
-        if (authErr || !user) {
-          throw new Error(authErr?.message ?? "Not authenticated");
-        }
+        // OAuth / hard nav can race cookie hydration — wait before failing.
+        const user = await resolveOnboardingAuthUser(supabase, {
+          hydrateTimeoutMs: depsRef.current.authHydrateTimeoutMs,
+        });
         const key = getIdempotencyKey();
         const session = await getOrCreateOnboardingSession(supabase, user.id, key);
         if (cancelled) return;
@@ -140,6 +144,7 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         setBootstrap({
           status: "error",
           message: toUserFacingOnboardingError(err, "session"),
+          authRequired: isOnboardingAuthError(err),
         });
       }
     })();
@@ -175,10 +180,12 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
     const session = sessionRef.current;
     const supabase = supabaseRef.current;
     if (!session || !supabase) throw new Error("Onboarding session not loaded");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    let user;
+    try {
+      user = await resolveOnboardingAuthUser(supabase, { hydrateTimeoutMs: 0 });
+    } catch {
+      throw new Error(ONBOARDING_AUTH_REQUIRED);
+    }
 
     if (!answers.brandName.trim()) {
       throw new Error(ONBOARDING_BRAND_NAME_REQUIRED);
