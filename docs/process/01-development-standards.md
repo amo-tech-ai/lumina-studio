@@ -15,7 +15,7 @@
 | **CLAUDE.md / AGENTS.md** | Always-on facts (stack, hard rules, ports) | ✅ Present | Keep lean; link out |
 | **Cursor rules (`.cursor/rules/*.mdc`)** | Hard constraints (one concern, naming, ponytail) | ✅ Present | New hard gate only |
 | **Skills (`.claude/skills/`)** | Procedural workflows loaded on demand | ✅ Many hubs | New repeatable playbook |
-| **Hooks** | Deterministic gates (lint/block forbidden cmds) | Partial (pre-push) | Must-never-skip checks |
+| **Hooks** | Deterministic gates (lint/block forbidden cmds) | ✅ Claude PreToolUse/Stop (4 scripts); 🔴 git pre-push **documented but not installed** | Must-never-skip checks |
 | **Commands / agents** | Slash flows, delegated research/test | Skills act as cmds | Subagents for research vs code |
 | **MCP** | Live docs/APIs (Linear, Cloudflare, Sentry…) | ✅ Configured | Prefer MCP over guessing |
 
@@ -91,6 +91,6 @@ flowchart LR
 
 ## Done when
 
-- [ ] Inventory table checked into this folder or Linear follow-up
-- [ ] ≤5 harness changes filed as separate Linear tasks
-- [ ] No process text dumped into always-on CLAUDE.md
+- [x] Inventory table checked into this folder — see [01-harness-audit-results.md](./01-harness-audit-results.md)
+- [ ] ≤5 harness changes filed as separate Linear tasks (MCP Linear needsAuth this run — list is in results)
+- [x] No process text dumped into always-on CLAUDE.md
