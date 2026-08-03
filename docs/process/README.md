@@ -25,7 +25,7 @@
 | 3 | [AI Research Playbook](./03-ai-research-playbook.md) · skill `ai-research` · `/research` | Every task, before code | With #4 templates |
 | 4 | [Testing & QA Playbook](./04-testing-qa-playbook.md) · [evidence template](./templates/qa-evidence-template.md) | Every task, before/after merge | With #3 |
 | 5 | [UI & User Journey](./05-ui-user-journey.md) | UX / screen work | Parallel with #7, #8 |
-| 6 | [Tech Stack Playbook](./06-tech-stack-playbook.md) | Stack gaps / upgrades | One tool at a time |
+| 6 | [Tech Stack Playbook](./06-tech-stack-playbook.md) · [`tech-stack/`](./tech-stack/) | Stack audit (Aug 2026) — exec summary through Linear tasks | One tool deep-dive at a time after reading §1–2 |
 | 7 | [AI Agents Strategy](./07-ai-agents-strategy.md) | Mastra / CopilotKit / RAG | Parallel with #5, #6 |
 | 8 | [Architecture Review](./08-architecture-review.md) | Custom vs dashboard/CLI | After #6 research |
 | 9 | [MVP Roadmap](./09-mvp-roadmap.md) | Prioritize backlog | After #5–#8 findings |

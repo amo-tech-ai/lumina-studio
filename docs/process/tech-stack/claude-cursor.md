@@ -1,20 +1,14 @@
-# Tech stack · Claude Code & Cursor
+# Tech stack · Claude Code / Cursor
 
-**iPix today:** Rich `CLAUDE.md`, skills, Cursor rules (`ponytail`, `lean`, task-naming).
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.11
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | Delivery harness — rules, skills, hooks, commands, MCP |
+| **Current (✅)** | `.cursor/rules/` · `.claude/skills/` · process playbooks · `/research` · Linear MCP (auth-sensitive in Cloud) |
+| **Class** | **MVP** |
+| **Rec** | **Keep** · **Improve** pre-push hook install + Linear default template · skip parallel prompt frameworks |
 
-```xml
-<task>
-1. Read Anthropic steering: CLAUDE.md vs skills vs hooks vs subagents.
-2. Adapt Karpathy principles into existing ponytail (do not duplicate).
-3. Propose ≤3 hooks that cut PR errors (mixed concerns, lint, verify).
-4. Commands: map docs/process playbooks to skills or slash commands.
-5. Output: what to add where (table only).
-</task>
-```
+## Related
 
-| Fill after run | Notes |
-|----------------|-------|
-| Additions | |
-| Deferrals | |
+[01 harness audit](../01-harness-audit-results.md) · [03 research](../03-ai-research-playbook.md) · [04 QA](../04-testing-qa-playbook.md)

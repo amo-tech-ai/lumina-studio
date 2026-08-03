@@ -1,22 +1,19 @@
 # Tech stack · Supabase
 
-**iPix today:** Remote-only Postgres + Auth + Edge Functions + RLS. Project `nvdlhrodvevgwdsneplk`.
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.2
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | Auth, Postgres+RLS, Edge Functions, Storage — operator data plane |
+| **Current (✅)** | Remote-only; PKCE login; Edge crawl/DNA/leads; verify scripts for RLS/edge/BI |
+| **Core** | Auth, RLS, migrations, Edge | **Advanced** | Realtime, Queues, Cron |
+| **Class** | Auth/RLS/Edge = **MVP** · Realtime crawl UX = **Post-MVP** |
+| **Rec** | **Keep** · **Improve** Realtime progress + advisors habit · never local Docker as SSOT |
 
-```xml
-<task>
-1. Official Supabase docs: RLS, Edge, pgvector, Advisors.
-2. Prefer Dashboard / CLI (`supabase`) / MCP before custom SQL helpers.
-3. Audit whether new tasks need migrations vs config.
-4. Mermaid: auth → RLS → edge → app failure points.
-5. Core MVP checks: verify-rls, verify-edge commands.
-</task>
-```
+## Gaps
 
-| Fill after run | Notes |
-|----------------|-------|
-| Latest features | |
-| Best practices | |
-| iPix gaps | |
-| MVP actions | |
+Realtime underused; queues/cron not standardized; observability = verify + Sentry.
+
+## Refs
+
+[Docs](https://supabase.com/docs) · [RLS](https://supabase.com/docs/guides/auth/row-level-security) · [Edge](https://supabase.com/docs/guides/functions) · [pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)

@@ -1,20 +1,18 @@
-# Tech stack · Models
+# Tech stack · Models & providers
 
-**iPix today:** Gemini via Mastra; Cloudflare AI Gateway routing for some paths.
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.1 + §3.9
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | Inference + embeddings for Mastra agents |
+| **Current (✅)** | Gemini default (`@ai-sdk/google`); Groq + gateway-compatible paths; `AI_ROUTING_AGENT_*` keys |
+| **Class** | Gemini tool agents = **MVP** · CF Workers AI marketing trial = **MVP** · fleet-wide native = **Post-MVP** |
+| **Rec** | **Keep** Gemini for planner/CRM/booking/vision · trial CF flash/Kimi/Gemma on marketing only |
 
-```xml
-<task>
-1. Compare current models (Gemini flash/pro family) vs Workers AI options.
-2. Match model to job: fast marketing chat vs tool-calling planner vs embeddings.
-3. Cost/latency/quality; keep tool-calling agents on models that support tools.
-4. Recommend defaults for Core MVP; park exotic models.
-</task>
-```
+## Flags SSOT
 
-| Fill after run | Notes |
-|----------------|-------|
-| Recommended map | job → model |
-| Gateway notes | |
-| MVP actions | |
+`app/src/lib/ai/agent-routing-keys.mjs`
+
+## Refs
+
+[Workers AI models](https://developers.cloudflare.com/workers-ai/models/) · [AI Gateway REST](https://developers.cloudflare.com/ai-gateway/usage/rest-api/)

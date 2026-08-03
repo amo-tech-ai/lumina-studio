@@ -1,21 +1,19 @@
 # Tech stack · pgvector / RAG
 
-**Question:** Does RAG help operators find brand assets, briefs, and similar work faster than raw search?
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.5
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | Semantic brand/context (later talent/assets) search |
+| **Current (✅)** | `vector(768)`; `search_brands` / context RPCs; model-match still filter-heavy |
+| **Core** | Healthy embeddings + RLS search | **Advanced** | Full RAG chat, rerank, hybrid |
+| **Class** | Brand search = **MVP** · Domain RAG packs = **Post-MVP** |
+| **Rec** | **Keep** pgvector · **Improve** Brand Hub UX · no second vector product |
 
-```xml
-<task>
-1. Docs: Supabase pgvector + Mastra RAG.
-2. How embeddings are used today in iPix (gateway, brand match).
-3. Benefits for /app journeys vs complexity.
-4. Core MVP: keep current embeddings path healthy; Advanced: full RAG chat.
-5. Prefer managed/SQL recipes before custom vector services.
-</task>
-```
+## RAG priority (🟡)
 
-| Fill after run | Notes |
-|----------------|-------|
-| Current usage | |
-| Mastra RAG used? | |
-| MVP recommendation | |
+Brand DNA → context snapshots → talent → shoot refs → CRM memory → campaigns.
+
+## MVP action
+
+**IPI-XXX · STACK-RAG-001 — Brand Hub similar-brands via search_brands RPC**

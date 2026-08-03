@@ -1,21 +1,19 @@
 # Tech stack · Mastra
 
-**iPix today:** `app/src/mastra/` registry; agents via CopilotKit. Skill: `mastra`.
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.3
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | Server-side agents, tools, workflows, memory for `/app` |
+| **Current (✅)** | 9 agents + `default`; `@mastra/core` ~1.41; memory alpha; pg + observability packages |
+| **Core** | Registry, tools, `resolveModel`, org `resourceId` | **Advanced** | Evals, RAG modules, agent networks |
+| **Class** | Agents/tools/memory harden = **MVP** · Evals depth = **Post-MVP** |
+| **Rec** | **Keep** as only product agent runtime · **Improve** obs + Hyperdrive storage · no OpenClaw in product |
 
-```xml
-<task>
-1. Official Mastra docs: agents, tools, workflows, memory, RAG.
-2. GitHub templates/recipes last 30 days.
-3. Are we using Mastra RAG? If not, is pgvector enough for MVP?
-4. Platform-first: package features before custom tool code.
-5. Mermaid: request → getMastra() → model → tools → HITL.
-</task>
-```
+## Gotchas
 
-| Fill after run | Notes |
-|----------------|-------|
-| RAG verdict | use / defer |
-| Gaps | |
-| MVP actions | |
+Never `getMastra()` at route module top-level; guard `DATABASE_URL` at build; sync registry key = agent `id` = `useAgent({ agentId })`.
+
+## Refs
+
+[mastra.ai/docs](https://mastra.ai/docs) · [github.com/mastra-ai/mastra](https://github.com/mastra-ai/mastra)

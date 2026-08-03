@@ -1,23 +1,24 @@
 # Tech stack · Cloudflare
 
-**iPix today:** Custom AI Gateway Worker in production; full OpenNext app cutover not done. SSOT: `tasks/cloudflare/todo.md`.
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.1 · Live tracker: `tasks/cloudflare/todo.md`
 
-## Multistep research prompt
+| | |
+|--|--|
+| **Purpose** | AI Gateway (live), future OpenNext hosting, Hyperdrive for Mastra Postgres |
+| **Current (✅)** | App on Vercel; `services/cloudflare-worker/` production AI path (frozen); gateway `ipix-prod`; Hyperdrive configured, not organic |
+| **Class** | Gateway + cutover gates = **MVP** · Full Workers AI fleet = **Post-MVP** |
+| **Rec** | **Keep** gateway · **Improve** IPI-708/709/707/763 + Hyperdrive · Worker delete **last** (IPI-592) |
 
-```xml
-<task>
-1. Search Cloudflare docs (Workers, AI Gateway, Workers AI models, bindings) via MCP + web.
-2. GitHub examples last 30 days: Workers + AI Gateway + OpenNext.
-3. Compare Dashboard/Wrangler vs custom code in services/cloudflare-worker/.
-4. Which Workers AI model fits marketing `fast` vs tool-calling agents?
-5. Gaps for Core MVP vs Advanced; Mermaid failure points for live gateway.
-</task>
-```
+## Models per agent (🟡 trial)
 
-| Fill after run | Notes |
-|----------------|-------|
-| Latest features | |
-| Best practices | |
-| Templates / recipes | |
-| iPix gaps | |
-| MVP actions | |
+Prefer Gemini for tool agents; trial Workers AI (Gemma/Kimi/flash) only on `public-marketing` behind `AI_ROUTING_AGENT_*` after `cfEnv` (IPI-750).
+
+## MVP actions
+
+1. Cutover safety gates  
+2. Hyperdrive organic  
+3. One native marketing flip + smoke  
+
+## Refs
+
+[Workers](https://developers.cloudflare.com/workers/) · [AI Gateway](https://developers.cloudflare.com/ai-gateway/) · [Workers AI](https://developers.cloudflare.com/workers-ai/models/) · [Hyperdrive](https://developers.cloudflare.com/hyperdrive/)

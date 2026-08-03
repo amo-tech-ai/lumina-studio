@@ -1,27 +1,18 @@
 # Tech stack · Ecosystem tools
 
-Candidates for research/crawl/social — evaluate before integrating.
+**SSOT playbook:** [06 · Tech Stack Playbook](../06-tech-stack-playbook.md) §3.6–3.16
 
-| Tool | Why consider | MVP? |
-|------|--------------|------|
-| Firecrawl | Already in brand crawl path | Likely Core (existing) |
-| Apify | Extra scrapers / store actors | Post-MVP unless gap |
-| [Xpoz](https://www.xpoz.ai/) | AI commerce patterns | Research only |
-| Postiz | Social scheduling | Post-MVP |
-| OpenClaw | (verify current product fit) | Research → defer if unclear |
-| MCP Chrome / Playwright | QA journeys | Core for testing |
+| Tool | iPix today | Class | Verdict |
+|------|------------|-------|---------|
+| **Firecrawl** | ✅ Brand crawl Edge path | MVP | **Keep / Improve** progress UX |
+| **Apify** | ⚪ None | Post-MVP | **Defer** — Firecrawl first |
+| **Xpoz.ai** | ⚪ Research only | Advanced | Patterns only — **no dependency** |
+| **Postiz** | ⚪ None | Post-MVP | Evaluate MCP after draft→approve |
+| **OpenClaw** | ⚪ None | Advanced | Eng MCP only — **not** product runtime |
+| **Chatwoot + WhatsApp** | ⚪ None | Post-MVP | Dashboard-first inbox spike |
+| **Stripe** | ✅ Mercur/B2C | MVP commerce | **Keep** out of `/app` until billing epic |
+| **MCP** | ✅ Cursor servers | MVP harness | **Keep / Improve** auth |
 
-## Multistep research prompt
+## Rule
 
-```xml
-<task>
-1. Web search each tool: latest features, pricing, GitHub activity last 30 days.
-2. Map to iPix journey step (crawl, research, publish, test).
-3. Prefer extending Firecrawl/existing before new vendors.
-4. Tag Core / Post / Advanced; reject tool sprawl.
-</task>
-```
-
-| Tool | Verdict | Evidence |
-|------|---------|----------|
-| | | |
+One crawl SSOT (Firecrawl). One product agent runtime (Mastra). New vendors need a research spike + Linear epic before code.
