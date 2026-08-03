@@ -185,7 +185,7 @@ export function AuthenticatedCopilotProvider({
 
   if (phase === "error") {
     return (
-      <div data-testid="copilot-auth-error" style={shellStyle}>
+      <div role="alert" data-testid="copilot-auth-error" style={shellStyle}>
         <p style={{ margin: 0 }}>
           We couldn&apos;t load your session. Retry or sign in again.
         </p>

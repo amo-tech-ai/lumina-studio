@@ -428,7 +428,9 @@ describe("AuthenticatedCopilotProvider", () => {
       expect(screen.getByTestId("copilot-kit")).toBeTruthy();
     });
 
-    authCb?.("SIGNED_OUT", null);
+    await act(async () => {
+      authCb?.("SIGNED_OUT", null);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("copilot-auth-signed-out")).toBeTruthy();
