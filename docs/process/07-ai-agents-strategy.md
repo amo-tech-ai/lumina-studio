@@ -391,21 +391,27 @@ flowchart LR
 
 | Task | Why |
 |------|-----|
-| **IPI-156 · Campaign creative tools on creative-director** | Campaign strategist hat |
-| **IPI-136 · Mastra semantic / observational memory** | Long threads |
+| **IPI-156 · CAMP-001 — Add campaign help to the existing Creative Director** | Spec: `docs/linear/issues/IPI-156-CAMP-001-creative-director-campaigns.md` |
+| **IPI-136 · Mastra semantic / observational memory** | Long threads (Post-MVP) |
 | Cutover / Hyperdrive tasks from [06](./06-tech-stack-playbook.md) | Runtime health for agents |
 
-### File new
+### Priority set (copy-ready bodies)
 
-| Task | Class |
-|------|-------|
-| **IPI-XXX · AGENT-CTX-001 — Inject brand/shoot/deal into CopilotKit shared state** | MVP |
-| **IPI-XXX · AGENT-DNA-001 — Require evidence + confidence on Brand Intelligence answers** | MVP |
-| **IPI-XXX · AGENT-RAG-001 — Cite search_brands / context snippets in BI chat** | MVP |
-| **IPI-XXX · AGENT-PLAN-001 — Shoot wizard empty-state prompts + gate copy** | MVP |
-| **IPI-XXX · AGENT-CD-001 — Creative Director campaign brief from DNA (no new agent)** | MVP |
+Index: [`docs/linear/issues/agent-priority-README.md`](../linear/issues/agent-priority-README.md)
+
+| Order | Task | Spec |
+|-------|------|------|
+| 1 | **IPI-XXX · AGENT-CTX-001 — Give AI the current brand, shoot, or deal context** | `IPI-XXX-AGENT-CTX-001.md` |
+| 2 | **IPI-XXX · AGENT-DNA-001 — Explain Brand DNA with evidence and confidence** | `IPI-XXX-AGENT-DNA-001.md` |
+| 3 | **IPI-XXX · AGENT-PLAN-001 — Require approval before each shoot-planning stage** | `IPI-XXX-AGENT-PLAN-001.md` |
+| 4 | **IPI-156 · CAMP-001 — Add campaign help to the existing Creative Director** | `IPI-156-CAMP-001-…md` (reuse Linear) |
+| 5 | **IPI-XXX · AGENT-RAG-001 — Let Brand Intelligence cite similar brands and past context** | `IPI-XXX-AGENT-RAG-001.md` |
+
+**Do not file from this set:** Support · Postiz · Apify · OpenClaw agents · duplicate AGENT-CD-001 (use IPI-156).
+
+| Later | Class |
+|-------|-------|
 | **IPI-XXX · AGENT-MATCH-001 — Semantic talent match behind flag** | Post-MVP |
-| **IPI-XXX · AGENT-SUP-001 — Chatwoot vs Mastra support spike** | Post-MVP |
 | **IPI-XXX · AGENT-EVAL-001 — Mastra eval scorers for planner + booking HITL** | Advanced |
 
 ---
