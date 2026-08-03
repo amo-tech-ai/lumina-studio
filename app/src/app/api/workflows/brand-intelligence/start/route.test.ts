@@ -93,6 +93,9 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     expect(inputData.brandId).toBe(BRAND_ID);
     // No `userId` key survives — validate-brand reads actorId only.
     expect(inputData).not.toHaveProperty("userId");
+    // IPI-817 — operator JWT must never enter Mastra workflow input / snapshots.
+    expect(inputData).not.toHaveProperty("accessToken");
+    expect(Object.keys(inputData).sort()).toEqual(["actorId", "brandId"]);
   });
 
   it("awaits run.start (not startAsync) so storage stays open through suspend", async () => {
