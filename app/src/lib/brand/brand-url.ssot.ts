@@ -6,7 +6,9 @@
  * because Next.js/Turbopack cannot resolve modules outside the `app/` root
  * (same constraint that made `config/groq-models.json` a generated SSOT).
  *
- * Edit THIS file only, then run `npm run sync:brand-url`.
+ * Edit THIS file only, then mirror into the app tree:
+ *   `cp supabase/functions/_shared/brand-url.ts app/src/lib/brand/brand-url.ssot.ts`
+ * (or `npm run sync:brand-url` once the CI/config sibling lands).
  * Drift is a test failure — see app/src/lib/brand/brand-url.ssot.test.ts.
  * Shared behaviour matrix: brand-url.fixtures.json (asserted on both sides).
  *
