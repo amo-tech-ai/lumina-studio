@@ -675,13 +675,15 @@ async function main() {
         break;
       }
     }
+    // Codex P2: uiSignOut is only set after a /auth/signout response, so the
+    // "clicked but no request" branch was unreachable. Use probe count instead.
     mark(
       "12_signout_ui",
       uiSignOut && signoutRequestObserved,
       uiSignOut && signoutRequestObserved
         ? "clicked Sign out control; /auth/signout request observed"
-        : uiSignOut
-          ? `visible Sign out control clicked but NO /auth/signout request fired (probed ${signoutCandidatesProbed} candidate(s)) — session left intact; anonymous checks below will fail`
+        : signoutCandidatesProbed > 0
+          ? `visible Sign out / Log out control clicked but NO /auth/signout request fired (probed ${signoutCandidatesProbed} candidate(s)) — session left intact; anonymous checks below will fail`
           : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
     );
 
@@ -818,11 +820,13 @@ async function main() {
         } catch {
           finalPath = null;
         }
+        // Require the follow-redirect landing on /login — a bare 200 at
+        // /auth/signout (r.ok) must not pass as idempotent logout success.
         mark(
           "13f_signout_idempotent",
-          idempotent.ok && finalPath === "/login",
-          `status=${idempotent.status} final=${finalPath ?? "unparseable"}`,
-          { status: idempotent.status, final_path: finalPath },
+          finalPath === "/login",
+          `status=${idempotent.status} final=${finalPath ?? "unparseable"} ok=${idempotent.ok}`,
+          { status: idempotent.status, final_path: finalPath, ok: idempotent.ok },
         );
       } catch (e) {
         mark(
