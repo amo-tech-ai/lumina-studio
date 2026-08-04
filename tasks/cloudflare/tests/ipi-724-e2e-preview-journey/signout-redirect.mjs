@@ -10,7 +10,7 @@ export function isPreviewSignoutSuccessRedirect(status, location, previewBase) {
     return (
       loc.origin === previewOrigin &&
       loc.pathname === "/login" &&
-      loc.searchParams.get("signoutError") !== "1"
+      !loc.searchParams.getAll("signoutError").includes("1")
     );
   } catch {
     return false;

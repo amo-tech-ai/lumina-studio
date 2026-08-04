@@ -15,6 +15,7 @@ const cases = [
   [false, 200, "/login"],
   [false, 303, "/app?signoutError=1"],
   [false, 303, `${PREVIEW}/login?signoutError=1`],
+  [false, 303, `${PREVIEW}/login?signoutError=0&signoutError=1`],
   [false, 303, "https://evil.example/login"],
   [false, 303, null],
   [false, null, "/login"],
