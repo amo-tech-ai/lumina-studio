@@ -590,14 +590,16 @@ export type DiscardGateResult = {
 
 const GATE_MUTATION_MESSAGES: Record<string, string> = {
   UNAUTHENTICATED: "Sign in to review this gate.",
-  FORBIDDEN: "You don't have permission to approve this gate.",
+  // Shared by approve + discard — keep action-neutral.
+  FORBIDDEN: "You don't have permission to change this gate.",
   NOT_FOUND: "This gate could not be found.",
   STALE_VERSION: "This plan changed since you last viewed it. Refresh and try again.",
   DEPENDENCY_CHANGED: "This plan's schedule changed since you last viewed it. Refresh and try again.",
   DEPENDENCY_CYCLE: "That dependency change would create a cycle. Adjust the proposal and try again.",
   IDEMPOTENCY_CONFLICT: "This request conflicts with one already in progress. Refresh and try again.",
   INVALID_INPUT: "That request wasn't valid.",
-  INSTANCE_TERMINAL: "This plan is archived or cancelled and can no longer be edited.",
+  // Matches planner_approve_gate / planner_discard_gate: completed|archived|cancelled.
+  INSTANCE_TERMINAL: "This plan is completed, archived, or cancelled and can no longer be edited.",
   GATE_LOCKED: "This gate isn't ready yet — finish the required tasks first.",
   GATE_ALREADY_APPROVED: "This gate was already approved.",
 };
@@ -609,6 +611,15 @@ function gateMutationError(fn: string, code: string): MutationResult<never> {
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }
   return { ok: false, error: { code, message } };
+}
+
+function gateRpcNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function gateRpcUnknownError(fn: string, detail: string): MutationResult<never> {
+  console.error(`[planner/mutations] ${fn} rpc failed:`, detail);
+  return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
 }
 
 export async function approveGate(
@@ -654,8 +665,7 @@ export async function approveGate(
   });
 
   if (error || !data) {
-    console.error("[planner/mutations] planner_approve_gate rpc failed:", error?.message ?? "empty response");
-    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+    return gateRpcUnknownError("planner_approve_gate", error?.message ?? "empty response");
   }
 
   type ApproveGateRpcResult =
@@ -664,6 +674,16 @@ export async function approveGate(
 
   const result = data as ApproveGateRpcResult;
   if (!result.ok) return gateMutationError("planner_approve_gate", result.code);
+
+  if (
+    typeof result.replayed !== "boolean" ||
+    !gateRpcNonEmptyString(result.phaseId) ||
+    !gateRpcNonEmptyString(result.approvalId) ||
+    !gateRpcNonEmptyString(result.approvedAt) ||
+    !gateRpcNonEmptyString(result.approvedBy)
+  ) {
+    return gateRpcUnknownError("planner_approve_gate", "malformed ok payload");
+  }
 
   return {
     ok: true,
@@ -705,8 +725,7 @@ export async function discardGate(
   });
 
   if (error || !data) {
-    console.error("[planner/mutations] planner_discard_gate rpc failed:", error?.message ?? "empty response");
-    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+    return gateRpcUnknownError("planner_discard_gate", error?.message ?? "empty response");
   }
 
   type DiscardGateRpcResult =
@@ -715,6 +734,14 @@ export async function discardGate(
 
   const result = data as DiscardGateRpcResult;
   if (!result.ok) return gateMutationError("planner_discard_gate", result.code);
+
+  if (
+    typeof result.replayed !== "boolean" ||
+    !gateRpcNonEmptyString(result.phaseId) ||
+    !gateRpcNonEmptyString(result.approvalId)
+  ) {
+    return gateRpcUnknownError("planner_discard_gate", "malformed ok payload");
+  }
 
   return {
     ok: true,

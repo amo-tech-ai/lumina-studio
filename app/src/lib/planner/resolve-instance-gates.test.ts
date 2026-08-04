@@ -104,6 +104,22 @@ describe("resolveInstanceGates", () => {
     expect(gates[0].status).toBe("discarded");
   });
 
+  it("falls back to the engine check when the persisted status is not approved or discarded", () => {
+    const phases = [phase({ id: "ph-cast", name: "Casting", orderIndex: 1 })];
+    const tasks = [task({ id: "t1", phaseId: "ph-cast", status: "done" })];
+    const gates = resolveInstanceGates({ ...instance, tasks }, phases, [manager], "u1", [
+      {
+        id: "ga-1",
+        phase_id: "ph-cast",
+        status: "pending",
+        approved_by: null,
+        approved_at: null,
+      },
+    ]);
+    expect(gates[0].status).toBe("reachable");
+    expect(gates[0].approvalId).toBe("ga-1");
+  });
+
   it.each(["completed", "archived", "cancelled"] as const)(
     "does not advertise Reachable on terminal instance status=%s",
     (status) => {
@@ -129,5 +145,14 @@ describe("resolveInstanceGates", () => {
     const tasks = [task({ id: "t1", phaseId: "ph-cast", status: "done" })];
     const gates = resolveInstanceGates({ ...instance, tasks }, phases, [manager], "u1", []);
     expect(gates.map((g) => g.phaseId)).toEqual(["ph-cast"]);
+  });
+
+  it("sorts gates by orderIndex regardless of input order", () => {
+    const phases = [
+      phase({ id: "ph-prod", orderIndex: 3 }),
+      phase({ id: "ph-cast", orderIndex: 1 }),
+    ];
+    const gates = resolveInstanceGates(instance, phases, [manager], "u1", []);
+    expect(gates.map((g) => g.phaseId)).toEqual(["ph-cast", "ph-prod"]);
   });
 });

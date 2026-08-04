@@ -1170,22 +1170,24 @@ describe("approveGate", () => {
   });
 
   it.each([
-    "STALE_VERSION",
-    "IDEMPOTENCY_CONFLICT",
-    "FORBIDDEN",
-    "GATE_LOCKED",
-    "GATE_ALREADY_APPROVED",
-    "DEPENDENCY_CYCLE",
-    "DEPENDENCY_CHANGED",
-    "INSTANCE_TERMINAL",
-    "UNAUTHENTICATED",
-    "NOT_FOUND",
-    "INVALID_INPUT",
-  ])("maps RPC-returned %s to a typed error", async (code) => {
+    ["STALE_VERSION", "This plan changed since you last viewed it. Refresh and try again."],
+    ["IDEMPOTENCY_CONFLICT", "This request conflicts with one already in progress. Refresh and try again."],
+    ["FORBIDDEN", "You don't have permission to change this gate."],
+    ["GATE_LOCKED", "This gate isn't ready yet — finish the required tasks first."],
+    ["GATE_ALREADY_APPROVED", "This gate was already approved."],
+    ["DEPENDENCY_CYCLE", "That dependency change would create a cycle. Adjust the proposal and try again."],
+    ["DEPENDENCY_CHANGED", "This plan's schedule changed since you last viewed it. Refresh and try again."],
+    [
+      "INSTANCE_TERMINAL",
+      "This plan is completed, archived, or cancelled and can no longer be edited.",
+    ],
+    ["UNAUTHENTICATED", "Sign in to review this gate."],
+    ["NOT_FOUND", "This gate could not be found."],
+    ["INVALID_INPUT", "That request wasn't valid."],
+  ] as const)("maps RPC-returned %s to a typed error", async (code, message) => {
     const { client } = mockRpcJson({ ok: false, code });
     const result = await approveGate({ ...BASE_APPROVE, idempotencyKey: `idem-${code}` }, client);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe(code);
+    expect(result).toEqual({ ok: false, error: { code, message } });
   });
 
   it("rejects an empty idempotency key before calling the RPC", async () => {
@@ -1201,6 +1203,23 @@ describe("approveGate", () => {
   it("never forwards a raw unrecognized RPC code", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = mockRpcJson({ ok: false, code: "WEIRD_NEW_CODE" });
+    const result = await approveGate(BASE_APPROVE, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+    });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps a malformed ok payload to UNKNOWN_ERROR", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "approved",
+      // Missing phaseId / approvalId / approvedAt / approvedBy
+    });
     const result = await approveGate(BASE_APPROVE, client);
     expect(result).toEqual({
       ok: false,
@@ -1246,13 +1265,35 @@ describe("discardGate", () => {
     });
   });
 
-  it.each(["FORBIDDEN", "GATE_ALREADY_APPROVED", "IDEMPOTENCY_CONFLICT", "INSTANCE_TERMINAL"])(
-    "maps RPC-returned %s to a typed error",
-    async (code) => {
-      const { client } = mockRpcJson({ ok: false, code });
-      const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: `d-${code}` }, client);
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error.code).toBe(code);
-    },
-  );
+  it("omits p_reason when no reason is supplied", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "discarded",
+      phaseId: "ph-cast",
+      approvalId: "ga-2",
+    });
+
+    await discardGate(BASE_DISCARD, client);
+
+    expect(rpcMock).toHaveBeenCalledWith("planner_discard_gate", {
+      p_instance_id: "i1",
+      p_phase_id: "ph-cast",
+      p_idempotency_key: "idem-discard-1",
+    });
+  });
+
+  it.each([
+    ["FORBIDDEN", "You don't have permission to change this gate."],
+    ["GATE_ALREADY_APPROVED", "This gate was already approved."],
+    ["IDEMPOTENCY_CONFLICT", "This request conflicts with one already in progress. Refresh and try again."],
+    [
+      "INSTANCE_TERMINAL",
+      "This plan is completed, archived, or cancelled and can no longer be edited.",
+    ],
+  ] as const)("maps RPC-returned %s to a typed error", async (code, message) => {
+    const { client } = mockRpcJson({ ok: false, code });
+    const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: `d-${code}` }, client);
+    expect(result).toEqual({ ok: false, error: { code, message } });
+  });
 });

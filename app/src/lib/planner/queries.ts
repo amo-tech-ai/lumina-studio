@@ -766,7 +766,7 @@ export async function listInstanceGates(
 
   if (!phasesResult.ok) return phasesResult;
   if (assignmentRes.error) {
-    return failure("QUERY_FAILED", "Gate approvals could not be loaded.");
+    return failure("QUERY_FAILED", "Your role on this plan could not be loaded.");
   }
   if (approvalsRes.error) {
     return failure("QUERY_FAILED", "Gate approvals could not be loaded.");
