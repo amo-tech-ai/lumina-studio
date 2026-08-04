@@ -43,7 +43,7 @@ export const IntakeBanner = ({ status, errorMessage }: Props) => {
       <div className="rounded-xl border border-[#E8E0D8] bg-white px-4 py-3">
         <p className="font-sans text-sm text-[#64748B]">
           {s === "brand_created"
-            ? "Analysis not started yet. Restart analysis to run brand intelligence."
+            ? "Analysis not started yet."
             : "Crawl complete — run analysis to populate scores and profile."}
         </p>
       </div>

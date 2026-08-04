@@ -15,6 +15,12 @@ describe("resolveRouteBriefing", () => {
     expect(b.panelSections).toBeUndefined();
   });
 
+  it("keeps Brand Hub suggestions state-neutral (IPI-919 — no unconditional Restart analysis)", () => {
+    const b = resolveRouteBriefing("/app/brand/11111111-1111-1111-1111-111111111111");
+    expect(b.nextActions).toContain("Check analysis status");
+    expect(b.nextActions).not.toContain("Restart analysis");
+  });
+
   it("maps shoot list", () => {
     const b = resolveRouteBriefing("/app/shoots");
     expect(b.section).toBe("Shoots");

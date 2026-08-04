@@ -62,7 +62,7 @@ export const ScoresTab = ({ scores, citations }: Props) => {
   if (scores.length === 0) {
     return (
       <p className="font-sans text-sm text-[#94A3B8]">
-        No scores yet. Restart analysis to generate brand scores.
+        No scores yet. Scores appear here once brand analysis completes.
       </p>
     );
   }

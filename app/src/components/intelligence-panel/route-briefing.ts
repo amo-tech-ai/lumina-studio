@@ -32,7 +32,7 @@ export function resolveRouteBriefing(pathname: string): RouteBriefing {
     return {
       section: "Brand Hub",
       headline: "Brand DNA, scores, and approvals for the active brand.",
-      nextActions: ["Explain DNA scores", "Restart analysis", "View assets"],
+      nextActions: ["Explain DNA scores", "Check analysis status", "View assets"],
     };
   }
   if (pathname.startsWith("/app/shoots/new")) {
