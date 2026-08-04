@@ -90,7 +90,7 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
   // Report the REAL load outcome to the shell so chat suggestions key off the
   // payload, not the URL (a 404/500 must not advertise loaded-shoot actions).
   useEffect(() => {
-    setShootLoad({ loaded: Boolean(data), failed: Boolean(fetchError) });
+    setShootLoad({ loaded: Boolean(data && !fetchError), failed: Boolean(fetchError) });
     return () => setShootLoad({ loaded: false, failed: false });
   }, [data, fetchError, setShootLoad]);
 

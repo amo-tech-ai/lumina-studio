@@ -250,6 +250,11 @@ describe("ShootDetailWorkspace — reports real load state to the operator shell
     expect(readState()).toEqual({ loaded: false, failed: true });
   });
 
+  it("keeps the shoot unloaded when stale data and fetchError are both present", () => {
+    const { readState } = renderWithProbe(payload(), "Unable to load this shoot.");
+    expect(readState()).toEqual({ loaded: false, failed: true });
+  });
+
   it("resets the load state when the workspace unmounts (provider outlives it)", () => {
     let state: ShootLoadState | null = null;
     function Probe() {
