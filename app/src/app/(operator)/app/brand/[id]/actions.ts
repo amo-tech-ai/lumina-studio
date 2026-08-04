@@ -7,11 +7,12 @@ import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // IPI-919 · ONB2-INT-001f — the legacy `reanalyzeBrand` Server Action was
-// retired here. Failed-analysis recovery has exactly one door:
-// POST /api/brands/[id]/restart-analysis (IPI-905/918), which is stage-aware
-// and never starts a duplicate paid crawl when only Brand Intelligence failed.
-// Initial onboarding crawl kickoff stays with the onboarding flow
-// (kickoffOnboardingCrawl / Mastra brand-intelligence-workflow).
+// retired here. It was the only failed-recovery door before IPI-905/918 and
+// always started a fresh crawl, even when only Brand Intelligence had failed.
+// Recovery now has exactly one door: POST /api/brands/[id]/restart-analysis
+// (IPI-905/918), which is stage-aware and reuses a completed crawl. Initial
+// onboarding kickoff never used this action — it stays with the onboarding
+// flow (kickoffOnboardingCrawl / Mastra brand-intelligence-workflow).
 
 export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?: string }> {
   if (!brandId) return { ok: false, error: "Brand id is required" };
