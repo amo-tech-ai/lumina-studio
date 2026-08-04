@@ -42,16 +42,18 @@ const STATUS_DOT: Record<PhaseTimelineStatus, string> = {
   todo: styles.dotTodo,
 };
 
-const GATE_VISUAL: Record<"approved" | "ready" | "locked", string> = {
+const GATE_VISUAL: Record<"approved" | "ready" | "locked" | "discarded", string> = {
   approved: styles.gateApproved,
   ready: styles.gateReady,
   locked: styles.gateLocked,
+  discarded: styles.gateDiscarded,
 };
 
-const GATE_TITLE: Record<"approved" | "ready" | "locked", string> = {
+const GATE_TITLE: Record<"approved" | "ready" | "locked" | "discarded", string> = {
   approved: "Gate: approved",
   ready: "Gate: ready for approval",
   locked: "Gate: locked",
+  discarded: "Gate: discarded",
 };
 
 /** Accessible name for a phase row — status/dates/gate are otherwise visual-only. */
@@ -69,6 +71,7 @@ export function phaseRowAccessibleName(row: TimelinePhase): string {
   if (row.gate === "ready") parts.push("gate ready for approval");
   else if (row.gate === "locked") parts.push("gate locked");
   else if (row.gate === "approved") parts.push("gate approved");
+  else if (row.gate === "discarded") parts.push("gate discarded");
   if (row.milestone) parts.push("shoot day milestone");
   return parts.join(", ");
 }
@@ -209,7 +212,7 @@ export function PlannerTimeline({ model }: { model: TimelineModel }) {
                   <span className={`${styles.labelCell} ${selected ? styles.labelCellSelected : ""}`}>
                     <span className={`${styles.dot} ${STATUS_DOT[row.status]}`} aria-hidden="true" />
                     <span className={styles.name}>{row.phase.name}</span>
-                    {(row.gate === "ready" || row.gate === "locked") && (
+                    {(row.gate === "ready" || row.gate === "locked" || row.gate === "discarded") && (
                       <Lock size={11} aria-hidden="true" className={styles.lockIcon} />
                     )}
                   </span>

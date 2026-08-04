@@ -319,6 +319,41 @@ describe("checkGate", () => {
     expect(result.passed).toBe(false);
     expect(result.reason).toContain("admin");
   });
+
+  it("coalesces null requiredRole to manager (RPC parity)", () => {
+    const phase = makePhase({ id: "phase-a", gateType: "approval", requiredRole: null });
+    const denied = engine.checkGate(
+      makeInstance({ id: "inst-1" }),
+      phase,
+      [makeTask({ id: "t1", phaseId: "phase-a", status: "done" })],
+      [makeAssign({ id: "a1", userId: "user-1", role: "contributor" })],
+      "user-1",
+    );
+    expect(denied.passed).toBe(false);
+    expect(denied.reason).toContain("manager");
+
+    const allowed = engine.checkGate(
+      makeInstance({ id: "inst-1" }),
+      phase,
+      [makeTask({ id: "t1", phaseId: "phase-a", status: "done" })],
+      [makeAssign({ id: "a1", userId: "user-1", role: "manager" })],
+      "user-1",
+    );
+    expect(allowed.passed).toBe(true);
+  });
+
+  it("fails when requiredRole is viewer", () => {
+    const phase = makePhase({ id: "phase-a", gateType: "approval", requiredRole: "viewer" });
+    const result = engine.checkGate(
+      makeInstance({ id: "inst-1" }),
+      phase,
+      [makeTask({ id: "t1", phaseId: "phase-a", status: "done" })],
+      [makeAssign({ id: "a1", userId: "user-1", role: "owner" })],
+      "user-1",
+    );
+    expect(result.passed).toBe(false);
+    expect(result.reason).toMatch(/viewer/i);
+  });
 });
 
 describe("resolveDependencies", () => {
