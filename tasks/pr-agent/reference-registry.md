@@ -4,7 +4,9 @@
 > current pinned versions, verified CLI commands, evidence/scorecard/rollback templates, and the
 > source-authority order. Uses the reviewer-preferred 9-task sequence with the official Linear
 > `PRAGENT-001..010` mapping (§7). Every PRAGENT linear task should link here instead of duplicating URLs.
-> Companion docs: `tasks/pr-agent/pr-agent-plan.md` (audit + rollout) · `tasks/pr-agent/summary.md` (plain-language) · `tasks/pr-agent/pr-agent-expert.md` (expert pack design).
+> Companion docs land in the **PRAGENT-001 PR (#806)** — merge order is **#806 first, then this PR**;
+> until #806 merges these repo-relative links are intentionally unresolvable:
+> `tasks/pr-agent/pr-agent-plan.md` (audit + rollout) · `tasks/pr-agent/summary.md` (plain-language) · `tasks/pr-agent/pr-agent-expert.md` (expert pack design).
 
 ## 1. Source authority order
 
@@ -78,7 +80,7 @@ Always resolve conflicts in this order (highest wins):
 |---|---|---|---|
 | PR-Agent GitHub Action | commit `01569655d8b4825bbe5` (2026-07-10) | tag `v0.41.1` (2026-08-01) | Shallow: current pin is ~3 weeks behind latest; soon: `PyPI` package still 0.41.0 |
 | `configure-aws-credentials` | `aws.*` static keys (no Action) | `v6.2.3` (2026-07-22) | Pin full SHA at implementation; never float `@vN` |
-| Bedrock model | `bedrock/qwen.qwen3-coder-next` | – | region `us-east-1`; static keys → OIDC (PRAGENT-008) |
+| Bedrock model | `bedrock/qwen.qwen3-coder-next` | – | region `us-east-1`; static keys → OIDC (official PRAGENT-009 · IPI-522) |
 
 ## 4. Verified CLI commands
 
@@ -94,43 +96,49 @@ gh api repos/amo-tech-ai/lumina-studio/contents/.github/workflows/pr-agent.yml -
 # recent runs of the action (success/skipped/short-circuit)
 gh api repos/amo-tech-ai/lumina-studio/actions/workflows/pr-agent.yml/runs --paginate
 
-# pilot pool of PRs (see PRAGENT-005 — pilot)
+# pilot pool of PRs (official PRAGENT-006 · IPI-660 — pilot)
 gh pr list --repo amo-tech-ai/lumina-studio --state merged --limit 50 \
   --json number,title,url,files,labels,mergedAt
 
 # per-PR comments (review findings + persistent comment updates)
 gh api repos/amo-tech-ai/lumina-studio/issues/<PR>/comments --paginate
 
-# reviewer capability matrix (PRAGENT-006 — consolidate)
+# reviewer capability matrix (official PRAGENT-007 · IPI-931 — consolidate)
 gh api repos/amo-tech-ai/lumina-studio/installations
 gh api repos/amo-tech-ai/lumina-studio/rulesets
 gh api repos/amo-tech-ai/lumina-studio/branches/main/protection
 ```
 
-### 4.2 Upstream verification (feeds PRAGENT-001 audit + PRAGENT-009 version bump)
+### 4.2 Upstream verification (feeds official PRAGENT-001 audit + PRAGENT-010 version bump)
 
 ```bash
 gh api repos/The-PR-Agent/pr-agent/releases/latest
 gh api repos/The-PR-Agent/pr-agent/commits/<PINNED_SHA>
-gh api repos/The-PR-Agent/pr-agent/contents/pr_agent/settings/configuration.toml
+# config at the audited pin — `ref` selects the commit; omitting it reads drifting default-branch main (§1 rule)
+gh api "repos/The-PR-Agent/pr-agent/contents/pr_agent/settings/configuration.toml?ref=01569655d8b4825bbe599fd5b2a8de59d5c58390"
 gh api repos/The-PR-Agent/pr-agent/tags --paginate
 ```
 
-### 4.3 Controlled defect iteration (PRAGENT-004 — seeded defects)
+### 4.3 Controlled defect iteration (official PRAGENT-005 · IPI-930 — seeded defects)
 
 ```bash
-pip install pr-agent
+# install the exact source the pinned Action runs — floating PyPI latest drifts out of sync with production (§1)
+pip install "git+https://github.com/The-PR-Agent/pr-agent@01569655d8b4825bbe599fd5b2a8de59d5c58390"
+export GITHUB_TOKEN=...          # required: CLI authenticates to GitHub to fetch the PR (docs.pr-agent.ai/installation/locally/)
 export OPENAI_KEY=...            # or Bedrock env for qwen3
-python -m pr_agent.cli --pr_url=<PR_URL> review     # publish_output=false to iterate without posting
+# real override, not a comment — without it the default `publish_output=true` posts every local trial to the PR
+python -m pr_agent.cli --pr_url=<PR_URL> --config.publish_output=false review
 ```
-CLI still needs a real PR URL — create one tiny temporary branch + PR per seeded defect, tune locally, run the GitHub-action once, then close without merging. **This corpus is where precision is proven — a clean PR that produces no findings is a pass; do not force findings on real PRs.**
+CLI still needs a real PR URL — create one tiny temporary branch + PR per seeded defect, tune locally, run the GitHub-action once, then close without merging. The Action workflow only fires on `opened` / `reopened` / `ready_for_review` — **not** on subsequent pushes — so open the temp PR as a **draft** (the automatic run happens before tuning), tune locally, then mark **ready for review** to trigger the one post-tuning Action run. **This corpus is where precision is proven — a clean PR that produces no findings is a pass; do not force findings on real PRs.**
 
-### 4.4 Cost/measurement (PRAGENT-007) — proxy only, no custom dashboard first
+### 4.4 Cost/measurement (official PRAGENT-008 · IPI-932) — proxy only, no custom dashboard first
 
 ```bash
 aws cloudwatch list-metrics --namespace AWS/Bedrock
+# filter to Amazon Bedrock — without --filter this returns TOTAL account spend and corrupts the cost scorecard
 aws ce get-cost-and-usage --time-period Start=YYYY-MM-DD,End=YYYY-MM-DD \
-  --granularity DAILY --metrics UnblendedCost
+  --granularity DAILY --metrics UnblendedCost \
+  --filter '{"Dimensions":{"Key":"SERVICE","Values":["Amazon Bedrock"],"MatchOptions":["EQUALS"]}}'
 ```
 
 ## 5. Shared evidence / scorecard template
@@ -157,7 +165,7 @@ Score findings = useful / duplicate / incorrect / noisy.
 | Wall-clock (runs 507–514) | 44–85s per run, all success | Actions API |
 | Failures / timeouts | 0 of 6 recent runs | Actions API |
 
-Treat per-PR cost as `estimated` until AWS cost explorer attribution exists (PRAGENT-007 — measure).
+Treat per-PR cost as `estimated` until AWS cost explorer attribution exists (official PRAGENT-008 — measure).
 
 ## 6. Rollback template
 
