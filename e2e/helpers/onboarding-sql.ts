@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -10,6 +12,7 @@ export type OnboardingUniqueness = {
   sessions: number;
   organizations: number;
   brands: number;
+  brandsInOrg: number;
   crawls: number;
   sessionStatus: string | null;
   currentScreen: number | null;
@@ -18,15 +21,37 @@ export type OnboardingUniqueness = {
   intakeStatus: string | null;
 };
 
+/** Match scripts/ipi-894-materialize-race.mjs — strip only SSL URL params node-pg rejects. */
 function sanitizePgConnectionString(raw: string): string {
-  // Strip query params Playwright/CI sometimes leave that break node-pg.
   try {
     const u = new URL(raw);
-    u.search = "";
+    for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey"]) {
+      u.searchParams.delete(key);
+    }
     return u.toString();
   } catch {
     return raw;
   }
+}
+
+function resolvePgSsl():
+  | { rejectUnauthorized: false }
+  | { rejectUnauthorized: true; ca: string } {
+  if (
+    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
+  ) {
+    return { rejectUnauthorized: false };
+  }
+  const explicitCa =
+    process.env.PGSSLROOTCERT || process.env.VERIFY_RLS_PG_SSLROOTCERT || "";
+  const caPath =
+    explicitCa || resolve(process.cwd(), "scripts/certs/supabase-prod-ca-2021.crt");
+  if (!existsSync(caPath)) {
+    // ponytail: QA pooler often needs TLS without a local CA in CI — opt-in insecure only.
+    return { rejectUnauthorized: false };
+  }
+  return { rejectUnauthorized: true, ca: readFileSync(caPath, "utf8") };
 }
 
 export async function withQaPg<T>(fn: (client: import("pg").Client) => Promise<T>): Promise<T> {
@@ -34,17 +59,16 @@ export async function withQaPg<T>(fn: (client: import("pg").Client) => Promise<T
   const connectionString = sanitizePgConnectionString(
     assertQaOnly("QA_DATABASE_URL", process.env.QA_DATABASE_URL),
   );
-  const client = new Client({ connectionString, connectionTimeoutMillis: 15_000 });
+  if (!connectionString.includes(QA_PROJECT_REF)) {
+    throw new Error("pg client connection string lost QA ref");
+  }
+  const client = new Client({
+    connectionString,
+    connectionTimeoutMillis: 15_000,
+    ssl: resolvePgSsl(),
+  });
   await client.connect();
   try {
-    // Belt-and-suspenders: refuse if connected DB is not the QA project.
-    const { rows } = await client.query<{ ref: string }>(
-      `select current_setting('request.jwt.claim.ref', true) as ref`,
-    ).catch(() => ({ rows: [{ ref: "" }] }));
-    void rows;
-    if (!connectionString.includes(QA_PROJECT_REF)) {
-      throw new Error("pg client connection string lost QA ref");
-    }
     return await fn(client);
   } finally {
     await client.end().catch(() => undefined);
@@ -54,6 +78,9 @@ export async function withQaPg<T>(fn: (client: import("pg").Client) => Promise<T
 /**
  * Count durable rows for one onboarding attempt (idempotency key + user).
  * Fail the caller when any count !== 1 after materialize.
+ *
+ * Counts distinct org/brand ids on the attempt's sessions, then brands under that org
+ * so a duplicate brand left on the same org still fails uniqueness.
  */
 export async function queryOnboardingUniqueness(opts: {
   userId: string;
@@ -66,12 +93,16 @@ export async function queryOnboardingUniqueness(opts: {
       current_screen: number | null;
       organization_id: string | null;
       brand_id: string | null;
+      distinct_orgs: number;
+      distinct_brands: number;
     }>(
       `select count(*)::int as n,
               max(status) as status,
               max(current_screen)::int as current_screen,
               max(organization_id::text) as organization_id,
-              max(brand_id::text) as brand_id
+              max(brand_id::text) as brand_id,
+              count(distinct organization_id)::int as distinct_orgs,
+              count(distinct brand_id)::int as distinct_brands
          from public.onboarding_sessions
         where user_id = $1::uuid
           and idempotency_key = $2`,
@@ -81,25 +112,22 @@ export async function queryOnboardingUniqueness(opts: {
     const orgId = row?.organization_id ?? null;
     const brandId = row?.brand_id ?? null;
 
-    let organizations = 0;
-    let brands = 0;
+    let brandsInOrg = 0;
     let crawls = 0;
     let intakeStatus: string | null = null;
 
     if (orgId) {
-      const org = await client.query<{ n: number }>(
-        `select count(*)::int as n from public.organizations where id = $1::uuid`,
+      const orgBrands = await client.query<{ n: number }>(
+        `select count(*)::int as n from public.brands where org_id = $1::uuid`,
         [orgId],
       );
-      organizations = org.rows[0]?.n ?? 0;
+      brandsInOrg = orgBrands.rows[0]?.n ?? 0;
     }
     if (brandId) {
-      const brand = await client.query<{ n: number; intake_status: string | null }>(
-        `select count(*)::int as n, max(intake_status) as intake_status
-           from public.brands where id = $1::uuid`,
+      const brand = await client.query<{ intake_status: string | null }>(
+        `select max(intake_status) as intake_status from public.brands where id = $1::uuid`,
         [brandId],
       );
-      brands = brand.rows[0]?.n ?? 0;
       intakeStatus = brand.rows[0]?.intake_status ?? null;
       const crawl = await client.query<{ n: number }>(
         `select count(*)::int as n from public.brand_crawls where brand_id = $1::uuid`,
@@ -110,8 +138,10 @@ export async function queryOnboardingUniqueness(opts: {
 
     return {
       sessions: row?.n ?? 0,
-      organizations,
-      brands,
+      // Distinct org/brand ids on this attempt (idempotency key) — not PK existence alone.
+      organizations: row?.distinct_orgs ?? 0,
+      brands: row?.distinct_brands ?? 0,
+      brandsInOrg,
       crawls,
       sessionStatus: row?.status ?? null,
       currentScreen: row?.current_screen ?? null,
@@ -125,15 +155,18 @@ export async function queryOnboardingUniqueness(opts: {
 export function assertUniqueMaterialized(u: OnboardingUniqueness): void {
   if (u.sessions !== 1) throw new Error(`expected 1 onboarding session, got ${u.sessions}`);
   if (u.organizations !== 1) throw new Error(`expected 1 organization, got ${u.organizations}`);
-  if (u.brands !== 1) throw new Error(`expected 1 brand, got ${u.brands}`);
+  if (u.brands !== 1) throw new Error(`expected 1 brand on session, got ${u.brands}`);
+  if (u.brandsInOrg !== 1) {
+    throw new Error(`expected 1 brand under org, got ${u.brandsInOrg}`);
+  }
   if (!u.organizationId || !u.brandId) {
     throw new Error("session missing organization_id or brand_id after materialize");
   }
 }
 
 /**
- * Tenant isolation (IPI-809): org membership is only for the owning user;
- * a stranger UUID has zero membership / session rows for this attempt.
+ * Tenant isolation (IPI-809): sole org membership for owner, plus RLS as a random
+ * stranger JWT subject (set_config) so a broken "see all sessions" policy fails.
  */
 export async function assertTenantIsolation(opts: {
   userId: string;
@@ -155,18 +188,6 @@ export async function assertTenantIsolation(opts: {
       );
     }
 
-    const stranger = "00000000-0000-4000-8000-000000000099";
-    const foreignSession = await client.query<{ n: number }>(
-      `select count(*)::int as n
-         from public.onboarding_sessions
-        where user_id = $1::uuid
-          and idempotency_key = $2`,
-      [stranger, opts.idempotencyKey],
-    );
-    if ((foreignSession.rows[0]?.n ?? 0) !== 0) {
-      throw new Error("stranger user unexpectedly owns this idempotency session");
-    }
-
     const brandOwner = await client.query<{ n: number }>(
       `select count(*)::int as n
          from public.brands b
@@ -177,6 +198,37 @@ export async function assertTenantIsolation(opts: {
     );
     if ((brandOwner.rows[0]?.n ?? 0) < 1) {
       throw new Error("owner is not a member of the brand's organization");
+    }
+
+    // Fresh UUID each run — never a fixed seed that might exist in QA.
+    const stranger = randomUUID();
+    await client.query("begin");
+    try {
+      await client.query(`select set_config('request.jwt.claim.sub', $1, true)`, [stranger]);
+      await client.query(`select set_config('request.jwt.claim.role', 'authenticated', true)`);
+      await client.query(`set local role authenticated`);
+
+      const foreignSession = await client.query<{ n: number }>(
+        `select count(*)::int as n
+           from public.onboarding_sessions
+          where idempotency_key = $1`,
+        [opts.idempotencyKey],
+      );
+      if ((foreignSession.rows[0]?.n ?? 0) !== 0) {
+        throw new Error(
+          "RLS leak: stranger JWT subject can see this onboarding session",
+        );
+      }
+
+      const foreignBrand = await client.query<{ n: number }>(
+        `select count(*)::int as n from public.brands where id = $1::uuid`,
+        [opts.brandId],
+      );
+      if ((foreignBrand.rows[0]?.n ?? 0) !== 0) {
+        throw new Error("RLS leak: stranger JWT subject can see this brand");
+      }
+    } finally {
+      await client.query("rollback").catch(() => undefined);
     }
   });
 }

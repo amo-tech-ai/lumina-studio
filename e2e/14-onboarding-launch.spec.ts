@@ -19,15 +19,23 @@ import { loadEnvLocalFiles, preflightOnboardingQaTarget } from "./helpers/qa-tar
  * IPI-836 · ONB2-VERIFY-001 — onboarding launch proof on QA.
  *
  * Run (fail-closed to QA; never production):
- *   ONBOARDING_LAUNCH_E2E=true node scripts/run-onboarding-launch-e2e.mjs
+ *   node scripts/run-onboarding-launch-e2e.mjs
  *
  * Or:
- *   ONBOARDING_LAUNCH_E2E=true npx playwright test e2e/14-onboarding-launch.spec.ts \
- *     --project=chromium-desktop
+ *   ONBOARDING_LAUNCH_E2E=true npx playwright test \
+ *     --config=playwright.onboarding-launch.config.ts \
+ *     e2e/14-onboarding-launch.spec.ts --project=chromium-desktop
+ *
+ * Default `npm run test:e2e` discovers this file but skips unless ONBOARDING_LAUNCH_E2E=true.
  */
+function launchOptIn(): boolean {
+  return process.env.ONBOARDING_LAUNCH_E2E === "true";
+}
+
 function requireOrSkip(condition: boolean, reason: string) {
   if (condition) return;
-  if (process.env.REQUIRE_ONBOARDING_LAUNCH_E2E === "true") {
+  // Opt-in alone is fail-closed: missing QA_PASSWORD must not exit green after preflight-only.
+  if (launchOptIn() || process.env.REQUIRE_ONBOARDING_LAUNCH_E2E === "true") {
     throw new Error(`Required onboarding launch e2e missing config: ${reason}`);
   }
   test.skip(true, reason);
@@ -39,6 +47,7 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
   });
 
   test("preflight refuses production targets", async () => {
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
     loadEnvLocalFiles();
     expect(() => preflightOnboardingQaTarget()).not.toThrow();
     expect(process.env.QA_DATABASE_URL).toContain("wtuhdynujhszsbwxlbdi");
@@ -48,8 +57,9 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
   test("questionnaire + mid-flow refresh + SQL uniqueness through materialize", async ({
     page,
   }) => {
-    test.setTimeout(8 * 60_000);
-    requireOrSkip(process.env.ONBOARDING_LAUNCH_E2E === "true", "Set ONBOARDING_LAUNCH_E2E=true");
+    // Materialize ≤3m + DNA ≤6m + nav/login overhead — must exceed combined budgets.
+    test.setTimeout(15 * 60_000);
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
     preflightOnboardingQaTarget();
 
     const started = await loginAndOpenFreshOnboarding(page);
@@ -146,7 +156,7 @@ test.describe("IPI-836 — mobile 390×844 smoke", () => {
 
   test("screens 1 and 5 primary controls reachable", async ({ page }) => {
     test.setTimeout(3 * 60_000);
-    requireOrSkip(process.env.ONBOARDING_LAUNCH_E2E === "true", "Set ONBOARDING_LAUNCH_E2E=true");
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
     preflightOnboardingQaTarget();
 
     const started = await loginAndOpenFreshOnboarding(page);
@@ -181,7 +191,7 @@ test.describe("IPI-836 — reduced motion", () => {
 
   test("Get started remains usable with reduced motion", async ({ page }) => {
     test.setTimeout(2 * 60_000);
-    requireOrSkip(process.env.ONBOARDING_LAUNCH_E2E === "true", "Set ONBOARDING_LAUNCH_E2E=true");
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
     preflightOnboardingQaTarget();
 
     const started = await loginAndOpenFreshOnboarding(page);
