@@ -9,7 +9,7 @@ import {
 } from "@/lib/command-center/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-// IPI-11: first-time users (0 brands) are guided to /app/onboarding.
+// IPI-11 / IPI-945: first-time users (0 brands) go to standalone /onboarding (v2).
 // IPI-17: returning users see portfolio-first Command Center with live KPI reads.
 const CommandCenterPage = async ({
   searchParams,
@@ -77,7 +77,7 @@ const CommandCenterPage = async ({
     };
   }
 
-  if (zeroBrands) redirect("/app/onboarding");
+  if (zeroBrands) redirect("/onboarding");
 
   return (
     <>
