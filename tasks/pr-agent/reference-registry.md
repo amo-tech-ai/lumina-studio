@@ -2,11 +2,15 @@
 
 > **Purpose:** single shared reference for the PR-Agent rollout — official source registry,
 > current pinned versions, verified CLI commands, evidence/scorecard/rollback templates, and the
-> source-authority order. Uses the reviewer-preferred 9-task sequence with the official Linear
-> `PRAGENT-001..010` mapping (§7). Every PRAGENT linear task should link here instead of duplicating URLs.
-> Companion docs land in the **PRAGENT-001 PR (#806)** — merge order is **#806 first, then this PR**;
-> until #806 merges these repo-relative links are intentionally unresolvable:
-> `tasks/pr-agent/pr-agent-plan.md` (audit + rollout) · `tasks/pr-agent/summary.md` (plain-language) · `tasks/pr-agent/pr-agent-expert.md` (expert pack design).
+> source-authority order. Numbering is the **official Linear `PRAGENT-001..010` map (§7)** — the same
+> single numbering the companion docs carry; no parallel reviewer-preferred sequence anywhere.
+> Every PRAGENT linear task should link here instead of duplicating URLs.
+>
+> **Task linkage:** this registry is the deliverable of **IPI-929 · PRAGENT-002 — Verify Upstream PR-Agent Assumptions**
+> (this PR, #807). The companion docs landed in **PR #806 — `docs(pr-agent): add PRAGENT-001 audit and rollout baseline`**
+> (IPI-928 · PRAGENT-001 — Audit Existing PR-Agent and AI Review Configuration), which is **merged**, so all
+> repo-relative links resolve: `tasks/pr-agent/pr-agent-plan.md` (audit + rollout) ·
+> `tasks/pr-agent/summary.md` (plain-language) · `tasks/pr-agent/pr-agent-expert.md` (expert pack design).
 
 ## 1. Source authority order
 
@@ -20,7 +24,7 @@ Always resolve conflicts in this order (highest wins):
 3. **Current release notes / changelog** — GitHub releases
 4. DeepWiki / community mirrors — **navigation aid only, never config truth**
 
-> The The-PR-Agent GitHub repo is the upstream. `qodo-ai/pr-agent` and legacy `codiumai/pr-agent`
+> The-PR-Agent/pr-agent on GitHub is the upstream. `qodo-ai/pr-agent` and legacy `codiumai/pr-agent`
 > links found in older docs are stale mirrors — route nav through the canonical sources above.
 
 ## 2. Official source registry
@@ -63,6 +67,12 @@ Always resolve conflicts in this order (highest wins):
 | GitHub REST – apps/installations | https://docs.github.com/rest/apps/installations |
 | GitHub REST – rulesets | https://docs.github.com/rest/analyze/rules |
 
+> **Seer scope boundary (PRAGENT-007 evaluation input).** The Sentry **Next.js SDK** (installed in `app/`)
+> reports runtime errors as Sentry **Issues**; it does NOT review pull requests. **Seer AI Code Review**
+> is a separate Sentry product that reviews GitHub PRs — installing or configuring the SDK does **not**
+> enable Seer reviews. When PRAGENT-007 (IPI-931 — Consolidate AI Reviewers) inventories active
+> reviewers, evaluate Seer's GitHub-side review presence independently of the SDK install state.
+
 ### 2.4 iPix stack expert-sheet anchors (IPI-661)
 
 | Domain | Official docs to ground the sheets in |
@@ -78,7 +88,7 @@ Always resolve conflicts in this order (highest wins):
 
 | Component | Ours | Upstream latest | Notes |
 |---|---|---|---|
-| PR-Agent GitHub Action | commit `01569655d8b4825bbe5` (2026-07-10) | tag `v0.41.1` (2026-08-01) | Shallow: current pin is ~3 weeks behind latest; soon: `PyPI` package still 0.41.0 |
+| PR-Agent GitHub Action | commit `01569655d8b4825bbe599fd5b2a8de59d5c58390` (2026-07-10) | tag `v0.41.1` (2026-08-01) | Shallow: current pin is ~3 weeks behind latest; note: PyPI package still 0.39.0 while `pyproject.toml` at the pin declares 0.41.0 |
 | `configure-aws-credentials` | `aws.*` static keys (no Action) | `v6.2.3` (2026-07-22) | Pin full SHA at implementation; never float `@vN` |
 | Bedrock model | `bedrock/qwen.qwen3-coder-next` | – | region `us-east-1`; static keys → OIDC (official PRAGENT-009 · IPI-522) |
 
@@ -129,6 +139,7 @@ export OPENAI_KEY=...            # or Bedrock env for qwen3
 # real override, not a comment — without it the default `publish_output=true` posts every local trial to the PR
 python -m pr_agent.cli --pr_url=<PR_URL> --config.publish_output=false review
 ```
+
 CLI still needs a real PR URL — create one tiny temporary branch + PR per seeded defect, tune locally, run the GitHub-action once, then close without merging. The Action workflow only fires on `opened` / `reopened` / `ready_for_review` — **not** on subsequent pushes — so open the temp PR as a **draft** (the automatic run happens before tuning), tune locally, then mark **ready for review** to trigger the one post-tuning Action run. **This corpus is where precision is proven — a clean PR that produces no findings is a pass; do not force findings on real PRs.**
 
 ### 4.4 Cost/measurement (official PRAGENT-008 · IPI-932) — proxy only, no custom dashboard first
@@ -158,14 +169,20 @@ Score findings = useful / duplicate / incorrect / noisy.
 
 ### 5.1 Measured baseline (IPI-928 audit, 2026-08-03)
 
+Every row cites the exact workflow-run ID and the command that retrieves the measurement, so anyone
+can reproduce it. Run numbers ↔ run IDs (2026-08-03, `pull_request` events, workflow `pr-agent.yml`):
+run 507 = id `30844145699` · run 508 = id `30845207358` · run 509 = id `30846274586` ·
+run 510 = id `30847177054` · run 511 = id `30847616106` · run 512 = id `30848440651` (skipped) ·
+run 513 = id `30850511245` (skipped) · run 514 = id `30852188987`.
+
 | Metric | Value | Source |
 |---|---|---|
-| Review LLM latency | ~13.8s call + ~1.1s output (run 508) | Actions run log |
-| Token usage | ~11.3K total (10K prompt / 331 completion) | LiteLLM log |
-| Wall-clock (runs 507–514) | 44–85s per run, all success | Actions API |
-| Failures / timeouts | 0 of 6 recent runs | Actions API |
+| Review LLM latency | ~13.8s call + ~1.1s output (run 508, id `30845207358`) | `gh api repos/amo-tech-ai/lumina-studio/actions/runs/30845207358/logs` → `/review` job step timing |
+| Token usage | ~11.3K total (10K prompt / 331 completion) | same run log (id `30845207358`) → LiteLLM usage summary line in the `/review` step output |
+| Wall-clock (runs 507–514) | 44–85s per completed run (6 success, 2 skipped) | `gh api 'repos/amo-tech-ai/lumina-studio/actions/workflows/pr-agent.yml/runs?per_page=30'` → `run_started_at`/`updated_at` per id above |
+| Failures / timeouts | 0 failed of 6 completed runs (512/513 skipped = short-circuit, not failures) | same runs query → `conclusion` field per id above |
 
-Treat per-PR cost as `estimated` until AWS cost explorer attribution exists (official PRAGENT-008 — measure).
+Treat per-PR cost as `estimated` until AWS cost explorer attribution exists (IPI-932 · PRAGENT-008 — Measure PR-Agent Accuracy, Noise and Cost).
 
 ## 6. Rollback template
 
@@ -173,32 +190,27 @@ Every config/CI/security PR must document:
 
 ```text
 - What changed                               # .pr_agent.toml key | workflow step | IAM policy
-- Trim source-of-truth                        # git revert <PR>/<sha> | `aws iam delete-role` | … 
+- Revert source of truth                      # git revert <PR>/<sha> | `aws iam delete-role` | …
 - Signal to roll back                         # the failure/error/slowdown observed
 - Isolation countermeasure                  # pinned SHA, no pull_request_target, no checkout of untrusted PR code
 - Data loss risk: none / <describe>          # schema-free, config only
 ```
 
-## 7. Linear linkage (preferred 9-task sequence ↔ official Linear IDs)
+## 7. Linear linkage — official `PRAGENT-001..010` map
 
-The rollout uses the reviewer-preferred **9-task sequence** (matches `summary.md` §8, `pr-agent-plan.md`
-Gantt, `pr-agent-expert.md` §9). Official Linear has 10 IDs — including the **verify-upstream** task
-(IPI-929) that produced this very registry — so official numbers are +1 offset for 003–010. Map:
+Single numbering, matching the merged companion docs (`summary.md` §8, `pr-agent-plan.md` Rollout
+Gantt, `pr-agent-expert.md` §9 — all carry these exact IDs and full task names; no parallel
+reviewer-preferred sequence). Ordered by official ID:
 
-| Preferred | Task | Official PRAGENT | IPI | Priority | Status | Links this registry |
-|---|---|---|---|---|---|---|
-| 001 | Audit existing AI review config | PRAGENT-001 | IPI-928 | High (P2) | Todo | ✅ evidence: repo files + runs |
-| 002 | Expert pack: review contract + 6 sheets | PRAGENT-003 | IPI-661 | Medium (P3) | Todo | ✅ doc URLs |
-| 003 | Restricted config + workflow | PRAGENT-004 | IPI-659 | High (P2) | Todo | ✅ config keys + install docs |
-| 004 | Seeded-defect validation PRs | PRAGENT-005 | IPI-930 | High (P2) | Todo | ✅ CLI + temp-PR patterns |
-| 005 | Pilot across representative PRs | PRAGENT-006 | IPI-660 | High (P2) | Backlog | ✅ gh CLI + scorecard |
-| 006 | Consolidate reviewers | PRAGENT-007 | IPI-931 | Medium (P3) | Backlog | ✅ reviewer sources |
-| 007 | Measure accuracy/noise/cost | PRAGENT-008 | IPI-932 | Medium (P3) | Backlog | ✅ cost/API sources |
-| 008 | OIDC (static → GitHub OIDC) | PRAGENT-009 | IPI-522 | Urgent (P1) | Backlog | ✅ AWS docs + exact SHA pinning |
-| 009 | Test + upgrade pinned version | PRAGENT-010 | IPI-933 | High (P2) | Backlog | ✅ releases/tags |
-
-**Official-only task (keeps Linear IDs contiguous):**
-
-| Official | Task | IP | Notes |
-|---|---|---|---|
-| PRAGENT-002 | Verify upstream PR-Agent (this registry + verification) | IPI-929 | Runs with the audit; produces and maintains this reference registry |
+| Official | IPI | Task | Priority | Status | Links this registry |
+|---|---|---|---|---|---|
+| PRAGENT-001 | IPI-928 | Audit Existing PR-Agent and AI Review Configuration | High (P2) | Done (PR #806 merged) | ✅ evidence: repo files + runs |
+| PRAGENT-002 | IPI-929 | Verify Upstream PR-Agent Assumptions | High (P2) | In Review (this PR, #807) | ✅ this registry |
+| PRAGENT-003 | IPI-661 | Add iPix PR-Agent Review Contract and Expert Guidance | Medium (P3) | Todo | ✅ doc URLs |
+| PRAGENT-004 | IPI-659 | Add Restricted PR-Agent Configuration and GitHub Workflow | High (P2) | Todo | ✅ config keys + install docs |
+| PRAGENT-005 | IPI-930 | Create Seeded Defect PRs to Validate Review Quality | High (P2) | Todo | ✅ CLI + temp-PR patterns |
+| PRAGENT-006 | IPI-660 | Run Initial PR-Agent Pilot on Representative PRs | High (P2) | Backlog | ✅ gh CLI + scorecard |
+| PRAGENT-007 | IPI-931 | Consolidate AI Reviewers | Medium (P3) | Backlog | ✅ reviewer sources |
+| PRAGENT-008 | IPI-932 | Measure PR-Agent Accuracy, Noise and Cost | Medium (P3) | Backlog | ✅ cost/API sources |
+| PRAGENT-009 | IPI-522 | Replace Static AWS Credentials With GitHub OIDC | Urgent (P1) | Backlog | ✅ AWS docs + exact SHA pinning |
+| PRAGENT-010 | IPI-933 | Test and Upgrade the Pinned PR-Agent Action Version | High (P2) | Backlog | ✅ releases/tags |
