@@ -29,6 +29,20 @@ export default defineConfig({
       ...(process.env.REQUIRE_OPERATOR_SIGNOUT_E2E === "true"
         ? { OPERATOR_AUTH_ENABLED: "true" }
         : {}),
+      // IPI-836 — force Next webServer onto QA Supabase (never production).
+      ...(process.env.ONBOARDING_LAUNCH_E2E === "true"
+        ? {
+            OPERATOR_AUTH_ENABLED: "true",
+            NEXT_PUBLIC_SUPABASE_URL: process.env.QA_SUPABASE_URL,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.QA_SUPABASE_ANON_KEY,
+            DATABASE_URL: process.env.QA_DATABASE_URL,
+            QA_DATABASE_URL: process.env.QA_DATABASE_URL,
+            QA_SUPABASE_URL: process.env.QA_SUPABASE_URL,
+            QA_SUPABASE_ANON_KEY: process.env.QA_SUPABASE_ANON_KEY,
+            CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH:
+              process.env.QA_DATABASE_URL,
+          }
+        : {}),
     },
   },
   use: {
