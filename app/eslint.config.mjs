@@ -54,7 +54,7 @@ export default tseslint.config(
         {
           selector: "ImportSpecifier[imported.name='reanalyzeBrand']",
           message:
-            "IPI-919 — reanalyzeBrand was retired. Failed-analysis recovery has one door: POST /api/brands/[id]/restart-analysis (IPI-905/918).",
+            "reanalyzeBrand was retired. Use POST /api/brands/[id]/restart-analysis for failed-analysis recovery.",
         },
       ],
     },
