@@ -1,16 +1,46 @@
+# iPix PR-Agent config — IPI-659 · PRAGENT-004 (restricted rollout, Phase A).
+# Every key below is verified to exist in upstream pr_agent/settings/configuration.toml
+# at the pinned Action SHA (the-pr-agent/pr-agent@01569655d8b4825bbe599fd5b2a8de59d5c58390).
+# Canonical values docs: tasks/pr-agent/ (plan §"Proposed .pr_agent.toml").
+# Rollback: git revert this file + .github/workflows/pr-agent.yml together.
+
 [config]
+# — model (existing; unchanged) —
 model = "bedrock/qwen.qwen3-coder-next"
+# Token-cap override for the custom model: PR-Agent's ceiling on tokens sent to the model
+# (model/context capacity, NOT generated-output size). Not "max output tokens".
 custom_model_max_tokens = 250000
+
+# — repo-shared context: Phase A = contract + AGENTS.md only (measured before adding sheets) —
+repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md"]
+# Context comes from the default branch (trusted) — a PR cannot edit the instructions
+# that review it. Sheets/budget changes land post-measurement (see tasks/pr-agent plan §5).
+repo_context_from_default_branch = true
+repo_context_max_lines = 500
+
+# — restricted rollout (IPI-659): keep the reviewer cite-only —
+restricted_mode = true            # upstream: skips operations needing contents: write (e.g. pushing
+                                  # code/changelog updates). NOT approval/suggest-commit proof — those
+                                  # are pinned separately below (verified upstream configuration.toml).
+ignore_pr_labels = ["skip-ai-review", "docs-only"]   # configured under [config] so ALL tools honor it
+ignore_pr_authors = ["dependabot", "renovate[bot]", "github-actions[bot]", "coderabbitai[bot]", "copilot[bot]"]
 
 [github_action_config]
 auto_review = true
 auto_describe = false
 auto_improve = false
 pr_actions = ["opened", "reopened", "ready_for_review"]
+handle_push_trigger = false       # explicit: no push/synchronize-triggered reviews (workflow has no
+                                  # push trigger; pin kept as documentation per rollout audit)
 
 [pr_reviewer]
+num_max_findings = 5                          # cap comment volume
+persistent_comment = false                    # fresh review comment each run (no stale edits)
+publish_output_no_suggestions = false         # stay silent when there is nothing worth posting
+approve_pr_on_self_review = false             # no silent AI approvals — humans decide (rule #1)
 extra_instructions = """
 Respect AGENTS.md and the iPix one-concern-per-PR rule.
+The iPix review contract is docs/pr-review-guidelines.md (Phase A context file); follow it.
 
 Prioritize:
 - correctness and regressions
@@ -25,3 +55,6 @@ Prioritize:
 Avoid formatting-only and low-value style comments.
 Only report findings supported by the changed code.
 """
+
+[pr_code_suggestions]
+commitable_code_suggestions = false           # no write-like suggested commits (advisor, not boss)

@@ -1,8 +1,11 @@
-name: PR Agent — Bedrock Qwen3 Coder Next
+---
+name: PR Agent — Bedrock Qwen3 Coder Next (restricted)
 
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
+  issue_comment:                      # manual commands (stage 2 allowlist) — gated below
+    types: [created]
 
 permissions:
   contents: read
@@ -10,12 +13,39 @@ permissions:
   issues: write
 
 concurrency:
-  group: pr-agent-${{ github.event.pull_request.number }}
+  group: pr-agent-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
   pr_agent_job:
-    if: github.event.sender.type != 'Bot'
+    # Auto path: non-draft, non-bot-authored PRs not carrying skip labels.
+    # Actor checks match the event type: pull_request → pull_request.user.type (the PR
+    # author), issue_comment → sender.type (the commenter).
+    #
+    # Manual path (stage 2): only the four token-boundary commands
+    # (/review /describe /ask /improve) from OWNER/MEMBER/COLLABORATOR on a PR comment.
+    # Token-boundary: the command must END the comment or be followed by a space, so
+    # '/review-malicious' and '/asker' never match; command-flag text (e.g. '/review
+    # --auto_approve') still starts with '/review ' and is rejected by restricted_mode.
+    if: >-
+      (
+        github.event_name == 'pull_request'
+        && github.event.pull_request.user.type != 'Bot'
+        && github.event.pull_request.draft == false
+        && !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
+        && !contains(github.event.pull_request.labels.*.name, 'docs-only')
+      ) || (
+        github.event_name == 'issue_comment'
+        && github.event.issue.pull_request
+        && github.event.sender.type != 'Bot'
+        && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        && (
+          endsWith(github.event.comment.body, '/review') || startsWith(github.event.comment.body, '/review ') ||
+          endsWith(github.event.comment.body, '/describe') || startsWith(github.event.comment.body, '/describe ') ||
+          endsWith(github.event.comment.body, '/ask') || startsWith(github.event.comment.body, '/ask ') ||
+          endsWith(github.event.comment.body, '/improve') || startsWith(github.event.comment.body, '/improve ')
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -26,9 +56,8 @@ jobs:
           aws.AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws.AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws.AWS_REGION_NAME: "us-east-1"
-          config.model: "bedrock/qwen.qwen3-coder-next"
-          config.custom_model_max_tokens: "250000"
-          github_action_config.auto_review: "true"
-          github_action_config.auto_describe: "false"
-          github_action_config.auto_improve: "false"
-          github_action_config.pr_actions: '["opened", "reopened", "ready_for_review"]'
+          # Note: no config.* env overrides — .pr_agent.toml (repo root, default branch)
+          # is the single source of config truth; env here carries credentials/region only.
+        # No actions/checkout — PR-Agent reads via GitHub APIs; issue_comment stays off
+        # until GITHUB_TOKEN inherits from the PR branch (which it never does: the default
+        # token only reads the default-branch context).
