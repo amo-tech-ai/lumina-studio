@@ -1,32 +1,32 @@
 {
-  "task": "IPI-724 \u00b7 CF-UJ-018 \u2014 End-to-End Preview User Journey Validation",
+  "task": "IPI-724 · CF-UJ-018 — End-to-End Preview User Journey Validation",
   "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
   "worker": "ipix-operator-preview",
-  "verify_readonly": false,
-  "evidence_out": "tasks/cloudflare/tests/ipi-724-e2e-preview-journey",
+  "verify_readonly": true,
+  "evidence_out": "../../../tmp/ipi-915-preview-evidence2",
   "worker_version_id": "50bd2987-b728-4b9c-a8da-f2a1e66841d5",
   "deployment_id": "675f8f91-7073-439c-bef8-3ecaff596e49",
   "worker_version_created_on": "2026-08-02T04:46:48.574511Z",
   "identity_source": "wrangler deployments list --env preview --json (latest by created_on)",
   "identity_error": null,
-  "evidence_runner_git_sha": "5a708fa52bb848ec88b29c1556900e492c99bc89",
+  "evidence_runner_git_sha": "9365df4fd89773a4f384891ad5e78ee409d889b3",
   "deployment_git_sha": null,
   "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
-  "cf_ray_health": "a258283258fd45f2-MIA",
+  "cf_ray_health": "a25b5ccefe7934f9-MIA",
   "region_guess": "MIA",
   "browser": {
     "name": "chromium",
     "version": "149.0.7827.55"
   },
   "playwright_version": "1.61.1",
-  "started_at": "2026-08-03T20:43:31.526Z",
-  "finished_at": "2026-08-03T20:45:34.103Z",
+  "started_at": "2026-08-04T06:03:40.081Z",
+  "finished_at": "2026-08-04T06:05:46.673Z",
   "performance": {
-    "command_center_ms": 14064,
+    "command_center_ms": 9752,
     "command_center_budget_ms": 5000,
-    "copilot_init_ms": 29,
+    "copilot_init_ms": 13,
     "copilot_init_budget_ms": 3000,
-    "first_stream_token_ms": 2589,
+    "first_stream_token_ms": 1851,
     "first_stream_token_budget_ms": 5000
   },
   "ai_health": {
@@ -39,7 +39,7 @@
       "service": "ai-gateway"
     }
   },
-  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 \u2014 redeploy HEAD before claiming current.",
+  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 — redeploy HEAD before claiming current.",
   "criteria": {
     "01_login": {
       "pass": true,
@@ -55,19 +55,19 @@
     },
     "perf_command_center": {
       "pass": false,
-      "note": "14064ms (budget 5000ms soft)",
-      "ms": 14064,
+      "note": "9752ms (budget 5000ms soft)",
+      "ms": 9752,
       "budgetMs": 5000,
       "soft": true
     },
     "04_copilot_init": {
       "pass": true,
-      "note": "dock=true composer=true 29ms"
+      "note": "dock=true composer=true 13ms"
     },
     "perf_copilot_init": {
       "pass": true,
-      "note": "29ms (budget 3000ms soft)",
-      "ms": 29,
+      "note": "13ms (budget 3000ms soft)",
+      "ms": 13,
       "budgetMs": 3000,
       "soft": true
     },
@@ -145,11 +145,11 @@
           "service": "ai-gateway"
         }
       },
-      "cfRay": "a258283258fd45f2-MIA"
+      "cfRay": "a25b5ccefe7934f9-MIA"
     },
     "07_chat_send": {
       "pass": true,
-      "note": "POST status=200 ct=text/event-stream firstByte~2589ms"
+      "note": "POST status=200 ct=text/event-stream firstByte~1851ms"
     },
     "08_stream": {
       "pass": true,
@@ -161,14 +161,14 @@
     },
     "perf_first_token": {
       "pass": true,
-      "note": "2589ms (budget 5000ms soft)",
-      "ms": 2589,
+      "note": "1851ms (budget 5000ms soft)",
+      "ms": 1851,
       "budgetMs": 5000,
       "soft": true
     },
     "09_console_network": {
       "pass": true,
-      "note": "blockingConsole=0 criticalFailedApis=0 warnings=15",
+      "note": "blockingConsole=0 criticalFailedApis=0 warnings=20",
       "blockingConsole": [],
       "criticalFailed": []
     },
@@ -187,7 +187,7 @@
     },
     "13c_signout_request": {
       "pass": true,
-      "note": "POST /auth/signout -> 303 location=https://ipix-operator-preview.sk-498.workers.dev/login \u2014 requires 3xx redirect to /login without signoutError",
+      "note": "POST /auth/signout -> 303 location=https://ipix-operator-preview.sk-498.workers.dev/login — requires 3xx redirect to /login without signoutError",
       "status": 303,
       "location": "https://ipix-operator-preview.sk-498.workers.dev/login",
       "redirect_to_login": true,
@@ -209,9 +209,11 @@
     },
     "13f_signout_idempotent": {
       "pass": true,
-      "note": "status=200 final=/login",
-      "status": 200,
-      "final_path": "/login"
+      "note": "status=303 location=https://ipix-operator-preview.sk-498.workers.dev/login path=/login",
+      "status": 303,
+      "location": "https://ipix-operator-preview.sk-498.workers.dev/login",
+      "location_path": "/login",
+      "redirect_to_login": true
     },
     "13b_protected_redirect": {
       "pass": true,
@@ -223,7 +225,7 @@
   "hard_ac_pass": true,
   "recommendation": "Done",
   "evidence_policy": {
-    "har": "minimal + content omit + urlFilter **/api/**; deleted after run \u2014 never commit",
+    "har": "minimal + content omit + urlFilter **/api/**; deleted after run — never commit",
     "preferred": "network-summary.json (host/path/method/status/latency/cf-ray only)",
     "ignoreHTTPSErrors": false
   }

@@ -213,13 +213,42 @@ describe("PlannerWorkspaceShell", () => {
       }
     });
 
-    it("keeps next-approval honestly empty — no Review CTA (IPI-483) — AC-C/E", () => {
+    it("shows empty next-approval when no reachable gates — AC-C/E", () => {
       render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} {...nowNextProps} />);
 
       const approval = screen.getByTestId("planner-next-approval-card");
-      expect(approval.textContent).toContain("Approvals unavailable");
-      expect(approval.textContent).toContain("IPI-483");
+      expect(approval.textContent).toContain("No approvals waiting");
       expect(screen.queryByRole("button", { name: /Review/i })).toBeNull();
+    });
+
+    it("Review selects a reachable gate phase — IPI-483", async () => {
+      const user = userEvent.setup();
+      render(
+        <PlannerWorkspaceShell
+          instanceId={INSTANCE_ID}
+          {...nowNextProps}
+          gates={[
+            {
+              phaseId: "ph-outfit",
+              phaseName: "Outfit confirmation",
+              phaseSlug: "outfit",
+              orderIndex: 3,
+              gateType: "approval",
+              requiredRole: "manager",
+              status: "reachable",
+              approvalId: null,
+              approvedAt: null,
+              approvedBy: null,
+            },
+          ]}
+        />,
+      );
+
+      expect(screen.getByTestId("planner-next-approval-card").textContent).toContain(
+        "Outfit confirmation",
+      );
+      await user.click(screen.getByTestId("planner-next-approval-review"));
+      expect(setSelection).toHaveBeenCalledWith({ type: "phase", id: "ph-outfit" });
     });
 
     it("View selects the task for AdaptivePanel — AC-D", async () => {

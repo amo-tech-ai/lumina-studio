@@ -1,0 +1,213 @@
+/* IPI-483 · PLN-ENG-002 (PR3) — SCR-32 / ApprovalCard.dc.html full pending card. */
+
+.card {
+  border: 1.5px solid var(--approval-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-card);
+  padding: 14px;
+  margin-bottom: 1rem;
+}
+
+.cardApproved {
+  border-color: var(--approval-border-done);
+}
+
+.cardDiscarded,
+.cardLocked {
+  border-color: var(--color-border-strong);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--approval-accent);
+}
+
+.dotApproved {
+  background: var(--color-approved);
+}
+
+.dotLocked,
+.dotDiscarded {
+  background: var(--color-text-muted);
+}
+
+.title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-approved);
+}
+
+.diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.diffPane {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 9px 11px;
+}
+
+.diffPaneMuted {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-subtle, var(--color-border));
+}
+
+.diffLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.diffBody {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.diffBodyAfter {
+  color: var(--color-text-primary);
+}
+
+.diffRow {
+  margin: 0 0 4px;
+}
+
+.diffRow:last-child {
+  margin-bottom: 0;
+}
+
+.meta {
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.approve {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-action);
+  color: var(--color-action-text, #fff);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.approve:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.edit {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.edit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.discard {
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.discard:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.discard:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--color-blocked, #b91c1c);
+  line-height: 1.4;
+}
+
+.editList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.editRow label {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editRow input {
+  width: 7.5rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 4px 6px;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}

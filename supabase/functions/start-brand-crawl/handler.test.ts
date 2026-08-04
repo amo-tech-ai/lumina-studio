@@ -4,7 +4,8 @@ import {
   BASE_EDGE_ENV,
   withEnv,
 } from "../_shared/test/mock-fetch.ts";
-import { handleStartBrandCrawl, normalizeUrl } from "./handler.ts";
+import fixtures from "../_shared/brand-url.fixtures.json" with { type: "json" };
+import { handleStartBrandCrawl } from "./handler.ts";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
 const CRAWL_ID = "33333333-3333-3333-3333-333333333333";
@@ -154,17 +155,6 @@ function installStartCrawlFetch(opts: {
   };
 }
 
-Deno.test("normalizeUrl requires http(s)", () => {
-  assertEquals(normalizeUrl("https://ok.com"), "https://ok.com");
-  let threw = false;
-  try {
-    normalizeUrl("ftp://bad.com");
-  } catch {
-    threw = true;
-  }
-  assertEquals(threw, true);
-});
-
 Deno.test("start-brand-crawl missing FIRECRAWL_API_KEY → 503", async () => {
   await withEnv({
     ...BASE_EDGE_ENV,
@@ -213,8 +203,10 @@ Deno.test("start-brand-crawl missing brandId → 400", async () => {
   }
 });
 
-Deno.test("start-brand-crawl invalid url → 400", async () => {
-  const restore = installStartCrawlFetch({});
+Deno.test("start-brand-crawl invalid url → typed 422, no database write", async () => {
+  const inserts: Record<string, unknown>[] = [];
+  const crawlPatches: Record<string, unknown>[] = [];
+  const restore = installStartCrawlFetch({ inserts, crawlPatches });
   try {
     await withEnv({
       ...BASE_EDGE_ENV,
@@ -224,7 +216,11 @@ Deno.test("start-brand-crawl invalid url → 400", async () => {
         brandId: BRAND_ID,
         url: "not-a-url",
       }));
-      assertEquals(res.status, 400);
+      assertEquals(res.status, 422);
+      const body = await res.json() as { error: { code: string } };
+      assertEquals(body.error.code, "validation_error");
+      assertEquals(inserts.length, 0);
+      assertEquals(crawlPatches.length, 0);
     });
   } finally {
     restore();
@@ -487,6 +483,128 @@ Deno.test("start-brand-crawl service-role personal brand wrong owner → 403", a
         actorId: BAD_ACTOR_ID,
       }));
       assertEquals(res.status, 403);
+    });
+  } finally {
+    restore();
+  }
+});
+
+// IPI-949 · ONB2-INT-001h — the shared brand-URL fixture matrix drives the
+// handler-level contract. Fixture data lives ONLY in the SSOT fixture file
+// (supabase/functions/_shared/brand-url.fixtures.json), never duplicated here.
+Deno.test("start-brand-crawl accepts matrix: 200 + canonical origin stored and crawled", async () => {
+  for (const row of fixtures.accepts) {
+    const firecrawlCalls: unknown[] = [];
+    const inserts: Record<string, unknown>[] = [];
+    const restore = installStartCrawlFetch({
+      existingCrawl: null,
+      firecrawlCalls,
+      inserts,
+    });
+    try {
+      await withEnv({
+        ...BASE_EDGE_ENV,
+        FIRECRAWL_API_KEY: "fc-test-key",
+      }, async () => {
+        const res = await handleStartBrandCrawl(crawlRequest({
+          brandId: BRAND_ID,
+          url: row.raw,
+          idempotencyKey: "idem-accept",
+        }));
+        assertEquals(res.status, 200, `${row.raw} — ${row.why}`);
+        assertEquals(
+          inserts.length,
+          1,
+          `${row.raw} — exactly one crawl insert`,
+        );
+        assertEquals(
+          inserts[0]?.source_url,
+          row.origin,
+          `${row.raw} — insert path stores canonical origin (${row.why})`,
+        );
+        const fc = firecrawlCalls[0] as { url: string };
+        assertEquals(
+          fc.url,
+          row.origin,
+          `${row.raw} — Firecrawl receives canonical origin (${row.why})`,
+        );
+      });
+    } finally {
+      restore();
+    }
+  }
+});
+
+Deno.test("start-brand-crawl rejects matrix: typed 422 + zero database writes", async () => {
+  for (const row of fixtures.rejects) {
+    const firecrawlCalls: unknown[] = [];
+    const inserts: Record<string, unknown>[] = [];
+    const crawlPatches: Record<string, unknown>[] = [];
+    const restore = installStartCrawlFetch({
+      firecrawlCalls,
+      inserts,
+      crawlPatches,
+    });
+    try {
+      await withEnv({
+        ...BASE_EDGE_ENV,
+        FIRECRAWL_API_KEY: "fc-test-key",
+      }, async () => {
+        const res = await handleStartBrandCrawl(crawlRequest({
+          brandId: BRAND_ID,
+          url: row.raw,
+        }));
+        assertEquals(res.status, 422, `${row.raw} — ${row.why}`);
+        const body = await res.json() as { error: { code: string } };
+        assertEquals(
+          body.error.code,
+          "validation_error",
+          `${row.raw} — ${row.why}`,
+        );
+        assertEquals(inserts.length, 0, `${row.raw} — no crawl insert`);
+        assertEquals(crawlPatches.length, 0, `${row.raw} — no crawl update`);
+        assertEquals(
+          firecrawlCalls.length,
+          0,
+          `${row.raw} — Firecrawl never called`,
+        );
+      });
+    } finally {
+      restore();
+    }
+  }
+});
+
+Deno.test("start-brand-crawl queued-crawl reset stores the same canonical source_url", async () => {
+  const inserts: Record<string, unknown>[] = [];
+  const crawlPatches: Record<string, unknown>[] = [];
+  const restore = installStartCrawlFetch({
+    existingCrawl: {
+      id: CRAWL_ID,
+      firecrawl_job_id: null,
+      job_status: "queued",
+    },
+    inserts,
+    crawlPatches,
+  });
+
+  try {
+    await withEnv({
+      ...BASE_EDGE_ENV,
+      FIRECRAWL_API_KEY: "fc-test-key",
+    }, async () => {
+      const res = await handleStartBrandCrawl(crawlRequest({
+        brandId: BRAND_ID,
+        url: "https://example-brand.com/collection?utm=instagram#frag",
+        idempotencyKey: "idem-reset",
+      }));
+      assertEquals(res.status, 200);
+      assertEquals(inserts.length, 0);
+      const sourcePatches = crawlPatches.filter((p) =>
+        typeof p.source_url === "string"
+      );
+      assertEquals(sourcePatches.length, 1);
+      assertEquals(sourcePatches[0]?.source_url, "https://example-brand.com");
     });
   } finally {
     restore();
