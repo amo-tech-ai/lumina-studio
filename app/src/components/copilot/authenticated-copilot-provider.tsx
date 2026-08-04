@@ -15,6 +15,7 @@ import { CopilotKit } from "@copilotkit/react-core/v2";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { OperatorPanel } from "@/components/operator-panel/operator-panel";
+import { ShootLoadStateProvider } from "@/components/shoot/shoot-load-state";
 import { ActiveBrandProvider } from "@/context/active-brand-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import "@copilotkit/react-core/v2/styles.css";
@@ -243,7 +244,12 @@ export function AuthenticatedCopilotProvider({
       headers={headers}
     >
       <ActiveBrandProvider>
-        <OperatorPanel>{children}</OperatorPanel>
+        {/* IPI-921 — ShootLoadState must outlive the shoot page (it resets on
+            unmount); mounted here so the operator shell can key suggestions off
+            the real load outcome instead of the URL. */}
+        <ShootLoadStateProvider>
+          <OperatorPanel>{children}</OperatorPanel>
+        </ShootLoadStateProvider>
       </ActiveBrandProvider>
     </CopilotKit>
   );

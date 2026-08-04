@@ -328,7 +328,10 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     vi.stubEnv("VERCEL", "1");
     // Clear CI so this matches real Vercel runtime (not GitHub Actions builds).
     vi.stubEnv("CI", "");
+    // Clear both — production prefers MASTRA_DATABASE_URL; leaving it set from
+    // the local env makes this test pass 200 instead of 503 in full-suite runs.
     vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
 
