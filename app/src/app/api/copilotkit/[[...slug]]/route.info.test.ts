@@ -75,7 +75,9 @@ async function importRouteWithMocks() {
 }
 
 describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", () => {
-  it("returns 200 JSON with creative-director when Intelligence env is partial", async () => {
+  it(
+    "returns 200 JSON with creative-director when Intelligence env is partial",
+    async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "ck-partial-license");
@@ -93,7 +95,11 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.agents?.["creative-director"]).toBeDefined();
     expect(body.agents?.["production-planner"]).toBeDefined();
     expect(body.agents?.default).toBeDefined();
-  });
+    },
+    // First import of the mocked route pulls the full Mastra registry; on a
+    // loaded machine it lands just past vitest's default 5s timeout.
+    15000,
+  );
 
   it("returns 503 JSON when the agent factory throws (not HTML 500)", async () => {
     vi.stubEnv("NODE_ENV", "production");
