@@ -11,7 +11,7 @@ alwaysApply: true
 | Detail lives in | Role |
 |-----------------|------|
 | `graphify.mdc` | Query graph before broad source reads |
-| `ponytail.mdc` | Smallest change + platform-first ladder |
+| `ponytail.mdc` | Smallest safe change ladder |
 | `task-naming.mdc` | **IPI-NNN · SPEC — Title** |
 | `infisical.mdc` | `infisical run --env=dev --` for secrets |
 | `.claude/skills/worktrees/` | Worktree create, health, cleanup |
@@ -33,13 +33,7 @@ Set explicitly (`lean-strict`, `lean-relaxed`) or default to **lean-standard**.
 
 ## Decision ladder (reuse → create)
 
-Apply **after** graphify discovery and **during** implementation (full ladder in `ponytail.mdc`):
-
-```text
-1. YAGNI → 2. Exists in repo? → 3. Extend safely?
-4. Platform (Dashboard/CLI) → 5. Stdlib / native → 6. Installed dep
-7. Only then: minimum new code
-```
+Apply **after** graphify discovery and **during** implementation. Canonical rung order lives in **`ponytail.mdc` only** — do not redefine precedence here.
 
 | Decision | Choose when | Avoid when |
 |----------|-------------|------------|
@@ -52,10 +46,12 @@ Apply **after** graphify discovery and **during** implementation (full ladder in
 ## Lifecycle (load skills for steps)
 
 ```text
-Understand → Discover (graphify) → Plan → Isolate (worktree)
+Understand → Discover (graphify) → Plan → Isolate (worktree when required by mode)
   → Implement (ponytail) → Test (verify-matrix) → Diff → Commit
   → PR → CI → Merge → Cleanup worktree
 ```
+
+`lean-relaxed` may skip worktree for a clean single-file change (see modes table).
 
 - **Specs / AC:** `.claude/skills/ipix-task-lifecycle/`
 - **Commands:** `cd app && npm run typecheck && npm run lint && npm test` (+ `build` when routes/config/env/middleware change)
@@ -77,6 +73,6 @@ Understand → Discover (graphify) → Plan → Isolate (worktree)
 | Graph queries | `graphify.mdc` |
 | Code minimalism / platform-first | `ponytail.mdc` |
 | Process playbooks | `process.mdc` (on demand) · `docs/process/` |
-| Linear mutations | `linear-governance.mdc` (on demand) · `linear` skill |
+| Linear mutations | `linear` skill · `linear-governance.mdc` (ship via IPI-936 / #799) |
 | Secrets | `infisical.mdc` |
 | Velocity audit | `.claude/skills/lean/SKILL.md` (`/lean`) |
