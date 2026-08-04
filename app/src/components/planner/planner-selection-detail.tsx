@@ -808,12 +808,14 @@ export function PlannerPhaseDetail({
   onClose,
   gate = null,
   instanceId,
+  onRefreshSelection,
 }: {
   phase: PlannerPhase;
   tasks: PlannerTask[];
   onClose: () => void;
   gate?: InstanceGate | null;
   instanceId?: string;
+  onRefreshSelection?: () => void | Promise<void>;
 }) {
   const { range, invalid } = rangeForPhase(tasks);
   const rangeLabel = invalid
@@ -837,7 +839,12 @@ export function PlannerPhaseDetail({
         {rangeLabel}
       </div>
       {gate && instanceId ? (
-        <GateApprovalCard instanceId={instanceId} gate={gate} tasks={tasks} />
+        <GateApprovalCard
+          instanceId={instanceId}
+          gate={gate}
+          tasks={tasks}
+          onMutated={onRefreshSelection}
+        />
       ) : phase.gateType && gateState && gateLabel ? (
         <>
           <div style={rowStyle}>

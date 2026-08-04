@@ -65,6 +65,7 @@ function task(overrides: Partial<PlannerTask> = {}): PlannerTask {
     assigneeUserId: null,
     assigneeRole: null,
     sortOrder: 0,
+    updatedAt: "2026-03-01T12:00:00.000Z",
     ...overrides,
   };
 }
@@ -148,8 +149,112 @@ describe("GateApprovalCard", () => {
         "i1",
         "ph-cast",
         expect.any(String),
-        [{ taskId: "t1", newStartDate: "2026-03-04", newEndDate: "2026-03-08" }],
+        [
+          {
+            taskId: "t1",
+            newStartDate: "2026-03-04",
+            newEndDate: "2026-03-08",
+            expectedUpdatedAt: "2026-03-01T12:00:00.000Z",
+          },
+        ],
       );
+    });
+  });
+
+  it("reuses the same Approve idempotency key across retries", async () => {
+    approveGateAction
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: "STALE_VERSION",
+          message: "This plan changed since you last viewed it. Refresh and try again.",
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          replayed: false,
+          status: "approved",
+          phaseId: "ph-cast",
+          approvalId: "ga-1",
+          approvedAt: "2026-08-02T12:00:00.000Z",
+          approvedBy: "u1",
+          changedTasks: [],
+        },
+      });
+    const user = userEvent.setup();
+    render(<GateApprovalCard instanceId="i1" gate={gate()} tasks={[task()]} />);
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await screen.findByTestId("planner-gate-error");
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(approveGateAction).toHaveBeenCalledTimes(2);
+    });
+    const key1 = approveGateAction.mock.calls[0][2];
+    const key2 = approveGateAction.mock.calls[1][2];
+    expect(key1).toBe(key2);
+  });
+
+  it("lets Edit schedule a previously undated task", async () => {
+    const user = userEvent.setup();
+    render(
+      <GateApprovalCard
+        instanceId="i1"
+        gate={gate()}
+        tasks={[task({ startDate: null, endDate: null })]}
+      />,
+    );
+
+    expect(screen.getByTestId("planner-gate-schedule-diff").textContent).toContain(
+      "Unscheduled",
+    );
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Shortlist models end date"), {
+      target: { value: "2026-03-06" },
+    });
+    // start input is labelled by the title
+    fireEvent.change(screen.getByLabelText("Shortlist models"), {
+      target: { value: "2026-03-04" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(approveGateAction).toHaveBeenCalledWith(
+        "i1",
+        "ph-cast",
+        expect.any(String),
+        [
+          {
+            taskId: "t1",
+            newStartDate: "2026-03-04",
+            newEndDate: "2026-03-06",
+            expectedUpdatedAt: "2026-03-01T12:00:00.000Z",
+          },
+        ],
+      );
+    });
+  });
+
+  it("calls onMutated after a successful Approve", async () => {
+    const onMutated = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <GateApprovalCard
+        instanceId="i1"
+        gate={gate()}
+        tasks={[task()]}
+        onMutated={onMutated}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(onMutated).toHaveBeenCalled();
+      expect(refresh).toHaveBeenCalled();
     });
   });
 

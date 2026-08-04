@@ -143,6 +143,7 @@ export async function resolvePlannerSelectionAction(
         listInstanceGates(instanceId),
       ]);
       if (!phasesResult.ok) return { ok: false };
+      if (!gatesResult.ok) return { ok: false };
       const resolved = resolvePhaseSelection(
         phasesResult.data,
         instanceResult.data.tasks,
@@ -150,9 +151,7 @@ export async function resolvePlannerSelectionAction(
       );
       if (!resolved) return { ok: false };
       const gate =
-        gatesResult.ok
-          ? (gatesResult.data.find((g) => g.phaseId === selection.id) ?? null)
-          : null;
+        gatesResult.data.find((g) => g.phaseId === selection.id) ?? null;
       return {
         ok: true,
         data: { kind: "phase", ...resolved, gate, instanceId },

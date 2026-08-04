@@ -6,7 +6,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import {
   approveGateAction,
@@ -23,8 +23,9 @@ type Busy = "idle" | "approving" | "discarding";
 
 type ProposedDates = Record<string, { start: string; end: string }>;
 
-function datedTasks(tasks: PlannerTask[]): PlannerTask[] {
-  return tasks.filter((t) => t.startDate && t.endDate && t.status !== "cancelled");
+/** Editable phase tasks — include undated rows so operators can schedule gaps. */
+function editableTasks(tasks: PlannerTask[]): PlannerTask[] {
+  return tasks.filter((t) => t.status !== "cancelled");
 }
 
 function formatSpan(start: string | null, end: string | null): string {
@@ -39,14 +40,16 @@ function buildProposedChanges(
   proposed: ProposedDates,
 ): GateProposedChange[] {
   const changes: GateProposedChange[] = [];
-  for (const task of datedTasks(tasks)) {
+  for (const task of editableTasks(tasks)) {
     const next = proposed[task.id];
     if (!next?.start || !next?.end) continue;
     if (next.start === task.startDate && next.end === task.endDate) continue;
+    if (!task.updatedAt) continue;
     changes.push({
       taskId: task.id,
       newStartDate: next.start,
       newEndDate: next.end,
+      expectedUpdatedAt: task.updatedAt,
     });
   }
   return changes;
@@ -63,18 +66,31 @@ export type GateApprovalCardProps = {
   instanceId: string;
   gate: InstanceGate;
   tasks: PlannerTask[];
+  /** Re-resolve AdaptivePanel phase selection after Approve/Discard. */
+  onMutated?: () => void | Promise<void>;
 };
 
-export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardProps) {
+export function GateApprovalCard({
+  instanceId,
+  gate,
+  tasks,
+  onMutated,
+}: GateApprovalCardProps) {
   const router = useRouter();
   const titleId = useId();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<Busy>("idle");
   const [error, setError] = useState<string | null>(null);
+  // Stable per logical attempt — reuse on retry of the same Approve/Discard.
+  const approveKeyRef = useRef<string | null>(null);
+  const discardKeyRef = useRef<string | null>(null);
   const [proposed, setProposed] = useState<ProposedDates>(() => {
     const initial: ProposedDates = {};
-    for (const task of datedTasks(tasks)) {
-      initial[task.id] = { start: task.startDate!, end: task.endDate! };
+    for (const task of editableTasks(tasks)) {
+      initial[task.id] = {
+        start: task.startDate ?? "",
+        end: task.endDate ?? "",
+      };
     }
     return initial;
   });
@@ -82,7 +98,11 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
   const status = gate.status;
   const isReachable = status === "reachable";
   const changes = buildProposedChanges(tasks, proposed);
-  const showDiff = isReachable && (editing || changes.length > 0 || datedTasks(tasks).length > 0);
+  const editables = editableTasks(tasks);
+  const showDiff =
+    isReachable && (editing || changes.length > 0 || editables.length > 0);
+  // RPC default: blank required_role → manager
+  const roleLabel = gate.requiredRole?.trim() || "manager";
 
   const cardClass =
     status === "approved"
@@ -104,30 +124,49 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
     if (busy !== "idle") return;
     setBusy("approving");
     setError(null);
-    const key = newIdempotencyKey("approve");
-    const result = await approveGateAction(instanceId, gate.phaseId, key, changes);
+    if (!approveKeyRef.current) {
+      approveKeyRef.current = newIdempotencyKey("approve");
+    }
+    const result = await approveGateAction(
+      instanceId,
+      gate.phaseId,
+      approveKeyRef.current,
+      changes,
+    );
     setBusy("idle");
     if (!result.ok) {
       setError(result.error.message);
       return;
     }
+    approveKeyRef.current = null;
+    discardKeyRef.current = null;
     setEditing(false);
     router.refresh();
+    await onMutated?.();
   }
 
   async function onDiscard() {
     if (busy !== "idle") return;
     setBusy("discarding");
     setError(null);
-    const key = newIdempotencyKey("discard");
-    const result = await discardGateAction(instanceId, gate.phaseId, key);
+    if (!discardKeyRef.current) {
+      discardKeyRef.current = newIdempotencyKey("discard");
+    }
+    const result = await discardGateAction(
+      instanceId,
+      gate.phaseId,
+      discardKeyRef.current,
+    );
     setBusy("idle");
     if (!result.ok) {
       setError(result.error.message);
       return;
     }
+    approveKeyRef.current = null;
+    discardKeyRef.current = null;
     setEditing(false);
     router.refresh();
+    await onMutated?.();
   }
 
   return (
@@ -151,7 +190,7 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
 
       <p className={styles.meta} data-testid="planner-gate-status">
         {GATE_STATUS_LABEL[status]}
-        {gate.requiredRole ? ` · Requires ${gate.requiredRole}` : ""}
+        {` · Requires ${roleLabel}`}
         {gate.reason ? ` · ${gate.reason}` : ""}
       </p>
 
@@ -160,10 +199,10 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
           <div className={`${styles.diffPane} ${styles.diffPaneMuted}`}>
             <div className={styles.diffLabel}>Before</div>
             <div className={styles.diffBody}>
-              {datedTasks(tasks).length === 0 ? (
-                <p className={styles.diffRow}>No dated tasks in this phase.</p>
+              {editables.length === 0 ? (
+                <p className={styles.diffRow}>No tasks in this phase.</p>
               ) : (
-                datedTasks(tasks).map((task) => (
+                editables.map((task) => (
                   <p key={task.id} className={styles.diffRow}>
                     <strong>{task.title}</strong>
                     {": "}
@@ -181,11 +220,12 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
                   No schedule changes — approving unlocks the next phase.
                 </p>
               ) : (
-                datedTasks(tasks).map((task) => {
+                editables.map((task) => {
                   const next = proposed[task.id];
-                  if (!next) return null;
+                  if (!next?.start || !next?.end) return null;
                   const changed =
-                    next.start !== task.startDate || next.end !== task.endDate;
+                    next.start !== (task.startDate ?? "") ||
+                    next.end !== (task.endDate ?? "");
                   if (!changed) return null;
                   return (
                     <p key={task.id} className={styles.diffRow}>
@@ -203,7 +243,7 @@ export function GateApprovalCard({ instanceId, gate, tasks }: GateApprovalCardPr
 
       {editing && isReachable ? (
         <div className={styles.editList} data-testid="planner-gate-edit-dates">
-          {datedTasks(tasks).map((task) => (
+          {editables.map((task) => (
             <div key={task.id} className={styles.editRow}>
               <label htmlFor={`gate-start-${task.id}`}>{task.title}</label>
               <input

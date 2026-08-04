@@ -86,7 +86,10 @@ export default async function PlannerWorkspacePage({
   // IPI-483 — overlay persisted gate_approvals so Approved/Discarded win
   // over the task-completion heuristic (never claim Approved from tasks alone).
   const gatesResult = await listInstanceGates(instanceId);
-  const gates = gatesResult.ok ? gatesResult.data : [];
+  if (!gatesResult.ok) {
+    throw new Error(gatesResult.error.message);
+  }
+  const gates = gatesResult.data;
 
   const timelineModel = applyInstanceGates(
     buildTimelineModel(phases, tasks, todayIso, status),
