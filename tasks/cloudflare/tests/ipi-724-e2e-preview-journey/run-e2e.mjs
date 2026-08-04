@@ -795,19 +795,17 @@ async function main() {
       // 13f. Logout is idempotent — a second POST /auth/signout while already
       // logged out must still 3xx to /login (not the signoutError → /app → /login
       // chain that redirect:"follow" would disguise as a clean /login landing).
+      // Use Playwright's request API with maxRedirects:0 — browser fetch({redirect:"manual"})
+      // always yields opaqueredirect (status 0, no Location) and falsely fails this hard AC.
       try {
-        const idempotent = await page.evaluate(async () => {
-          const r = await fetch("/auth/signout", {
-            method: "POST",
-            credentials: "same-origin",
-            redirect: "manual",
-          });
-          return {
-            status: r.status,
-            location: r.headers.get("location"),
-            type: r.type,
-          };
+        const idempotentRes = await page.request.fetch(`${PREVIEW}/auth/signout`, {
+          method: "POST",
+          maxRedirects: 0,
         });
+        const idempotent = {
+          status: idempotentRes.status(),
+          location: idempotentRes.headers()["location"] ?? null,
+        };
         let redirectToLogin = false;
         let locationPath = null;
         if (idempotent.location) {

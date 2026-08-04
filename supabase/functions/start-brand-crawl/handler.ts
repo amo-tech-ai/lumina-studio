@@ -1,4 +1,5 @@
 import { insertAgentLog } from "../_shared/agent-log.ts";
+import { normalizeBrandUrl } from "../_shared/brand-url.ts";
 import { handleCors } from "../_shared/cors.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
 import { firecrawlStartCrawl } from "../_shared/firecrawl.ts";
@@ -32,17 +33,6 @@ type BrandRow = {
   org_id: string | null;
   user_id: string | null;
 };
-
-export function normalizeUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    throw new Error("url or websiteUrl is required");
-  }
-  if (!/^https?:\/\//i.test(trimmed)) {
-    throw new Error("URL must start with http:// or https://");
-  }
-  return trimmed;
-}
 
 const ACTIVE_CRAWL_STATUSES = ["queued", "running", "complete"] as const;
 
@@ -149,14 +139,18 @@ export async function handleStartBrandCrawl(req: Request): Promise<Response> {
       return errorResponse("invalid_request", "brandId is required", 400);
     }
 
-    let sourceUrl: string;
-    try {
-      sourceUrl = normalizeUrl(body.url ?? body.websiteUrl ?? "");
-    } catch (urlErr) {
+    // IPI-949 · ONB2-INT-001h — shared brand-URL SSOT (IPI-920): only the
+    // canonical public origin is stored/crawled; anything else is a typed 422
+    // and never reaches brand_crawls.source_url.
+    const rawUrl = body.url ?? body.websiteUrl ?? "";
+    const sourceUrl = typeof rawUrl === "string"
+      ? normalizeBrandUrl(rawUrl)
+      : null;
+    if (sourceUrl === null) {
       return errorResponse(
-        "invalid_request",
-        safeErrorMessage(urlErr),
-        400,
+        "validation_error",
+        "A valid public http(s) url is required",
+        422,
       );
     }
 
