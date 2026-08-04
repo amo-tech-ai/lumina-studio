@@ -39,7 +39,7 @@ const CHIP_TONE: Record<TaskStatusTone, string> = {
 };
 
 function columnGated(col: KanbanColumn): boolean {
-  return col.gate === "ready" || col.gate === "locked";
+  return col.gate === "ready" || col.gate === "locked" || col.gate === "discarded";
 }
 
 /** Match Timeline phaseRowAccessibleName gate phrasing. */
@@ -48,6 +48,7 @@ export function kanbanColumnAccessibleName(col: KanbanColumn): string {
   if (col.gate === "ready") parts.push("gate ready for approval");
   else if (col.gate === "locked") parts.push("gate locked");
   else if (col.gate === "approved") parts.push("gate approved");
+  else if (col.gate === "discarded") parts.push("gate discarded");
   return parts.join(", ");
 }
 
