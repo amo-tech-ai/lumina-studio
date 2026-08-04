@@ -23,7 +23,7 @@ restricted_mode = true            # upstream: skips operations needing contents:
                                   # code/changelog updates). NOT approval/suggest-commit proof — those
                                   # are pinned separately below (verified upstream configuration.toml).
 ignore_pr_labels = ["skip-ai-review", "docs-only"]   # configured under [config] so ALL tools honor it
-ignore_pr_authors = ["dependabot", "renovate[bot]", "github-actions[bot]", "coderabbitai[bot]", "copilot[bot]"]
+ignore_pr_authors = ["coderabbitai[bot]", "chatgpt-codex-connector[bot]", "copilot-swe-agent[bot]", "codex[bot]", "codebug[bot]", "dependabot[bot]", "renovate[bot]", "github-actions[bot]"]  # spec set (PRAGENT-002) + dependency bots
 
 [github_action_config]
 auto_review = true
