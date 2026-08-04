@@ -42,4 +42,4 @@ Canonical precedence is **`ponytail.mdc` only**. Full research flow: skill `ai-r
 | Smallest change | `ponytail.mdc` |
 | Lifecycle gates | `lean.mdc` (slim) · `ipix-task-lifecycle` |
 | Evidence / Done | `task-accuracy.mdc` · `task-verifier` |
-| Linear mutations | `linear` skill · `linear-governance.mdc` (IPI-936 / #799) |
+| Linear mutations | `linear-governance.mdc` (alwaysApply) · `linear` skill |

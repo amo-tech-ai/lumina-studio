@@ -73,6 +73,6 @@ Understand → Discover (graphify) → Plan → Isolate (worktree when required 
 | Graph queries | `graphify.mdc` |
 | Code minimalism / platform-first | `ponytail.mdc` |
 | Process playbooks | `process.mdc` (on demand) · `docs/process/` |
-| Linear mutations | `linear` skill · `linear-governance.mdc` (ship via IPI-936 / #799) |
+| Linear mutations | `linear-governance.mdc` (alwaysApply) · `linear` skill |
 | Secrets | `infisical.mdc` |
 | Velocity audit | `.claude/skills/lean/SKILL.md` (`/lean`) |
