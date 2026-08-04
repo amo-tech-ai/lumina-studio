@@ -199,3 +199,23 @@ export interface PlannerMutationError {
 export type MutationResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: PlannerMutationError };
+
+// IPI-483 · PLN-ENG-002 — gate visibility for SCR-32 ApprovalCard (PR2).
+// Completing tasks alone never yields "approved"; that requires a persisted
+// planner.gate_approvals row with status=approved.
+export type GateUiStatus = "locked" | "reachable" | "approved" | "discarded";
+
+export type InstanceGate = {
+  phaseId: string;
+  phaseName: string;
+  phaseSlug: string;
+  orderIndex: number;
+  gateType: Exclude<GateType, null>;
+  requiredRole: string | null;
+  status: GateUiStatus;
+  reason?: string;
+  approvalId: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+};
+

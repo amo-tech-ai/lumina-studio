@@ -255,38 +255,45 @@ export class PlannerEngine {
       return { passed: false, reason: "Not all tasks in this phase are complete." };
     }
 
-    // Check user's role meets the gate requirement (scoped to instance)
-    if (phase.requiredRole) {
-      const userAssignment = assignments.find(
-        (a) => a.userId === userId && a.instanceId === instance.id,
-      );
-      if (!userAssignment) {
-        return { passed: false, reason: "User is not assigned to this instance." };
-      }
+    // Match planner_approve_gate: null/blank required_role coalesces to manager;
+    // viewer is never a valid approve role (RPC → INVALID_INPUT / FORBIDDEN).
+    const requiredRole =
+      phase.requiredRole && phase.requiredRole.trim().length > 0
+        ? phase.requiredRole.trim()
+        : "manager";
 
-      const hierarchy: Record<string, number> = {
-        viewer: 0,
-        contributor: 1,
-        manager: 2,
-        owner: 3,
+    const userAssignment = assignments.find(
+      (a) => a.userId === userId && a.instanceId === instance.id,
+    );
+    if (!userAssignment) {
+      return { passed: false, reason: "User is not assigned to this instance." };
+    }
+
+    const hierarchy: Record<string, number> = {
+      viewer: 0,
+      contributor: 1,
+      manager: 2,
+      owner: 3,
+    };
+
+    if (!(requiredRole in hierarchy) || requiredRole === "viewer") {
+      return {
+        passed: false,
+        reason:
+          requiredRole === "viewer"
+            ? "Viewer cannot approve gates."
+            : `Unknown required role "${requiredRole}".`,
       };
+    }
 
-      if (!(phase.requiredRole in hierarchy)) {
-        return {
-          passed: false,
-          reason: `Unknown required role "${phase.requiredRole}".`,
-        };
-      }
+    const userLevel = hierarchy[userAssignment.role] ?? 0;
+    const requiredLevel = hierarchy[requiredRole];
 
-      const userLevel = hierarchy[userAssignment.role] ?? 0;
-      const requiredLevel = hierarchy[phase.requiredRole];
-
-      if (userLevel < requiredLevel) {
-        return {
-          passed: false,
-          reason: `User role ${userAssignment.role} does not meet required role ${phase.requiredRole}.`,
-        };
-      }
+    if (userLevel < requiredLevel) {
+      return {
+        passed: false,
+        reason: `User role ${userAssignment.role} does not meet required role ${requiredRole}.`,
+      };
     }
 
     return { passed: true };

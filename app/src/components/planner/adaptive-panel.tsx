@@ -123,6 +123,25 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
     };
   }, [instanceId]);
 
+  // IPI-483 — re-resolve phase selection after Approve/Discard so the card
+  // picks up persisted Approved/Discarded (router.refresh alone leaves local
+  // AdaptivePanel resolution stale).
+  const refreshPhaseSelection = useCallback(async () => {
+    const requested = selectionRef.current;
+    if (requested === null || requested.type !== "phase") return;
+    const result = await resolvePlannerSelectionAction(instanceId, requested);
+    const current = selectionRef.current;
+    if (
+      current === null ||
+      current.type !== "phase" ||
+      current.id !== requested.id
+    ) {
+      return;
+    }
+    if (!result.ok || result.data.kind !== "phase") return;
+    setState({ status: "resolved", result: result.data });
+  }, [instanceId]);
+
   // Memoized, not rebuilt every render: AdaptivePanel is itself a consumer of
   // IntelligenceDetailContext (via useSetIntelligenceDetail -> useIntelligenceDetail
   // -> useContext), so every setDetail() call re-renders this component. An
@@ -149,14 +168,17 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
     if (state.result.kind === "phase") {
       return (
         <PlannerPhaseDetail
+          instanceId={state.result.instanceId}
           phase={state.result.phase}
           tasks={state.result.tasks}
+          gate={state.result.gate}
           onClose={deselect}
+          onRefreshSelection={refreshPhaseSelection}
         />
       );
     }
     return <PlannerMemberDetail member={state.result.member} onClose={deselect} />;
-  }, [selection, state, deselect, refreshTaskSelection]);
+  }, [selection, state, deselect, refreshTaskSelection, refreshPhaseSelection]);
 
   useSetIntelligenceDetail(node);
 

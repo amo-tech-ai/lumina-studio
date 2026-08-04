@@ -180,6 +180,28 @@ async function extractThreadIdFromBody(
   return { threadId, request: forwardedRequest };
 }
 
+/**
+ * IPI-944 · COPILOT-AUTH-MODEL-001 — Strip the operator Supabase Bearer before
+ * CopilotRuntime sees the request.
+ *
+ * CopilotKit `configureAgentForRequest` copies `authorization` via
+ * `extractForwardableHeaders` onto `agent.headers`. `@ag-ui/mastra` then puts
+ * those headers on `modelSettings.headers`, and `@ai-sdk/google` merges them
+ * with `x-goog-api-key: GEMINI_API_KEY`. Google rejects dual auth:
+ * "API key for authentication is used with other authentication credentials."
+ *
+ * Operator identity stays available to tools via `requestToken` ALS (set below
+ * after `withOperatorAuth` / `extractAccessToken`). This only removes the
+ * header from the Request handed to `endpoint()` — it does not weaken the
+ * `/api/copilotkit` auth gate.
+ */
+function stripOperatorAuthorization(request: Request): Request {
+  if (!request.headers.has("authorization")) return request;
+  const headers = new Headers(request.headers);
+  headers.delete("authorization");
+  return new Request(request, { headers });
+}
+
 if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
   console.warn(
     "[copilotkit] COPILOTKIT_LICENSE_TOKEN not set — thread persistence disabled, each page load starts a fresh conversation",
@@ -502,9 +524,13 @@ const handler = async (request: Request): Promise<Response> => {
         await assertThreadOwnership(bodyThreadId, resourceId, user.id);
       }
 
+      // IPI-944: auth already succeeded; JWT is in requestToken ALS. Strip
+      // Authorization so CopilotKit cannot forward it into Gemini model calls.
+      const modelSafeRequest = stripOperatorAuthorization(forwardedRequest);
+
       const response = await _requestUser.run(user, () =>
         _requestResourceId.run(resourceId, () =>
-          requestToken.run(token, () => endpoint(forwardedRequest)),
+          requestToken.run(token, () => endpoint(modelSafeRequest)),
         ),
       );
       return withStreamIdleTimeout(

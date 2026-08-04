@@ -180,6 +180,60 @@ export type Database = {
           },
         ]
       }
+      gate_approvals: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          id: string
+          idempotency_key: string | null
+          instance_id: string
+          phase_id: string
+          request_hash: string | null
+          result_payload: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          instance_id: string
+          phase_id: string
+          request_hash?: string | null
+          result_payload?: Json | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          instance_id?: string
+          phase_id?: string
+          request_hash?: string | null
+          result_payload?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gate_approvals_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gate_approvals_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gate_conditions: {
         Row: {
           condition_type: string
@@ -522,9 +576,14 @@ export type Database = {
     Functions: {
       can_broadcast_instance: { Args: { p_topic: string }; Returns: boolean }
       can_subscribe_instance: { Args: { p_topic: string }; Returns: boolean }
+      dependency_edges_have_cycle: { Args: { p_edges: Json }; Returns: boolean }
       ensure_default_5_week_workflow: {
         Args: { p_org_id: string }
         Returns: string
+      }
+      gate_phase_tasks_done: {
+        Args: { p_instance_id: string; p_phase_id: string }
+        Returns: boolean
       }
       is_assigned: {
         Args: { p_instance_id: string; p_roles: string[] }
@@ -6963,6 +7022,17 @@ export type Database = {
         Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
         Returns: boolean
       }
+      planner_approve_gate: {
+        Args: {
+          p_changed_tasks: Json
+          p_expected_dependency_edges: Json
+          p_idempotency_key: string
+          p_instance_id: string
+          p_phase_id: string
+          p_proposed_dependency_edges?: Json
+        }
+        Returns: Json
+      }
       planner_create_instance: {
         Args: {
           p_entity_id: string
@@ -6974,6 +7044,15 @@ export type Database = {
           p_planned_start: string
           p_tasks: Json
           p_workflow_id: string
+        }
+        Returns: Json
+      }
+      planner_discard_gate: {
+        Args: {
+          p_idempotency_key: string
+          p_instance_id: string
+          p_phase_id: string
+          p_reason?: string
         }
         Returns: Json
       }

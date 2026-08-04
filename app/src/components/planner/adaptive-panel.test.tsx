@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IntelligenceDetailProvider, useIntelligenceDetail } from "@/context/intelligence-detail-context";
 import type { PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
 
+vi.mock("./gate-approval-card.module.css", () => ({
+  default: new Proxy({}, { get: (_, k) => String(k) }),
+}));
+
 const resolvePlannerSelectionAction = vi.fn();
 vi.mock("@/app/(operator)/app/planner/[instanceId]/selection-actions", () => ({
   resolvePlannerSelectionAction: (...args: unknown[]) => resolvePlannerSelectionAction(...args),
@@ -18,6 +22,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
   updateTaskAction: vi.fn(),
+  shiftTaskAction: vi.fn(),
 }));
 
 const deselect = vi.fn();
@@ -161,7 +166,13 @@ describe("AdaptivePanel — phase selection", () => {
     mockSelection = { type: "phase", id: PHASE_ID };
     resolvePlannerSelectionAction.mockResolvedValue({
       ok: true,
-      data: { kind: "phase", phase: PHASE_FIXTURE, tasks: [TASK_FIXTURE] },
+      data: {
+        kind: "phase",
+        phase: PHASE_FIXTURE,
+        tasks: [TASK_FIXTURE],
+        gate: null,
+        instanceId: "i1",
+      },
     });
 
     renderPanel();

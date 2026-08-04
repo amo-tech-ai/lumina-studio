@@ -185,6 +185,38 @@ describe("middleware — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  // IPI-945 · ONB2-ROUTE-001 — legacy shell path always 307s to v2.
+  it("redirects /app/onboarding to /onboarding even when auth gate is off", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    vi.stubEnv("NODE_ENV", "development");
+    const res = await middleware(appRequest("/app/onboarding"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/\/onboarding$/);
+  });
+
+  it("redirects /app/onboarding to /onboarding when authenticated", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await middleware(
+      appRequest("/app/onboarding", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue() },
+      ]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/\/onboarding$/);
+  });
+
+  // Legacy rewrite runs before the auth gate — unauthenticated bookmarks must
+  // land on /onboarding (then the /onboarding gate sends them to /login), not
+  // stop at /login?redirect=/app/onboarding.
+  it("redirects /app/onboarding to /onboarding when auth is on and unsigned", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await middleware(appRequest("/app/onboarding"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/\/onboarding$/);
+    expect(res.headers.get("location")).not.toMatch(/\/login/);
+  });
+
   it("matches all app routes except static assets for session refresh", () => {
     expect(config.matcher).toEqual([
       "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

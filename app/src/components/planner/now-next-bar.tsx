@@ -4,15 +4,14 @@
 // Mounted once in PlannerWorkspaceShell; uses the shared getInstanceDetail
 // task payload + pure selectCurrentTaskForViewer. No supabase.from here.
 //
-// "Your next approval" stays honestly empty until IPI-483 — no fabricated
-// gates. View opens AdaptivePanel via ?selection=task:<uuid>.
+// IPI-483 — "Your next approval" uses listInstanceGates (reachable only).
 
 import { CircleCheck, Clock } from "lucide-react";
 import { useMemo } from "react";
 
 import { formatPlanDateShort, parsePlanDate } from "@/lib/planner/planner-date-utils";
 import { selectCurrentTaskForViewer } from "@/lib/planner/select-current-task";
-import type { PlannerTask } from "@/lib/planner/types";
+import type { InstanceGate, PlannerTask } from "@/lib/planner/types";
 import { usePlannerSelection } from "@/lib/planner/use-planner-selection";
 
 import styles from "./now-next-bar.module.css";
@@ -24,6 +23,8 @@ export type NowNextBarProps = {
   phaseNames: Record<string, string>;
   /** YYYY-MM-DD — same UTC-today string the Timeline model uses. */
   today: string;
+  /** IPI-483 — from listInstanceGates; first reachable drives next-approval. */
+  gates?: InstanceGate[];
 };
 
 function formatTaskSub(
@@ -49,13 +50,20 @@ function formatTaskSub(
   return parts.join(" · ");
 }
 
-export function NowNextBar({ tasks, viewerId, phaseNames, today }: NowNextBarProps) {
+function firstReachableGate(gates: InstanceGate[] | undefined): InstanceGate | null {
+  if (!gates?.length) return null;
+  return gates.find((g) => g.status === "reachable") ?? null;
+}
+
+export function NowNextBar({ tasks, viewerId, phaseNames, today, gates }: NowNextBarProps) {
   const { setSelection } = usePlannerSelection();
 
   const current = useMemo(
     () => selectCurrentTaskForViewer(tasks, viewerId, today),
     [tasks, viewerId, today],
   );
+
+  const nextGate = useMemo(() => firstReachableGate(gates), [gates]);
 
   return (
     <div className={styles.bar} data-testid="planner-now-next-bar">
@@ -91,19 +99,45 @@ export function NowNextBar({ tasks, viewerId, phaseNames, today }: NowNextBarPro
         ) : null}
       </div>
 
-      {/* ponytail: Phase 1 honest-empty state until IPI-483 — never invent an approval. */}
-      <div className={styles.card} data-testid="planner-next-approval-card">
-        <div className={styles.iconWrapDone} aria-hidden="true">
+      <div
+        className={nextGate ? `${styles.card} ${styles.cardApproval}` : styles.card}
+        data-testid="planner-next-approval-card"
+      >
+        <div
+          className={nextGate ? styles.iconWrapApproval : styles.iconWrapDone}
+          aria-hidden="true"
+        >
           <CircleCheck style={{ width: 15, height: 15 }} />
         </div>
         <div className={styles.body}>
           <div className={styles.eyebrow}>Your next approval</div>
-          <div className={styles.title}>Approvals unavailable</div>
-          <div className={styles.sub}>
-            Approval gates are not wired yet — they ship with the workflow engine
-            (IPI-483).
-          </div>
+          {nextGate ? (
+            <>
+              <div className={styles.title}>{nextGate.phaseName}</div>
+              <div className={styles.subApproval}>
+                Ready for approval
+                {nextGate.requiredRole ? ` · Requires ${nextGate.requiredRole}` : ""}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.title}>No approvals waiting</div>
+              <div className={styles.sub}>
+                When a production gate is ready, it will show up here.
+              </div>
+            </>
+          )}
         </div>
+        {nextGate ? (
+          <button
+            type="button"
+            className={styles.reviewButton}
+            data-testid="planner-next-approval-review"
+            onClick={() => setSelection({ type: "phase", id: nextGate.phaseId })}
+          >
+            Review
+          </button>
+        ) : null}
       </div>
     </div>
   );
