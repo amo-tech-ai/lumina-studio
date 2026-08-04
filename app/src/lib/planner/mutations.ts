@@ -605,8 +605,12 @@ const GATE_MUTATION_MESSAGES: Record<string, string> = {
 };
 
 function gateMutationError(fn: string, code: string): MutationResult<never> {
-  const message = GATE_MUTATION_MESSAGES[code];
-  if (!message) {
+  // Own-property only — RPC codes like "constructor"/"toString" must not
+  // resolve to Object.prototype functions and leak non-string messages to UI.
+  const message = Object.hasOwn(GATE_MUTATION_MESSAGES, code)
+    ? GATE_MUTATION_MESSAGES[code]
+    : undefined;
+  if (typeof message !== "string" || message.length === 0) {
     console.error(`[planner/mutations] ${fn} rpc failed:`, code);
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }

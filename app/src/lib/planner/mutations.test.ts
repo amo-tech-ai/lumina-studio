@@ -1124,6 +1124,25 @@ describe("approveGate", () => {
     });
   });
 
+  it("forwards proposedDependencyEdges: null (date-only path distinct from omit)", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "approved",
+      phaseId: "ph-cast",
+      approvalId: "ga-1",
+      approvedAt: "2026-08-02T12:00:00.000Z",
+      approvedBy: "u1",
+      changedTasks: [],
+    });
+
+    await approveGate({ ...BASE_APPROVE, proposedDependencyEdges: null }, client);
+
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({
+      p_proposed_dependency_edges: null,
+    });
+  });
+
   it("normalizes omitted lagDays to 0 before dependency CAS payload", async () => {
     const { client, rpcMock } = mockRpcJson({
       ok: true,
@@ -1295,5 +1314,39 @@ describe("discardGate", () => {
     const { client } = mockRpcJson({ ok: false, code });
     const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: `d-${code}` }, client);
     expect(result).toEqual({ ok: false, error: { code, message } });
+  });
+
+  it("rejects an empty idempotency key before calling the RPC", async () => {
+    const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false });
+    const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: "  " }, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "That request wasn't valid." },
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("maps a malformed ok payload to UNKNOWN_ERROR", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Missing phaseId / approvalId — triggers discardGate payload validation.
+    const { client } = mockRpcJson({ ok: true, replayed: false, status: "discarded" });
+    const result = await discardGate(BASE_DISCARD, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+    });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps prototype-inherited RPC codes to UNKNOWN_ERROR (own-property guard)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson({ ok: false, code: "constructor" });
+    const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: "d-ctor" }, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+    });
+    consoleError.mockRestore();
   });
 });
