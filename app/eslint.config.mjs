@@ -51,6 +51,11 @@ export default tseslint.config(
           selector: "CallExpression[callee.name='copilotKitEndpoint']",
           message: "v1 runtime — use createCopilotEndpoint from '@copilotkit/runtime/v2'.",
         },
+        {
+          selector: "ImportSpecifier[imported.name='reanalyzeBrand']",
+          message:
+            "IPI-919 — reanalyzeBrand was retired. Failed-analysis recovery has one door: POST /api/brands/[id]/restart-analysis (IPI-905/918).",
+        },
       ],
     },
   },

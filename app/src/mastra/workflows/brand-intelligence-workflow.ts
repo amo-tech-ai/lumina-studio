@@ -126,7 +126,8 @@ export const validateBrand = createStep({
 
     if (!brand.brand_url) throw new Error("Brand has no website URL");
     // Atomic guard: only proceed if brand is not already in a running/ready state.
-    // Mirrors the reanalyzeBrand action pattern to prevent concurrent run corruption.
+    // Mirrors the retired reanalyzeBrand action's atomic guard pattern to prevent
+    // concurrent run corruption.
     const { error: statusErr } = await sb
       .from("brands")
       .update({ intake_status: "crawl_running", updated_at: new Date().toISOString() })

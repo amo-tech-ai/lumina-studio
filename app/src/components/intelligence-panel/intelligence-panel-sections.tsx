@@ -5,7 +5,6 @@ import { resolvePanelApprovals } from "@/lib/intelligence/resolve-panel-approval
 import { resolvePanelScores } from "@/lib/intelligence/panel-scores-fallback";
 
 import {
-  BrandDetailNoDnaBlock,
   BrandDetailPanelExtras,
 } from "./brand-detail-panel-extras";
 import { HealthSection } from "./health-section";
@@ -152,13 +151,6 @@ function CommandCenterAndDetailSections({
 
   return (
     <>
-      {showOverview && brandDetailMode && !scores ? (
-        <BrandDetailNoDnaBlock
-          brandId={activeBrandId ?? data.brand?.id ?? null}
-          brandName={data.brand?.name ?? "This brand"}
-        />
-      ) : null}
-
       {showOverview && health && scores ? (
         <HealthSection
           dna={scores.dna}

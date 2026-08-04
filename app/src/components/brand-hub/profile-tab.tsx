@@ -15,7 +15,7 @@ export const ProfileTab = ({ profile }: Props) => {
   if (!hasMeaningfulProfile(profile)) {
     return (
       <p className="font-sans text-sm text-[#94A3B8]">
-        Brand profile not analyzed yet. Run Re-analyze to populate fields.
+        Brand profile not analyzed yet. Restart analysis to populate fields.
       </p>
     );
   }

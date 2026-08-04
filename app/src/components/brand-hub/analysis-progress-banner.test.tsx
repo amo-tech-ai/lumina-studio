@@ -110,7 +110,7 @@ describe("AnalysisProgressBanner", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="failed" />);
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.getByText("Analysis failed")).toBeTruthy();
-    expect(screen.getByText(/Re-analyze/)).toBeTruthy();
+    expect(screen.getByText(/If this persists/)).toBeTruthy();
   });
 
   it("subscribes to realtime on mount", () => {
@@ -129,9 +129,11 @@ describe("AnalysisProgressBanner", () => {
     expect(screen.getByText("Gemini timeout — API quota exceeded")).toBeTruthy();
   });
 
-  it("falls back to default retry text when errorMessage is absent", () => {
+  it("falls back to default failure text when errorMessage is absent", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="failed" />);
-    expect(screen.getByRole("alert").textContent).toContain("Use Re-analyze to retry");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "If this persists, contact support",
+    );
   });
 
   it("refreshes layout on scores_complete but keeps progress copy (not success)", () => {

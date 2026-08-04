@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { Calendar, ChevronRight, Zap } from "lucide-react";
-import { toast } from "sonner";
+import { useMemo } from "react";
+import { Calendar, ChevronRight } from "lucide-react";
 
 import { BrandDetailAnalysingCard } from "@/components/brand-hub/brand-detail-analysing-card";
 import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress-banner";
@@ -14,7 +12,6 @@ import { DraftBanner } from "@/components/brand-hub/draft-banner";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
 import { EvidenceDialog } from "@/components/intelligence-panel/evidence-dialog";
 import type { EvidenceBlockProps } from "@/components/evidence-block/types";
-import { reanalyzeBrand } from "@/app/(operator)/app/brand/[id]/actions";
 import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
 import { isAnalysingIntakeStatus } from "@/lib/brand-list-filters";
 import { brandDetailGreeting, brandDetailHeroChip } from "@/lib/brand-detail-greeting";
@@ -88,8 +85,11 @@ export function BrandDetailWorkspace({
   isAuthenticated,
   canRestartAnalysis = false,
 }: BrandDetailWorkspaceProps) {
-  const router = useRouter();
-  const [startingAnalysis, setStartingAnalysis] = useState(false);
+  // IPI-919 · ONB2-INT-001f — the legacy "Start analysis" control (which called
+  // the retired reanalyzeBrand action and always bought a fresh crawl) is gone.
+  // Failed-analysis recovery has one door: the Restart analysis control in the
+  // failed AnalysisProgressBanner → POST /api/brands/[id]/restart-analysis.
+  // Initial analysis start stays with onboarding (kickoffOnboardingCrawl).
   const status = intakeStatus ?? "brand_created";
   const analysing = isAnalysingIntakeStatus(status);
   const hasDna = dnaScore > 0;
@@ -114,24 +114,6 @@ export function BrandDetailWorkspace({
     scores: baseScores,
     workflowRunId,
   });
-
-  const startAnalysis = async () => {
-    if (startingAnalysis) return;
-    setStartingAnalysis(true);
-    try {
-      const result = await reanalyzeBrand(brandId);
-      if (result.ok) {
-        router.refresh();
-      } else {
-        // IPI-722 — a real, server-returned failure (e.g. no website URL,
-        // analysis already running) was previously discarded here, leaving
-        // the button silently doing nothing. Never a silent no-op.
-        toast.error(result.error);
-      }
-    } finally {
-      setStartingAnalysis(false);
-    }
-  };
 
   if (!isAuthenticated) {
     return (
@@ -228,18 +210,6 @@ export function BrandDetailWorkspace({
               Review assets
             </Link>
           </div>
-        ) : null}
-
-        {!hasDna && !analysing ? (
-          <button
-            type="button"
-            className={styles.chipPrimary}
-            disabled={startingAnalysis}
-            onClick={startAnalysis}
-          >
-            <Zap size={15} aria-hidden />
-            {startingAnalysis ? "Starting…" : "Start analysis"}
-          </button>
         ) : null}
 
         {status === "draft_ready" && draftProfile ? (
