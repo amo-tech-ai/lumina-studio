@@ -171,6 +171,25 @@ async function checkedCleanup(label, query) {
   if (error) trackCleanupError(`${label}: ${error.message}`);
 }
 
+/**
+ * Delete planner rows for an org before the organization itself.
+ * instances.workflow_id is ON DELETE RESTRICT, so org→workflow CASCADE can fail
+ * while instances still reference those workflows. Instance children
+ * (tasks/deps/events/assignments/gate_approvals) cascade from instances.
+ */
+async function cleanupPlannerOrg(orgId) {
+  if (!admin || !orgId) return;
+  const plannerAdmin = admin.schema("planner");
+  await checkedCleanup(
+    `planner.instances for org ${orgId}`,
+    plannerAdmin.from("instances").delete().eq("org_id", orgId),
+  );
+  await checkedCleanup(
+    `planner.workflows for org ${orgId}`,
+    plannerAdmin.from("workflows").delete().eq("org_id", orgId),
+  );
+}
+
 /** Cross-user SELECT deny: fail on query error, then assert zero rows. */
 function assertSelectDenied(error, data, message) {
   if (error) {
@@ -773,6 +792,7 @@ async function deleteAuthUser(userId) {
 
 async function cleanupRlsTestData({
   orgId,
+  orgBId,
   brandId,
   brandIds,
   notificationId,
@@ -823,6 +843,12 @@ async function cleanupRlsTestData({
     await checkedCleanup(`brand ${id}`, admin.from("brands").delete().eq("id", id));
   }
 
+  // Planner fixtures (incl. IPI-483 wfGate/instGate + org B cross-org gate):
+  // instances before workflows, then organizations.
+  for (const oid of [orgId, orgBId].filter(Boolean)) {
+    await cleanupPlannerOrg(oid);
+  }
+
   if (orgId) {
     await checkedCleanup(
       `org_members for org ${orgId}`,
@@ -831,6 +857,17 @@ async function cleanupRlsTestData({
     await checkedCleanup(
       `org ${orgId}`,
       admin.from("organizations").delete().eq("id", orgId),
+    );
+  }
+
+  if (orgBId) {
+    await checkedCleanup(
+      `org_members for org B ${orgBId}`,
+      admin.from("org_members").delete().eq("org_id", orgBId),
+    );
+    await checkedCleanup(
+      `org B ${orgBId}`,
+      admin.from("organizations").delete().eq("id", orgBId),
     );
   }
 
@@ -857,6 +894,7 @@ let userA;
 let userB;
 let brandAId;
 let orgAId;
+let orgBId;
 let notificationId;
 let crmNotificationId;
 let assetId;
@@ -2143,7 +2181,7 @@ try {
     .select("id")
     .single();
   assert(!orgBErr && orgB?.id, "user B creates org B for planner isolation");
-  const orgBId = orgB?.id;
+  orgBId = orgB?.id;
 
   const { data: wfB, error: wfBErr } = await plannerB
     .from("workflows")
@@ -3083,10 +3121,11 @@ try {
   // (IPI-670 create_instance requires a complete phase cover of its workflow).
   {
     async function currentEdgesFor(instanceId) {
-      const { data: deps } = await plannerA
+      const { data: deps, error: depsErr } = await plannerA
         .from("dependencies")
         .select("from_task_id, to_task_id, lag_days")
         .eq("instance_id", instanceId);
+      assert(!depsErr, "currentEdgesFor can SELECT planner.dependencies");
       return (deps ?? [])
         .map((d) => ({
           fromTaskId: d.from_task_id,
@@ -3281,12 +3320,13 @@ try {
       "identical approve retry replays the original result",
     );
 
-    const { data: gateEvents } = await plannerA
+    const { data: gateEvents, error: gateEventsErr } = await plannerA
       .from("events")
       .select("id")
       .eq("instance_id", instGate.id)
       .eq("event_type", "gate_approved")
       .eq("idempotency_key", approveKey);
+    assert(!gateEventsErr, "SELECT gate_approved events after approve");
     assert((gateEvents ?? []).length === 1, "exactly one gate_approved event for the approve idempotency key");
 
     // 5 — Same key, different payload → IDEMPOTENCY_CONFLICT.
@@ -3450,11 +3490,12 @@ try {
       "approve with cyclic proposed edges is rejected with DEPENDENCY_CYCLE",
     );
 
-    const { data: cycleDeps } = await plannerA
+    const { data: cycleDeps, error: cycleDepsErr } = await plannerA
       .from("dependencies")
       .select("id")
       .eq("instance_id", instGate.id)
       .in("from_task_id", [cTaskA.id, cTaskB.id]);
+    assert(!cycleDepsErr, "SELECT dependencies after failed cycle approve");
     assert((cycleDeps ?? []).length === 0, "failed cycle approve writes no dependency rows");
 
     // 9 — Discard path (fresh phase, not yet approved).
@@ -4505,17 +4546,9 @@ try {
     }
   }
 
-  // Cleanup planner org B (cascade via organizations delete)
-  if (orgBId && admin) {
-    await checkedCleanup(
-      `org_members for org B ${orgBId}`,
-      admin.from("org_members").delete().eq("org_id", orgBId),
-    );
-    await checkedCleanup(
-      `org B ${orgBId}`,
-      admin.from("organizations").delete().eq("id", orgBId),
-    );
-  }
+  // Org B planner + org rows are removed in cleanupRlsTestData (instances →
+  // workflows → organizations) so IPI-483 gate fixtures cannot leave RESTRICT
+  // orphans when organizations.delete cascades to workflows.
 
   // ── IPI-721 SHOOT-REG-001 — shoot org-membership visibility ──
   // Regression coverage for: public.shoot_portfolio_view and public.get_shoot_detail(uuid) —
@@ -5236,6 +5269,7 @@ try {
 } finally {
   await cleanupRlsTestData({
     orgId: orgAId,
+    orgBId,
     brandId: brandAId,
     brandIds: crmConvertBrandIds,
     notificationId,
