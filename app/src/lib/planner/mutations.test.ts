@@ -1221,31 +1221,76 @@ describe("approveGate", () => {
 
   it("never forwards a raw unrecognized RPC code", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { client } = mockRpcJson({ ok: false, code: "WEIRD_NEW_CODE" });
-    const result = await approveGate(BASE_APPROVE, client);
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
-    });
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    try {
+      const { client } = mockRpcJson({ ok: false, code: "WEIRD_NEW_CODE" });
+      const result = await approveGate(BASE_APPROVE, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("maps a malformed ok payload to UNKNOWN_ERROR", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { client } = mockRpcJson({
-      ok: true,
-      replayed: false,
-      status: "approved",
-      // Missing phaseId / approvalId / approvedAt / approvedBy
-    });
-    const result = await approveGate(BASE_APPROVE, client);
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
-    });
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    try {
+      const { client } = mockRpcJson({
+        ok: true,
+        replayed: false,
+        status: "approved",
+        // Missing phaseId / approvalId / approvedAt / approvedBy
+      });
+      const result = await approveGate(BASE_APPROVE, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("maps an RPC transport error to UNKNOWN_ERROR", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { client } = mockRpcJson(null, { message: "connection reset" });
+      const result = await approveGate(BASE_APPROVE, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("maps a non-array changedTasks payload to UNKNOWN_ERROR", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { client } = mockRpcJson({
+        ok: true,
+        replayed: false,
+        status: "approved",
+        phaseId: "ph-cast",
+        approvalId: "ga-1",
+        approvedAt: "2026-08-02T12:00:00.000Z",
+        approvedBy: "u1",
+        changedTasks: { taskId: "t1" },
+      });
+      const result = await approveGate(BASE_APPROVE, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
 
@@ -1328,25 +1373,31 @@ describe("discardGate", () => {
 
   it("maps a malformed ok payload to UNKNOWN_ERROR", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    // Missing phaseId / approvalId — triggers discardGate payload validation.
-    const { client } = mockRpcJson({ ok: true, replayed: false, status: "discarded" });
-    const result = await discardGate(BASE_DISCARD, client);
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
-    });
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
+    try {
+      // Missing phaseId / approvalId — triggers discardGate payload validation.
+      const { client } = mockRpcJson({ ok: true, replayed: false, status: "discarded" });
+      const result = await discardGate(BASE_DISCARD, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("maps prototype-inherited RPC codes to UNKNOWN_ERROR (own-property guard)", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { client } = mockRpcJson({ ok: false, code: "constructor" });
-    const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: "d-ctor" }, client);
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
-    });
-    consoleError.mockRestore();
+    try {
+      const { client } = mockRpcJson({ ok: false, code: "constructor" });
+      const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: "d-ctor" }, client);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

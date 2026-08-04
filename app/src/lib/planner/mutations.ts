@@ -684,7 +684,8 @@ export async function approveGate(
     !gateRpcNonEmptyString(result.phaseId) ||
     !gateRpcNonEmptyString(result.approvalId) ||
     !gateRpcNonEmptyString(result.approvedAt) ||
-    !gateRpcNonEmptyString(result.approvedBy)
+    !gateRpcNonEmptyString(result.approvedBy) ||
+    (result.changedTasks != null && !Array.isArray(result.changedTasks))
   ) {
     return gateRpcUnknownError("planner_approve_gate", "malformed ok payload");
   }
