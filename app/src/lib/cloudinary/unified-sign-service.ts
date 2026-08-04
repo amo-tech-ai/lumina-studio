@@ -57,6 +57,7 @@ export type SignResult = {
   timestamp?: number;
   assetFolder?: string;
   uploadUrl?: string;
+  filename?: string;
   expiresAt?: number;
   params?: Record<string, unknown>;
 };
@@ -170,9 +171,18 @@ export async function signCloudinaryUpload(
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY;
 
+  if (!apiKey) {
+    console.error("[unified-sign] CLOUDINARY_API_KEY missing");
+    return { error: "Internal error", status: 500 };
+  }
+
   if (request.mode === "widget") {
     return signWidgetRequest(request, supabase, operatorId, apiSecret, apiKey);
   } else {
+    if (!cloudName) {
+      console.error("[unified-sign] CLOUDINARY_CLOUD_NAME missing");
+      return { error: "Internal error", status: 500 };
+    }
     return signServerRequest(request, supabase, operatorId, apiSecret, apiKey, cloudName);
   }
 }
@@ -256,10 +266,10 @@ async function signWidgetRequest(
   return {
     signature,
     apiKey,
-    uploadPreset: paramsForSignature.upload_preset,
-    uploadSignatureTimestamp: paramsForSignature.timestamp,
-    folder: paramsForSignature.folder,
-    context: paramsForSignature.context,
+    uploadPreset: paramsForSignature.upload_preset as string | undefined,
+    uploadSignatureTimestamp: paramsForSignature.timestamp as number | undefined,
+    folder: paramsForSignature.folder as string | undefined,
+    context: paramsForSignature.context as string | undefined,
   };
 }
 
@@ -336,7 +346,7 @@ async function signServerRequest(
     apiKey,
     cloudName,
     timestamp,
-    assetFolder: paramsToSign.asset_folder,
+    assetFolder: paramsToSign.asset_folder as string | undefined,
     uploadUrl: cloudName ? `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload` : undefined,
     filename: sanitizeUploadFilename(filename),
     params: paramsToSign,
