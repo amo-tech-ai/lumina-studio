@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlannerPhase, PlannerTask } from "@/lib/planner/types";
 
+vi.mock("./gate-approval-card", () => ({
+  GateApprovalCard: ({ gate }: { gate: { status: string; phaseName: string } }) => (
+    <div data-testid="planner-gate-approval-card">GateApprovalCard:{gate.status}</div>
+  ),
+}));
+
 import { PlannerPhaseDetail, PlannerTaskDetail } from "./planner-selection-detail";
 
 const refreshMock = vi.fn();
@@ -68,6 +74,32 @@ describe("PlannerPhaseDetail — gate state", () => {
 
     expect(screen.getByTestId("planner-detail-gate-state").textContent).toContain("Ready for approval");
     expect(screen.getByTestId("planner-detail-gate-state").textContent).not.toContain("Approved");
+  });
+
+  it("mounts GateApprovalCard when AdaptivePanel supplies a persisted gate", () => {
+    render(
+      <PlannerPhaseDetail
+        instanceId="i-1"
+        phase={phase()}
+        tasks={[task({ status: "done" })]}
+        gate={{
+          phaseId: "ph-casting",
+          phaseName: "Casting",
+          phaseSlug: "casting",
+          orderIndex: 2,
+          gateType: "approval",
+          requiredRole: "manager",
+          status: "reachable",
+          approvalId: null,
+          approvedAt: null,
+          approvedBy: null,
+        }}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("planner-gate-approval-card").textContent).toContain("reachable");
+    expect(screen.queryByTestId("planner-detail-gate-state")).toBeNull();
   });
 
   it("shows Locked when the gated phase has no tasks", () => {
