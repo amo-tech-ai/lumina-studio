@@ -27,13 +27,14 @@ import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { CrmChatProvider, useCrmChatContext } from "@/context/crm-chat-context";
+import { useShootLoadState } from "@/components/shoot/shoot-load-state";
 import { NavSidebar } from "./nav-sidebar";
 import { MobileSignOutBar } from "./mobile-sign-out-bar";
 import { useOperatorBrands } from "./use-operator-brands";
 import { useUnreadNotifications } from "./use-unread-notifications";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
-import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
+import { routeBrandId } from "@/lib/intelligence/normalize-route-path";
 import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
 import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
 import { NAV_TARGETS, resolveNavigateToPath } from "./navigate-to-path";
@@ -135,7 +136,6 @@ function OperatorShell({
   useCrmDraftFollowUpRender();
 
   const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
-  const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
   const routeBrandName = useMemo(
     () => brands.find((b) => b.id === routeBrandIdFromPath)?.name,
     [brands, routeBrandIdFromPath],
@@ -230,12 +230,13 @@ function OperatorShell({
   });
 
   // IPI-197 — Dynamic suggestion chips based on route + context
+  const { shootLoad } = useShootLoadState();
   const suggestions = useRouteSuggestions({
     pathname,
     context: {
       hasBrands: brands.length > 0,
       brandLoaded: Boolean(routeBrandIdFromPath),
-      shootLoaded: Boolean(routeShootIdFromPath),
+      shootLoaded: shootLoad.loaded,
       crmRecordLoaded: crmChat.crmRecordLoaded,
       companyName: crmChat.companyName,
       contactName: crmChat.contactName,

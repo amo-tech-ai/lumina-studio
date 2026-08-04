@@ -20,7 +20,7 @@
 set search_path to public, extensions;
 
 begin;
-select plan(79);
+select plan(81);
 
 -- One row per (schema, table) that verify-rls.mjs checks RLS on today.
 create temporary table rls_tables (schemaname text, tablename text) on commit drop;
@@ -51,12 +51,13 @@ insert into rls_tables (schemaname, tablename) values
   ('planner', 'assignments'),
   ('planner', 'dependencies'),
   ('planner', 'events'),
+  ('planner', 'gate_approvals'),
   ('planner', 'instances'),
   ('planner', 'phases'),
   ('planner', 'tasks'),
   ('planner', 'workflows');
 
--- RLS enabled (relrowsecurity), one assertion per table (30).
+-- RLS enabled (relrowsecurity), one assertion per table (31).
 select ok(
     exists(
       select 1 from pg_class c
@@ -70,7 +71,7 @@ select ok(
 from rls_tables t
 order by t.schemaname, t.tablename;
 
--- At least one policy exists, one assertion per table (30). RLS-enabled-but-zero-
+-- At least one policy exists, one assertion per table (31). RLS-enabled-but-zero-
 -- policies is a fail-closed misconfiguration (nobody, not even the owner, can read
 -- a row) — distinct from "not locked down at all", but still worth catching directly.
 select ok(
