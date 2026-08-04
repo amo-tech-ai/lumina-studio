@@ -58,9 +58,9 @@ export type PhaseTimelineStatus =
   | "at_risk"
   | "todo";
 
-// Mirrors SCR-32's gate diamond trio: green (approved), amber (ready for
-// approval), grey (locked — nothing to approve yet).
-export type GateVisualState = "approved" | "ready" | "locked";
+// Mirrors SCR-32 gate diamonds: green (approved), amber (ready / reachable),
+// grey (locked), muted (discarded proposal — IPI-483).
+export type GateVisualState = "approved" | "ready" | "locked" | "discarded";
 
 export interface TimelinePhaseRange {
   start: PlanDate;
@@ -360,9 +360,9 @@ function phaseProgress(tasks: PlannerTask[]): number | null {
 }
 
 /**
- * Gate diamond / Detail label. Phase 1 has no persisted approval decision
- * (IPI-483), so task completion never yields `approved` — only `ready`.
- * Cancelled tasks are ignored, matching progress aggregation.
+ * Gate diamond / Detail label from task completion alone. Never yields
+ * `approved` — that requires a persisted gate_approvals row overlaid via
+ * applyInstanceGates (IPI-483 PR3). Cancelled tasks ignored.
  */
 export function resolveGateVisualState(
   phase: PlannerPhase,

@@ -11,6 +11,7 @@ Load one primary reference per task. Use this file as the table of contents.
 | [issue-generator.md](issue-generator.md) | Generating issue drafts, sub-issues, acceptance criteria, Linear descriptions |
 | [search.md](search.md) | Safe issue/project/backlog search patterns |
 | [ipix.md](ipix.md) | iPix team `IPI-###`, `PLT-###`, `COM-###`, `UI-###`, `AI-###`, `DNA-###` workflows |
+| [governance-detail.md](governance-detail.md) | Long Linear governance (milestones, cycles, HOLD, tool map) — on demand from `linear-governance.mdc` |
 | [templates.md](templates.md) | Reusable Markdown templates |
 | [security.md](security.md) | API keys, MCP config, CLI auth, secret handling |
 | [skill-maintenance.md](skill-maintenance.md) | How to maintain this skill using progressive disclosure |

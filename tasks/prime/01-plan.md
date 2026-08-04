@@ -1,6 +1,15 @@
 # PR-Agent customization plan for iPix (lean, verified)
 
-> Status: **execution SSOT** — incorporates forensic notes (`02-notes.md`, `03-notes.md`) after evidence check against live pilot + installed packages.  
+> **SUPERSEDED (2026-08-04).** The authoritative PR-Agent execution plan now lives in
+> `tasks/pr-agent/` — `pr-agent-plan.md` (audit + rollout, official `PRAGENT-001..010` map),
+> `pr-agent-expert.md` (expert-pack design), and `summary.md` (plain-language). This document is kept
+> for historical reference only: its scoped decisions (config-first calibration, expert docs only
+> after measured misses, omitting full `AGENTS.md` from `repo_context_files`, deferred
+> `restricted_mode`) are reconciled by the `tasks/pr-agent/` plan, and its verified config findings
+> (model string, region env, pinned Action SHA, `pr_actions` ↔ `pull_request.types` pairing) were
+> folded in there. Do not implement from this file.
+>
+> Former status (historical): execution SSOT — incorporated forensic notes (`02-notes.md`, `03-notes.md`) after evidence check against live pilot + installed packages.
 > Upstream: [The-PR-Agent/pr-agent](https://github.com/The-PR-Agent/pr-agent) · [docs](https://docs.pr-agent.ai/) · [config](https://docs.pr-agent.ai/usage-guide/configuration_options/) · [repo context](https://docs.pr-agent.ai/usage-guide/additional_configurations/#bringing-per-repo-context-files-to-pr-agent) · [Action](https://docs.pr-agent.ai/installation/github/#run-as-a-github-action)
 
 ---

@@ -5,7 +5,7 @@ import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-
 
 import { setViewConfigAction } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { PersistedViewType, PlannerTask, ViewType } from "@/lib/planner/types";
+import type { InstanceGate, PersistedViewType, PlannerTask, ViewType } from "@/lib/planner/types";
 
 import { AdaptivePanel } from "./adaptive-panel";
 import { NowNextBar } from "./now-next-bar";
@@ -53,6 +53,8 @@ export type PlannerWorkspaceShellProps = {
    * session-only). Defaults to Timeline when unset / missing preference.
    */
   initialView?: ViewType;
+  /** IPI-483 — persisted gates for Now & Next "Your next approval". */
+  gates?: InstanceGate[];
 };
 
 // IPI-579 / IPI-580 / IPI-581 — page passes server-built view nodes.
@@ -69,6 +71,7 @@ export function PlannerWorkspaceShell({
   phaseNames = {},
   today,
   initialView = "timeline",
+  gates,
 }: PlannerWorkspaceShellProps) {
   const [view, setView] = useState<ViewType>(initialView);
   const [persistWarning, setPersistWarning] = useState<string | null>(null);
@@ -176,6 +179,7 @@ export function PlannerWorkspaceShell({
             viewerId={viewerId}
             phaseNames={phaseNames}
             today={today}
+            gates={gates}
           />
         ) : null}
 

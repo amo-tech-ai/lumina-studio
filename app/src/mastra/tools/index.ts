@@ -9,6 +9,7 @@
 //    AFTER a useInterrupt HITL approval — never write durable tables directly
 //    (no silent writes; IPI2-116 pattern). Real write tools (analyzeBrandUrl,
 //    commitApprovedBrandDraft, …) land with their edge functions + auth (IPI2-83/127).
+import { getCurrentPageContext } from "./currentPageContext";
 import { approveShotList } from "./approveShotList";
 import { estimateShootBudget } from "./estimateShootBudget";
 import { explainShootDnaAlerts } from "./explainShootDnaAlerts";
@@ -43,6 +44,7 @@ import { draftCampaignBrief } from "./draftCampaignBrief";
 // evidence, deterministic retake suggestions, proposal-only bulk approval draft)
 // IPI-156 — CAMP-001: Creative Director campaign brief draft (proposal-only, no persist)
 export const agentTools = {
+  getCurrentPageContext,
   recommendShootType,
   planDeliverables,
   lookupShotReferences,   // DB-backed shot type suggestions — call before generateShotListDraft
