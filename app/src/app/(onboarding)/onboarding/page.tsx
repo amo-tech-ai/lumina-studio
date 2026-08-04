@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import "../onboarding.css";
 import { OnboardingFlowLoader } from "./onboarding-flow-loader";
+import { OnboardingSignOut } from "./onboarding-sign-out";
 
 /**
  * IPI-833 · ONB2-UI-001 — /onboarding
@@ -39,6 +40,7 @@ export default function OnboardingPage() {
       data-testid="onboarding-shell"
       className="onboarding fixed inset-0 overflow-y-auto bg-[var(--onboarding-bg)]"
     >
+      <OnboardingSignOut />
       <OnboardingFlowLoader />
     </div>
   );

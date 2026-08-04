@@ -27,8 +27,11 @@ export async function middleware(request: NextRequest) {
   // render the dual UI (3-step form + Copilot chrome).
   if (pathname === "/app/onboarding" || pathname.startsWith("/app/onboarding/")) {
     const url = request.nextUrl.clone();
+    // Explicit map — avoid fragile replace→empty-string fallbacks.
     url.pathname =
-      pathname.replace(/^\/app\/onboarding/, "/onboarding") || "/onboarding";
+      pathname === "/app/onboarding"
+        ? "/onboarding"
+        : `/onboarding${pathname.slice("/app/onboarding".length)}`;
     const redirect = NextResponse.redirect(url);
     copyResponseCookies(sessionResponse, redirect);
     return redirect;

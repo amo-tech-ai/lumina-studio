@@ -4,6 +4,8 @@ import {
   ONBOARDING_IDEMPOTENCY_STORAGE_PREFIX,
   getOrCreateOnboardingIdempotencyKey,
   onboardingIdempotencyStorageKey,
+  rotateOnboardingIdempotencyKey,
+  wantsFreshOnboardingSession,
 } from "./idempotency-key";
 
 function memoryStorage(seed: Record<string, string> = {}) {
@@ -46,14 +48,41 @@ describe("getOrCreateOnboardingIdempotencyKey — IPI-945 user-scoped", () => {
     expect(getOrCreateOnboardingIdempotencyKey("user-a", storage)).toBe("fixed-key");
   });
 
-  it("removes the legacy browser-global key when minting a user-scoped key", () => {
+  it("migrates a legacy browser-global key into the user-scoped slot before clearing", () => {
     const storage = memoryStorage({
-      [ONBOARDING_IDEMPOTENCY_STORAGE_KEY]: "legacy-shared",
+      [ONBOARDING_IDEMPOTENCY_STORAGE_KEY]: "legacy-draft-key",
     });
-    const minted = getOrCreateOnboardingIdempotencyKey("user-new", storage);
+    const migrated = getOrCreateOnboardingIdempotencyKey("user-new", storage);
+    expect(migrated).toBe("legacy-draft-key");
     expect(storage.getItem(ONBOARDING_IDEMPOTENCY_STORAGE_KEY)).toBeNull();
-    expect(minted).not.toBe("legacy-shared");
-    expect(storage.getItem(onboardingIdempotencyStorageKey("user-new"))).toBe(minted);
+    expect(storage.getItem(onboardingIdempotencyStorageKey("user-new"))).toBe(
+      "legacy-draft-key",
+    );
+  });
+
+  it("prefers an existing scoped key over a leftover legacy key", () => {
+    const scoped = onboardingIdempotencyStorageKey("user-a");
+    const storage = memoryStorage({
+      [scoped]: "scoped-wins",
+      [ONBOARDING_IDEMPOTENCY_STORAGE_KEY]: "legacy-ignored",
+    });
+    expect(getOrCreateOnboardingIdempotencyKey("user-a", storage)).toBe("scoped-wins");
+    expect(storage.getItem(ONBOARDING_IDEMPOTENCY_STORAGE_KEY)).toBeNull();
+  });
+
+  it("clears legacy via setItem blank when removeItem is missing", () => {
+    const map = new Map<string, string>([
+      [ONBOARDING_IDEMPOTENCY_STORAGE_KEY, "legacy-only"],
+    ]);
+    const storage = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        map.set(k, v);
+      },
+    };
+    const migrated = getOrCreateOnboardingIdempotencyKey("user-a", storage);
+    expect(migrated).toBe("legacy-only");
+    expect(storage.getItem(ONBOARDING_IDEMPOTENCY_STORAGE_KEY)).toBe("");
   });
 
   it("rejects empty userId", () => {
@@ -66,5 +95,24 @@ describe("getOrCreateOnboardingIdempotencyKey — IPI-945 user-scoped", () => {
     expect(ONBOARDING_IDEMPOTENCY_STORAGE_PREFIX.startsWith("ipix:onboarding:")).toBe(
       true,
     );
+  });
+});
+
+describe("rotateOnboardingIdempotencyKey — Add brand", () => {
+  it("mints a new key even when a scoped key already exists", () => {
+    const scoped = onboardingIdempotencyStorageKey("user-a");
+    const storage = memoryStorage({ [scoped]: "old-session" });
+    const rotated = rotateOnboardingIdempotencyKey("user-a", storage);
+    expect(rotated).not.toBe("old-session");
+    expect(storage.getItem(scoped)).toBe(rotated);
+  });
+});
+
+describe("wantsFreshOnboardingSession", () => {
+  it("detects ?new=1", () => {
+    expect(wantsFreshOnboardingSession("?new=1")).toBe(true);
+    expect(wantsFreshOnboardingSession("new=1")).toBe(true);
+    expect(wantsFreshOnboardingSession("?new=0")).toBe(false);
+    expect(wantsFreshOnboardingSession("")).toBe(false);
   });
 });

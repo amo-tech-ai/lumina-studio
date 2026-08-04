@@ -171,7 +171,7 @@ export function BrandListWorkspace({ brands, isAuthenticated, fetchError }: Prop
             <h1 className={styles.title}>Brands</h1>
             <p className={styles.subtitle}>{countLabel}</p>
           </div>
-          <Link href="/onboarding" className={styles.primaryBtn}>
+          <Link href="/onboarding?new=1" className={styles.primaryBtn}>
             <Plus size={16} aria-hidden />
             Add brand
           </Link>
