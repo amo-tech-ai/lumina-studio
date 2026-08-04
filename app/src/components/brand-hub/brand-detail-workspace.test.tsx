@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("./brand-detail.module.css", () => ({
   default: new Proxy({}, { get: (_, key) => String(key) }),
@@ -11,8 +11,22 @@ vi.mock("@/components/intelligence-panel/evidence-dialog", () => ({
     <button type="button">{triggerLabel}</button>
   ),
 }));
-vi.mock("@/components/brand-hub/analysis-progress-banner", () => ({
-  AnalysisProgressBanner: () => null,
+vi.mock("@/components/brand-hub/analysis-progress-banner", async () => {
+  const { RestartAnalysisButton } = await import(
+    "@/components/brand-hub/restart-analysis-button"
+  );
+  return {
+    AnalysisProgressBanner: ({
+      brandId,
+      canRestart,
+    }: {
+      brandId: string;
+      canRestart?: boolean;
+    }) => (canRestart ? <RestartAnalysisButton brandId={brandId} /> : null),
+  };
+});
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 vi.mock("@/components/brand-hub/brand-detail-draft-card", () => ({
   BrandDetailDraftCard: () => <div data-testid="workflow-draft-card" />,
@@ -29,6 +43,7 @@ import { BrandDetailWorkspace } from "./brand-detail-workspace";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("BrandDetailWorkspace", () => {
@@ -77,7 +92,43 @@ describe("BrandDetailWorkspace", () => {
     expect(screen.queryByTestId("workflow-draft-card")).toBeNull();
   });
 
-  // IPI-919 — the legacy "Start analysis" control (reanalyzeBrand) was
-  // removed; failed-analysis recovery goes through the Restart analysis
-  // control in the failed AnalysisProgressBanner → restart-analysis API.
+  it("recovers failed analysis via Restart analysis → restart-analysis API (IPI-919)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, mode: "crawl_restarted" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <BrandDetailWorkspace
+        brandId="nike-id"
+        brandName="Nike"
+        brandUrl="https://nike.com"
+        intakeStatus="failed"
+        dnaScore={0}
+        profile={{ _error: "crawl timed out" }}
+        draftProfile={null}
+        baseScores={[]}
+        canRestartAnalysis
+        isAuthenticated
+      />,
+    );
+
+    const restart = screen.getByRole("button", { name: /Restart analysis/i });
+    expect(restart).toBeTruthy();
+    expect(screen.queryByText("Start analysis", { exact: true })).toBeNull();
+
+    fireEvent.click(restart);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/brands/nike-id/restart-analysis",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "same-origin",
+        }),
+      );
+    });
+  });
 });
