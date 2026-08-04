@@ -1,0 +1,120 @@
+---
+description: iPix Linear governance — live verification, safe mutations, naming, Done evidence. Detail in the linear skill.
+alwaysApply: true
+---
+
+# Linear governance — iPix
+
+## Plain English (why this rule exists)
+
+When Maya plans Spring Campaign in Command Center, Linear must show who owns what and what is Done — not a stale markdown tracker. Agents that trust repo summaries invent wrong blockers and mark AI chat “fixed” when `/info` still 403s. This rule forces **live Linear** reads, safe writes, and evidence-backed Done.
+
+**Real-world iPix:** Operator signs in → brand/org resolves → CopilotKit `/info` 200 → Production Planner. Governance mistakes (wrong project, fake Done, cycle spam) hide the real failure (e.g. missing `org_members` on **IPI-935 · COPILOT-AUTHZ-LOCAL-001 — Fix Signed-In Operator /info 403 (org membership)**).
+
+## Scope
+
+Stable **how** to use Linear. Never treat this file as SSOT for dates, statuses, cycle windows, or ownership — those live in **live Linear**.
+
+Companions: `.claude/skills/linear/` · `task-naming.mdc` · `docs/process/templates/task-execution-prompt.md` · detail: `references/governance-detail.md` (load on demand).
+
+## Source of truth
+
+| Information | Authority |
+|-------------|-----------|
+| Status, project, milestone, cycle, priority, owner | Live Linear |
+| Code | `origin/main` + open PR / worktree |
+| Production behavior | Browser / production probe |
+| Requirements / AC | Canonical issue / `docs/linear/issues/` |
+| Repo trackers / `live-workspace-state.md` | Summary only — may be stale |
+
+Conflict → **report**, do not silently overwrite.
+
+## Access & safety
+
+| Prefer | Fallback |
+|--------|----------|
+| Linear MCP (`plugin-linear-linear`) | GraphQL + `LINEAR_API_KEY` only when MCP cannot set a field |
+
+Never print secrets. Never delete projects/issues unless asked. Bulk/destructive → propose first, apply after approval. Discover MCP tools each session. GraphQL only after inspect + listed entities + approval for bulk.
+
+## Naming & one concern
+
+- Titles / first mention: **`IPI-NNN · SPEC — Plain English`** (`task-naming.mdc`)
+- Team: **iPix1** (`IPI`)
+- One independently testable outcome per issue/PR
+- Never mix unrelated docs + production code (AGENTS.md #1)
+
+## Ownership (short)
+
+Attach issues to the project that **owns delivery**. Resolve names via live Linear — do not invent. Detail + examples → skill `governance-detail.md`.
+
+## Status & Done
+
+| State | When |
+|-------|------|
+| Backlog | Unscheduled |
+| Todo | Ready to start |
+| In Progress | Actively executing |
+| Done | ACs met + evidence (`origin/main`, tests, **browser**) — never status-copy alone |
+| Duplicate | `duplicateOf` set |
+| Canceled | Explicitly abandoned |
+
+Reopen Done only with approval (unless the task authorizes correction). Record the unmet AC first.
+
+## Cycles & dependencies (short)
+
+- Cycle = work expected to **start or progress** in-window; owned; capacity-backed; not every important ticket
+- Relations: `blocks` / `blockedBy` / `relatedTo` / `duplicateOf` — not prose-only depends-on
+- Scan for open dependency cycles; keep valid Done history edges
+- Detail, HOLD DNS, milestone patterns → `governance-detail.md`
+
+## Read → mutate → verify
+
+**Read-only:** discover MCP → list filtered issues/project/cycles → spot-check → dependency scan → compare to `origin/main` (label STALE) → PASS / NEEDS FIXES; mutate only when asked.
+
+**Mutate:** confirm approval → change milestones/cycles/deps → cleanup noise → optional project update → re-read live → LINEAR FIX VERDICT.
+
+## Issue create / rewrite checklist
+
+- [ ] Dedupe by title/identifier
+- [ ] Full title + team IPI
+- [ ] Prepend `<task_execution>` from `docs/process/templates/task-execution-prompt.md` if missing (skip Dupes / noise / pure trackers unless asked)
+- [ ] Correct project + milestone (active delivery) + optional cycle
+- [ ] Hard `blockedBy` / `blocks` when needed
+- [ ] Labels that match track
+
+Humans: IPI team default template — `docs/process/templates/LINEAR-DEFAULT-INSTALL.md`.
+
+Do **not** paste the full Staff XML into this alwaysApply rule.
+
+## AI task execution (pointer)
+
+For every **executable** IPI issue, follow the SSOT prompt (research → reuse → implement → test → browser → update Linear → DoD). Do not reload the full XML here.
+
+```text
+1 Explain simply · 2 Real iPix workflow · 3 Research official docs + repo
+4 Audit existing code · 5 Reuse before build · 6 Plan · 7 Implement
+8 Tests · 9 Browser (Playwright / Chrome MCP) · 10 Docs · 11 Linear · 12 DoD
+```
+
+Reuse search before code: repo helpers, APIs, Supabase, Mastra, CopilotKit, Cloudflare, MCP, Edge Functions, agents, workflows, dashboards.
+
+**Done requires:** ACs · tests · browser (or honest N/A) · docs · Linear updated · no duplicate impl · fail-closed auth preserved · rollback considered when risky.
+
+PR body (when shipping code): problem · solution · files · tests · risks · rollback · evidence — plus `pr-description.mdc` plain-English sections.
+
+## Anti-patterns
+
+| ❌ Don’t | ✅ Do |
+|---------|--------|
+| Trust markdown dates/examples | Live Linear |
+| Bare `IPI-249` in user text | Full **IPI-249 · SPEC — …** |
+| Mark Done from sibling merge | Evidence for **this** issue |
+| Cycle-stuff every ticket | Capacity-backed only |
+| Milestone to inflate % | Outcome-bearing delivery |
+| Weaken fail-closed auth for green `/info` | Fix data/env (e.g. `org_members`) |
+| Full Staff XML in alwaysApply | Point to `task-execution-prompt.md` |
+
+## Detail (load on demand)
+
+`.claude/skills/linear/references/governance-detail.md` — milestones, cycles, HOLD, progress docs, tool map, examples, live-state file refresh.
