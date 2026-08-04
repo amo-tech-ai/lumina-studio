@@ -75,25 +75,30 @@ async function importRouteWithMocks() {
 }
 
 describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", () => {
-  it("returns 200 JSON with creative-director when Intelligence env is partial", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
-    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "ck-partial-license");
-    vi.stubEnv("INTELLIGENCE_API_KEY", "");
-    vi.stubEnv("GEMINI_API_KEY", "test-key");
+  // Cold dynamic import under full-suite load often exceeds the default 5s.
+  it(
+    "returns 200 JSON with creative-director when Intelligence env is partial",
+    async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+      vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "ck-partial-license");
+      vi.stubEnv("INTELLIGENCE_API_KEY", "");
+      vi.stubEnv("GEMINI_API_KEY", "test-key");
 
-    const route = await importRouteWithMocks();
-    const response = await route.GET(
-      new Request("http://localhost/api/copilotkit/info"),
-    );
+      const route = await importRouteWithMocks();
+      const response = await route.GET(
+        new Request("http://localhost/api/copilotkit/info"),
+      );
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toMatch(/json/i);
-    const body = (await response.json()) as { agents?: Record<string, unknown> };
-    expect(body.agents?.["creative-director"]).toBeDefined();
-    expect(body.agents?.["production-planner"]).toBeDefined();
-    expect(body.agents?.default).toBeDefined();
-  });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toMatch(/json/i);
+      const body = (await response.json()) as { agents?: Record<string, unknown> };
+      expect(body.agents?.["creative-director"]).toBeDefined();
+      expect(body.agents?.["production-planner"]).toBeDefined();
+      expect(body.agents?.default).toBeDefined();
+    },
+    15_000,
+  );
 
   it("returns 503 JSON when the agent factory throws (not HTML 500)", async () => {
     vi.stubEnv("NODE_ENV", "production");
