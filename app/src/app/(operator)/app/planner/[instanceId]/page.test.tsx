@@ -12,6 +12,7 @@ vi.mock("@/lib/planner/queries", () => ({
   getInstanceDetail: vi.fn(),
   listWorkflowPhases: vi.fn(),
   getViewConfig: vi.fn(),
+  listInstanceGates: vi.fn(),
 }));
 
 vi.mock("@/lib/planner/planner-view-model", () => ({
@@ -48,7 +49,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-import { getInstanceDetail, getViewConfig, listWorkflowPhases } from "@/lib/planner/queries";
+import { getInstanceDetail, getViewConfig, listInstanceGates, listWorkflowPhases } from "@/lib/planner/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PlannerWorkspacePage from "./page";
 
@@ -58,6 +59,8 @@ beforeEach(() => {
   vi.mocked(listWorkflowPhases).mockReset();
   vi.mocked(getViewConfig).mockReset();
   vi.mocked(getViewConfig).mockResolvedValue({ ok: true, data: null } as never);
+  vi.mocked(listInstanceGates).mockReset();
+  vi.mocked(listInstanceGates).mockResolvedValue({ ok: true, data: [] } as never);
   vi.mocked(createSupabaseServerClient).mockReset();
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: {
