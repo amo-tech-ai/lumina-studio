@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
 import { assertNoSecrets } from "./assert-no-secrets.mjs";
+import { isPreviewSignoutSuccessRedirect } from "./signout-redirect.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
@@ -727,28 +728,19 @@ async function main() {
       { status: anonInfo.status },
     );
     if (uiSignOut) {
-      // CodeRabbit P1: accept ONLY the documented success path. The route
-      // signals a failed remote revoke via 303 -> /app?signoutError=1 (local
-      // session still cleared, remote not); a bare status<400 would mask it.
-      let signoutRedirectToLogin = false;
-      if (signoutLocation) {
-        try {
-          const loc = new URL(signoutLocation, PREVIEW);
-          signoutRedirectToLogin =
-            loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
-        } catch {
-          signoutRedirectToLogin = false;
-        }
-      }
+      // Documented success only: exactly 303 → PREVIEW-origin /login without signoutError.
+      // Failed remote revoke is 303 → /app?signoutError=1; other 3xx / off-origin must fail.
+      const signoutRedirectToLogin = isPreviewSignoutSuccessRedirect(
+        signoutStatus,
+        signoutLocation,
+        PREVIEW,
+      );
       mark(
         "13c_signout_request",
-        signoutStatus !== null &&
-          signoutStatus >= 300 &&
-          signoutStatus < 400 &&
-          signoutRedirectToLogin,
+        signoutStatus !== null && signoutRedirectToLogin,
         signoutStatus === null
           ? "NO POST /auth/signout response within 15s — logout request never completed"
-          : `POST /auth/signout -> ${signoutStatus}${signoutLocation ? ` location=${signoutLocation}` : " (no Location)"} — requires 3xx redirect to /login without signoutError`,
+          : `POST /auth/signout -> ${signoutStatus}${signoutLocation ? ` location=${signoutLocation}` : " (no Location)"} — requires 303 redirect to PREVIEW /login without signoutError`,
         {
           status: signoutStatus,
           location: signoutLocation,
@@ -793,36 +785,37 @@ async function main() {
       }
 
       // 13f. Logout is idempotent — a second POST /auth/signout while already
-      // logged out must still 3xx to /login (not the signoutError → /app → /login
+      // logged out must still 303 to PREVIEW /login (not the signoutError → /app → /login
       // chain that redirect:"follow" would disguise as a clean /login landing).
       // Use Playwright's request API with maxRedirects:0 — browser fetch({redirect:"manual"})
       // always yields opaqueredirect (status 0, no Location) and falsely fails this hard AC.
+      // Pass origin-scoped headers explicitly: page.request bypasses context.route().
       try {
         const idempotentRes = await page.request.fetch(`${PREVIEW}/auth/signout`, {
           method: "POST",
           maxRedirects: 0,
+          ...(extraHTTPHeaders ? { headers: extraHTTPHeaders } : {}),
         });
         const idempotent = {
           status: idempotentRes.status(),
           location: idempotentRes.headers()["location"] ?? null,
         };
-        let redirectToLogin = false;
         let locationPath = null;
         if (idempotent.location) {
           try {
-            const loc = new URL(idempotent.location, PREVIEW);
-            locationPath = loc.pathname;
-            redirectToLogin =
-              loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
+            locationPath = new URL(idempotent.location, PREVIEW).pathname;
           } catch {
-            redirectToLogin = false;
+            locationPath = null;
           }
         }
+        const redirectToLogin = isPreviewSignoutSuccessRedirect(
+          idempotent.status,
+          idempotent.location,
+          PREVIEW,
+        );
         mark(
           "13f_signout_idempotent",
-          idempotent.status >= 300 &&
-            idempotent.status < 400 &&
-            redirectToLogin,
+          redirectToLogin,
           `status=${idempotent.status} location=${idempotent.location ?? "none"} path=${locationPath ?? "n/a"}`,
           {
             status: idempotent.status,
@@ -913,7 +906,7 @@ async function main() {
     },
     ai_health: healthBody,
     adapterAvailable_note:
-      "If preview still returns adapterAvailable, Worker predates #512 — redeploy HEAD before claiming current.",
+      "If preview still returns adapterAvailable, Worker predates PR #512 · IPI-510 · CF-UJ-011 — Probe preview AI health via AI_GATEWAY service binding — redeploy HEAD before claiming current.",
     criteria,
     overall_pass: Object.entries(criteria)
       .filter(([k]) => !k.startsWith("perf_") && k !== "13b_protected_redirect")
