@@ -126,7 +126,7 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
               <div className={styles.portfolioEmpty}>
                 <Layers className={styles.portfolioEmptyIcon} aria-hidden />
                 <p className={styles.mutedCopy}>Add a brand to see portfolio health here.</p>
-                <Link href="/app/onboarding" className={styles.portfolioEmptyBtn}>
+                <Link href="/onboarding" className={styles.portfolioEmptyBtn}>
                   Add brand
                 </Link>
               </div>

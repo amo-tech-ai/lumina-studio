@@ -24,6 +24,7 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/brand")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/brand/some-id")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/onboarding")).toBe("brand-intelligence");
+    expect(resolveAgentId("/onboarding")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/assets")).toBe("creative-director");
     expect(resolveAgentId("/app/matching")).toBe("model-match"); // IPI-308 · MODEL-P2
     expect(resolveAgentId("/app/preview")).toBe("visual-identity");
@@ -57,4 +58,11 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/shootsextra")).toBe("production-planner");
     expect(resolveAgentId("/app/campaignsextra")).toBe("production-planner");
   });
+
+  // IPI-945 — standalone /onboarding is the first non-/app ROUTE_MAP prefix.
+  it("does not treat /onboardingx as /onboarding", () => {
+    expect(resolveAgentId("/onboardingx")).toBe("production-planner");
+    expect(resolveAgentId("/onboarding/step-2")).toBe("brand-intelligence");
+  });
 });
+

@@ -270,7 +270,7 @@ describe("routing contract — /app/page.tsx", () => {
       "utf8",
     );
     expect(src).toMatch(/createSupabaseServerClient/);
-    expect(src).toMatch(/redirect.*\/app\/onboarding/);
+    expect(src).toMatch(/redirect.*\/onboarding/);
     expect(src).toMatch(/count.*===.*0/);
   });
 });
