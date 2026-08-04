@@ -121,7 +121,8 @@ export function BrandListWorkspace({ brands, isAuthenticated, fetchError }: Prop
               <h1 className={styles.title}>Brands</h1>
               <p className={styles.subtitle}>0 brands</p>
             </div>
-            <Link href="/app/onboarding" className={styles.primaryBtn}>
+            {/* Zero brands: resume draft — omit ?new=1 (IPI-945). */}
+            <Link href="/onboarding" className={styles.primaryBtn}>
               <Plus size={16} aria-hidden />
               Add brand
             </Link>
@@ -145,7 +146,8 @@ export function BrandListWorkspace({ brands, isAuthenticated, fetchError }: Prop
               Add your first brand and we&apos;ll crawl it and build a full Brand DNA profile in
               minutes.
             </p>
-            <Link href="/app/onboarding" className={styles.primaryBtn}>
+            {/* Zero brands: resume draft — omit ?new=1 (IPI-945). */}
+            <Link href="/onboarding" className={styles.primaryBtn}>
               <Plus size={16} aria-hidden />
               Add brand
             </Link>
@@ -171,7 +173,8 @@ export function BrandListWorkspace({ brands, isAuthenticated, fetchError }: Prop
             <h1 className={styles.title}>Brands</h1>
             <p className={styles.subtitle}>{countLabel}</p>
           </div>
-          <Link href="/app/onboarding" className={styles.primaryBtn}>
+          {/* Already has brands: rotate idempotency so Add brand does not resume the old session. */}
+          <Link href="/onboarding?new=1" className={styles.primaryBtn}>
             <Plus size={16} aria-hidden />
             Add brand
           </Link>

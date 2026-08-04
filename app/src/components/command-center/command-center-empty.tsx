@@ -23,7 +23,7 @@ export function CommandCenterEmpty() {
         Add your first brand and we&apos;ll crawl your site to build Brand DNA — palette,
         voice, and imagery — in minutes. You review before anything goes live.
       </p>
-      <Link href="/app/onboarding" className={styles.emptyCta}>
+      <Link href="/onboarding" className={styles.emptyCta}>
         Set up brand
       </Link>
       <p className={styles.emptyHint}>

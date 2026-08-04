@@ -199,6 +199,170 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
   });
 });
 
+// IPI-944 · COPILOT-AUTH-MODEL-001 — operator Bearer must authenticate the
+// route and populate requestToken ALS, but must NOT reach CopilotRuntime
+// (configureAgentForRequest forwards authorization → Gemini dual-auth reject).
+describe("IPI-944 — strip operator Authorization before CopilotRuntime", () => {
+  const endpointRequests: Request[] = [];
+
+  beforeEach(async () => {
+    endpointRequests.length = 0;
+    vi.stubEnv("NODE_ENV", "development");
+    getLocalAgentsCalls.length = 0;
+
+    vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
+    vi.doMock("@/lib/auth", () => ({
+      resolveOperatorUser: vi.fn(),
+      extractAccessToken: vi.fn().mockReturnValue("test-token"),
+    }));
+    vi.doMock("@/lib/request-token", () => ({
+      requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()), getStore: vi.fn() },
+    }));
+    vi.doMock("@/lib/operator-gate", () => ({
+      withOperatorAuth: vi.fn().mockResolvedValue({
+        id: "real-user",
+        email: "op@test.com",
+        name: "Op",
+      }),
+      OperatorAuthError: class extends Error {
+        constructor(m: string) {
+          super(m);
+          this.name = "OperatorAuthError";
+        }
+      },
+      isOperatorAuthEnforced: vi.fn(() => false),
+    }));
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: {
+        getLocalAgents: vi.fn((opts: { resourceId: string }) => {
+          getLocalAgentsCalls.push({ resourceId: opts.resourceId });
+          return [];
+        }),
+      },
+    }));
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn((config: { agents: () => unknown }) => {
+        (globalThis as Record<string, unknown>).__capturedAgentFactory = config.agents;
+        return {};
+      }),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async (request: Request) => {
+          endpointRequests.push(request);
+          const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as
+            | (() => unknown)
+            | undefined;
+          if (factory) await factory();
+          return new Response("ok");
+        },
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+    mockOrgScopeDeps();
+  });
+
+  it("removes Authorization from the request passed to endpoint while keeping requestToken ALS", async () => {
+    const { requestToken } = await import("@/lib/request-token");
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info", {
+        headers: {
+          authorization: "Bearer operator.supabase.jwt",
+          "x-copilotkit-runtime-client-gql-version": "1.61.0",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(endpointRequests).toHaveLength(1);
+    expect(endpointRequests[0].headers.get("authorization")).toBeNull();
+    // Unrelated forwardable headers must survive (CopilotKit client metadata).
+    expect(endpointRequests[0].headers.get("x-copilotkit-runtime-client-gql-version")).toBe(
+      "1.61.0",
+    );
+    expect(vi.mocked(requestToken.run)).toHaveBeenCalledWith("test-token", expect.any(Function));
+  });
+
+  it("still returns 401 when operator auth fails (fail closed)", async () => {
+    const { OperatorAuthError } = await import("@/lib/operator-gate");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockRejectedValue(new OperatorAuthError("Unauthorized"));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
+
+    expect(response.status).toBe(401);
+    expect(endpointRequests).toHaveLength(0);
+  });
+});
+
+describe("IPI-944 — strip Authorization on agent/run POST (body intact)", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
+    vi.doMock("@/lib/auth", () => ({
+      resolveOperatorUser: vi.fn(),
+      extractAccessToken: vi.fn().mockReturnValue("test-token"),
+    }));
+    vi.doMock("@/lib/request-token", () => ({
+      requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()), getStore: vi.fn() },
+    }));
+    vi.doMock("@/lib/operator-gate", () => ({
+      withOperatorAuth: vi.fn().mockResolvedValue({
+        id: "real-user",
+        email: "op@test.com",
+        name: "Op",
+      }),
+      OperatorAuthError: class extends Error {
+        constructor(m: string) {
+          super(m);
+          this.name = "OperatorAuthError";
+        }
+      },
+      isOperatorAuthEnforced: vi.fn(() => false),
+    }));
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn(() => ({})) },
+    }));
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async (request: Request) =>
+          Response.json({
+            authorization: request.headers.get("authorization"),
+            body: await request.text(),
+          }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+  });
+
+  it("strips Authorization without dropping the brand-intelligence run JSON body", async () => {
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const payload = {
+      threadId: "bi-thread-1",
+      messages: [{ role: "user", content: "audit this brand" }],
+    };
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/brand-intelligence/run", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer operator.supabase.jwt",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { authorization: string | null; body: string };
+    expect(result.authorization).toBeNull();
+    expect(JSON.parse(result.body)).toEqual(payload);
+  });
+});
+
 describe("C3 — single auth resolution per request (runtime)", () => {
   beforeEach(async () => {
     vi.stubEnv("NODE_ENV", "development");

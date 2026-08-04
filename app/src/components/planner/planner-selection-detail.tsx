@@ -3,10 +3,10 @@
 // IPI-551 · PLN-S4b — presentational Detail views AdaptivePanel publishes
 // into the shared IntelligencePanel via useSetIntelligenceDetail.
 //
-// IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail gains an editable form for
-// fields updateTask supports (title, description, status, assignee). Priority
-// stays read-only — the IPI-649 adapter has no priority patch. Schedule moves
-// belong to shiftTask (separate PR). No ApprovalCard here (Stage 2 / IPI-483).
+// IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail: updateTask form + keyboard
+// schedule shift via shiftTask (±1 day / date picker with confirm). Priority
+// stays read-only (adapter has no priority patch). DnD deferred — see PR body.
+// No ApprovalCard here (Stage 2 · IPI-483).
 
 import { useRouter } from "next/navigation";
 import {
@@ -20,10 +20,16 @@ import {
 } from "react";
 
 import {
+  shiftTaskAction,
   updateTaskAction,
 } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import type { PlannerAssigneeOption } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
-import { planDateToISO } from "@/lib/planner/planner-date-utils";
+import {
+  addPlanDays,
+  daysBetween,
+  parsePlanDate,
+  planDateToISO,
+} from "@/lib/planner/planner-date-utils";
 import {
   rangeForPhase,
   resolveGateVisualState,
@@ -210,6 +216,196 @@ function draftFromTask(task: PlannerTask): Draft {
   };
 }
 
+function proposeShift(task: PlannerTask, deltaDays: number): {
+  start: string;
+  end: string | null;
+} | null {
+  const start = parsePlanDate(task.startDate);
+  if (!start) return null;
+  const end = parsePlanDate(task.endDate);
+  return {
+    start: planDateToISO(addPlanDays(start, deltaDays)),
+    end: end ? planDateToISO(addPlanDays(end, deltaDays)) : null,
+  };
+}
+
+function TaskScheduleShift({
+  task,
+  disabled,
+  onShifted,
+}: {
+  task: PlannerTask;
+  disabled: boolean;
+  onShifted: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const [proposedDelta, setProposedDelta] = useState<number | null>(null);
+  const [pickerDate, setPickerDate] = useState(task.startDate ?? "");
+  const [shiftError, setShiftError] = useState<{ code: string; message: string } | null>(null);
+  const [isShifting, startShift] = useTransition();
+  const shiftKeyRef = useRef<string | null>(null);
+  // CAS token from the task version shown in the proposal preview.
+  const observedUpdatedAtRef = useRef<string | null>(null);
+
+  const start = parsePlanDate(task.startDate);
+  const end = parsePlanDate(task.endDate);
+  // planner_shift_task rejects changed tasks missing either bound (INVALID_INPUT).
+  const canShift = Boolean(start && end);
+  const preview = proposedDelta !== null ? proposeShift(task, proposedDelta) : null;
+
+  // Keep the date input in sync after a successful shift (component stays mounted).
+  useEffect(() => {
+    if (proposedDelta === null) {
+      setPickerDate(task.startDate ?? "");
+    }
+  }, [task.startDate, proposedDelta]);
+
+  function proposeDelta(delta: number) {
+    shiftKeyRef.current = null;
+    observedUpdatedAtRef.current = task.updatedAt ?? null;
+    setShiftError(null);
+    setProposedDelta(delta);
+  }
+
+  function proposeFromPicker(iso: string) {
+    setPickerDate(iso);
+    shiftKeyRef.current = null;
+    observedUpdatedAtRef.current = task.updatedAt ?? null;
+    setShiftError(null);
+    const next = parsePlanDate(iso);
+    if (!start || !next) {
+      setProposedDelta(null);
+      return;
+    }
+    setProposedDelta(daysBetween(start, next));
+  }
+
+  function cancelProposal() {
+    setProposedDelta(null);
+    setShiftError(null);
+    shiftKeyRef.current = null;
+    observedUpdatedAtRef.current = null;
+    setPickerDate(task.startDate ?? "");
+  }
+
+  function confirmShift() {
+    if (proposedDelta === null || proposedDelta === 0 || !canShift || isShifting || disabled) return;
+    const expectedUpdatedAt = observedUpdatedAtRef.current ?? task.updatedAt ?? "";
+    if (!expectedUpdatedAt) {
+      setShiftError({
+        code: "INVALID_INPUT",
+        message: "This task is missing a version token. Reload and try again.",
+      });
+      return;
+    }
+    shiftKeyRef.current ??= crypto.randomUUID();
+    const idempotencyKey = shiftKeyRef.current;
+    setShiftError(null);
+
+    startShift(async () => {
+      const result = await shiftTaskAction(
+        task.instanceId,
+        task.id,
+        proposedDelta,
+        idempotencyKey,
+        expectedUpdatedAt,
+      );
+      if (!result.ok) {
+        setShiftError({ code: result.error.code, message: result.error.message });
+        return;
+      }
+      shiftKeyRef.current = null;
+      observedUpdatedAtRef.current = null;
+      setProposedDelta(null);
+      await onShifted();
+      router.refresh();
+    });
+  }
+
+  if (!canShift) {
+    return (
+      <div style={{ marginTop: "1rem" }} data-testid="planner-task-schedule">
+        <div style={labelStyle}>Schedule</div>
+        <p style={mutedStyle}>Unscheduled — add both start and end dates before moving this task.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: "1rem" }} data-testid="planner-task-schedule">
+      <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>Schedule</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+        <button
+          type="button"
+          disabled={disabled || isShifting}
+          onClick={() => proposeDelta(-1)}
+          data-testid="planner-task-move-earlier"
+        >
+          Move earlier 1 day
+        </button>
+        <button
+          type="button"
+          disabled={disabled || isShifting}
+          onClick={() => proposeDelta(1)}
+          data-testid="planner-task-move-later"
+        >
+          Move later 1 day
+        </button>
+        <label style={{ display: "flex", gap: "0.35rem", alignItems: "center", fontSize: 13 }}>
+          <span>Start date</span>
+          <input
+            type="date"
+            value={pickerDate}
+            disabled={disabled || isShifting}
+            onChange={(e) => proposeFromPicker(e.target.value)}
+            data-testid="planner-task-shift-date"
+          />
+        </label>
+      </div>
+
+      {preview && proposedDelta !== 0 ? (
+        <div
+          style={{ marginTop: "0.75rem", padding: "0.5rem 0", borderTop: "1px solid var(--color-border, #e5e5e5)" }}
+          data-testid="planner-task-shift-preview"
+        >
+          <p style={{ margin: "0 0 0.5rem", fontSize: 13 }}>
+            Proposed: {preview.start}
+            {preview.end ? ` → ${preview.end}` : ""}{" "}
+            <span style={mutedStyle}>
+              ({proposedDelta! > 0 ? "+" : ""}
+              {proposedDelta} day{Math.abs(proposedDelta!) === 1 ? "" : "s"})
+            </span>
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              type="button"
+              disabled={disabled || isShifting}
+              onClick={confirmShift}
+              data-testid="planner-task-shift-confirm"
+            >
+              {isShifting ? "Moving…" : "Confirm move"}
+            </button>
+            <button
+              type="button"
+              disabled={isShifting}
+              onClick={cancelProposal}
+              data-testid="planner-task-shift-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {shiftError ? (
+        <div role="alert" style={{ ...errorStyle, marginTop: "0.5rem" }} data-testid="planner-task-shift-error">
+          <p style={{ margin: 0 }}>{shiftError.message}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PlannerTaskDetail({
   task,
   onClose,
@@ -233,18 +429,39 @@ export function PlannerTaskDetail({
   // expectedUpdatedAt — Reload updates that before props catch up.
   const taskIdRef = useRef(task.id);
   const taskUpdatedAtRef = useRef(task.updatedAt);
+  // Last server-synced field baseline — used to preserve dirty edits across a
+  // schedule-only refresh (shift updates dates/updatedAt without Save).
+  const baselineDraftRef = useRef(draftFromTask(task));
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
 
   useEffect(() => {
     const sameId = task.id === taskIdRef.current;
     const sameUpdatedAt = task.updatedAt === taskUpdatedAtRef.current;
     if (sameId && sameUpdatedAt) return;
+
+    const baseline = baselineDraftRef.current;
+    const current = draftRef.current;
+    const dirty =
+      sameId &&
+      (current.title !== baseline.title ||
+        current.description !== baseline.description ||
+        current.status !== baseline.status ||
+        current.assigneeUserId !== baseline.assigneeUserId);
+
     taskIdRef.current = task.id;
     taskUpdatedAtRef.current = task.updatedAt;
-    setDraft(draftFromTask(task));
     setExpectedUpdatedAt(task.updatedAt ?? "");
-    setFieldError(null);
-    setActionError(null);
-    idempotencyKeyRef.current = null;
+
+    if (!dirty) {
+      const next = draftFromTask(task);
+      baselineDraftRef.current = next;
+      setDraft(next);
+      setFieldError(null);
+      setActionError(null);
+      idempotencyKeyRef.current = null;
+    }
+    // Dirty + same task: keep unsaved field edits; only CAS token / dates advance.
   }, [task]);
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -258,9 +475,11 @@ export function PlannerTaskDetail({
     startTransition(async () => {
       const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
       if (refreshed) {
+        const next = draftFromTask(refreshed.task);
         taskIdRef.current = refreshed.task.id;
         taskUpdatedAtRef.current = refreshed.task.updatedAt;
-        setDraft(draftFromTask(refreshed.task));
+        baselineDraftRef.current = next;
+        setDraft(next);
         setExpectedUpdatedAt(refreshed.task.updatedAt ?? "");
         setActionError(null);
         setFieldError(null);
@@ -328,6 +547,11 @@ export function PlannerTaskDetail({
         idempotencyKeyRef.current = null;
         taskIdRef.current = task.id;
         taskUpdatedAtRef.current = result.data.updatedAt;
+        baselineDraftRef.current = {
+          ...draftRef.current,
+          title,
+          description: patch.description ?? "",
+        };
         setExpectedUpdatedAt(result.data.updatedAt);
         if (onRefreshSelection) await onRefreshSelection();
         // revalidatePath alone does not update mounted client views — refresh RSC props.
@@ -517,6 +741,14 @@ export function PlannerTaskDetail({
           {isPending ? "Saving task…" : null}
         </p>
       </form>
+
+      <TaskScheduleShift
+        task={task}
+        disabled={isPending}
+        onShifted={async () => {
+          if (onRefreshSelection) await onRefreshSelection();
+        }}
+      />
     </div>
   );
 }

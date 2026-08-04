@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight, MoreHorizontal, Share2, WifiOff } from "lucide-react";
 
 import { isDeliverableCover } from "@/lib/cloudinary/url";
@@ -20,7 +20,33 @@ import { BudgetTab } from "./shoot-detail-tabs/budget-tab";
 import { ApprovalsTab } from "./shoot-detail-tabs/approvals-tab";
 import { DeliverablesTab } from "./shoot-detail-tabs/deliverables-tab";
 import { ActivityTab } from "./shoot-detail-tabs/activity-tab";
+import { useShootDetailContext } from "./shoot-detail-context";
+import { useShootLoadState } from "./shoot-load-state";
+import { useActiveBrand } from "@/context/active-brand-context";
 import styles from "./shoot-detail.module.css";
+
+/** Injects CopilotKit context when shoot payload is present (including empty shot list). */
+function ShootDetailAgentContext({ data }: { data: ShootDetailPayload }) {
+  const { setActiveBrandId } = useActiveBrand();
+  useShootDetailContext({
+    shootId: data.shoot.id,
+    shootName: data.shoot.name,
+    shootStatus: data.shoot.status,
+    brandId: data.brand.id,
+    brandName: data.brand.name,
+    channels: data.shoot.target_channels ?? [],
+    shotCount: data.shots.length,
+    deliverableCount: data.deliverables.length,
+    dnaScore: data.shoot.dna_score,
+    hasBrief: Boolean(data.shoot.brief?.trim()),
+  });
+  // Align the global active-brand with the shoot's actual brand so a stale
+  // selection (previous brand page, etc.) can never contradict the open shoot.
+  useEffect(() => {
+    setActiveBrandId(data.brand.id);
+  }, [data.brand.id, setActiveBrandId]);
+  return null;
+}
 
 const TAB_IDS = [
   "overview",
@@ -59,6 +85,14 @@ type Props = {
 export function ShootDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("overview");
+  const { setShootLoad } = useShootLoadState();
+
+  // Report the REAL load outcome to the shell so chat suggestions key off the
+  // payload, not the URL (a 404/500 must not advertise loaded-shoot actions).
+  useEffect(() => {
+    setShootLoad({ loaded: Boolean(data && !fetchError), failed: Boolean(fetchError) });
+    return () => setShootLoad({ loaded: false, failed: false });
+  }, [data, fetchError, setShootLoad]);
 
   if (fetchError || !data) {
     return (
@@ -89,6 +123,7 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
   if (shots.length === 0) {
     return (
       <div className={styles.root}>
+        <ShootDetailAgentContext data={data} />
         <div className={styles.header}>
           <div className={styles.headerInner}>
             <Breadcrumb name={shoot.name} />
@@ -119,6 +154,7 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
 
   return (
     <div className={styles.root}>
+      <ShootDetailAgentContext data={data} />
       <div className={styles.header}>
         <div className={styles.headerInner}>
           <Breadcrumb name={shoot.name} />

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from "vitest";
+import { useEffect } from "react";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
 vi.mock("./shoot-detail.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -9,13 +10,34 @@ vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (
 
 vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={props.alt} /> }));
 
+const mockUseAgentContext = vi.fn();
+vi.mock("@copilotkit/react-core/v2", () => ({
+  useAgentContext: (...args: unknown[]) => mockUseAgentContext(...args),
+}));
+
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 import { ShootDetailWorkspace } from "./shoot-detail-workspace";
+import { ShootLoadStateProvider, useShootLoadState } from "./shoot-load-state";
+import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import type { ShootDetailPayload } from "@/lib/shoot/get-shoot-detail";
+import type { ShootLoadState } from "./shoot-load-state";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  mockUseAgentContext.mockClear();
+});
+
+function renderWorkspace(data: ShootDetailPayload | null, fetchError: string | null) {
+  return render(
+    <ShootLoadStateProvider>
+      <ActiveBrandProvider>
+        <ShootDetailWorkspace data={data} fetchError={fetchError} />
+      </ActiveBrandProvider>
+    </ShootLoadStateProvider>,
+  );
+}
 
 function payload(overrides: Partial<ShootDetailPayload> = {}): ShootDetailPayload {
   return {
@@ -52,22 +74,59 @@ function payload(overrides: Partial<ShootDetailPayload> = {}): ShootDetailPayloa
 
 describe("ShootDetailWorkspace — error / empty-shots states", () => {
   it("shows the error state with a working retry", () => {
-    render(<ShootDetailWorkspace data={null} fetchError="Unable to load this shoot." />);
+    renderWorkspace(null, "Unable to load this shoot.");
     expect(screen.getByText("Unable to load this shoot.")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledOnce();
   });
 
   it("swaps the whole workspace (not just the Shots tab) when there are no shots", () => {
-    render(<ShootDetailWorkspace data={payload({ shots: [] })} fetchError={null} />);
+    renderWorkspace(payload({ shots: [] }), null);
     expect(screen.getByText("Spring Campaign — no shots yet")).toBeDefined();
     expect(screen.queryByRole("tablist")).toBeNull();
   });
 });
 
+describe("ShootDetailWorkspace — agent context contract", () => {
+  it("forwards shoot/brand ids on populated and empty shot-list branches", () => {
+    const { unmount } = renderWorkspace(payload(), null);
+    expect(mockUseAgentContext).toHaveBeenCalled();
+    const populated = mockUseAgentContext.mock.calls.at(-1)?.[0] as {
+      value: Record<string, unknown>;
+    };
+    expect(populated.value).toMatchObject({
+      surface: "shoot-detail",
+      shoot_id: "shoot-1",
+      brand_id: "brand-1",
+      shot_count: 1,
+      deliverable_count: 0,
+    });
+    unmount();
+    mockUseAgentContext.mockClear();
+
+    renderWorkspace(payload({ shots: [] }), null);
+    const empty = mockUseAgentContext.mock.calls.at(-1)?.[0] as {
+      description: string;
+      value: { suggested_next_actions: string[]; shot_count: number };
+    };
+    expect(empty.value).toMatchObject({
+      shoot_id: "shoot-1",
+      brand_id: "brand-1",
+      shot_count: 0,
+    });
+    expect(empty.description).toMatch(/Shot list is empty/i);
+    expect(empty.value.suggested_next_actions.some((a) => /plan this shoot/i.test(a))).toBe(true);
+  });
+
+  it("does not inject context when shoot data failed to load", () => {
+    renderWorkspace(null, "Unable to load this shoot.");
+    expect(mockUseAgentContext).not.toHaveBeenCalled();
+  });
+});
+
 describe("ShootDetailWorkspace — populated", () => {
   it("renders the hero, all 9 tabs, and switches tab content on click", () => {
-    render(<ShootDetailWorkspace data={payload()} fetchError={null} />);
+    renderWorkspace(payload(), null);
     expect(screen.getByRole("heading", { name: "Spring Campaign" })).toBeDefined();
     expect(screen.getByText("DNA 87")).toBeDefined();
 
@@ -85,30 +144,28 @@ describe("ShootDetailWorkspace — populated", () => {
 
 describe("ShootDetailWorkspace — honest empty per tab (no fake data)", () => {
   it("Team tab shows EmptyState, not a fabricated crew list", () => {
-    render(<ShootDetailWorkspace data={payload({ crew: [] })} fetchError={null} />);
+    renderWorkspace(payload({ crew: [] }), null);
     fireEvent.click(screen.getByRole("tab", { name: "Team" }));
     expect(screen.getByTestId("empty-state")).toBeDefined();
   });
 
   it("Schedule tab shows EmptyState when there is no date or location", () => {
-    render(
-      <ShootDetailWorkspace
-        data={payload({ shoot: { ...payload().shoot, start_date: null, end_date: null, location: null } })}
-        fetchError={null}
-      />,
+    renderWorkspace(
+      payload({ shoot: { ...payload().shoot, start_date: null, end_date: null, location: null } }),
+      null,
     );
     fireEvent.click(screen.getByRole("tab", { name: "Schedule" }));
     expect(screen.getByTestId("empty-state")).toBeDefined();
   });
 
   it("Budget tab shows EmptyState when no estimated budget or breakdown exists", () => {
-    render(<ShootDetailWorkspace data={payload()} fetchError={null} />);
+    renderWorkspace(payload(), null);
     fireEvent.click(screen.getByRole("tab", { name: "Budget" }));
     expect(screen.getByTestId("empty-state")).toBeDefined();
   });
 
   it("Assets tab shows EmptyState with zero assets", () => {
-    render(<ShootDetailWorkspace data={payload({ assets: [] })} fetchError={null} />);
+    renderWorkspace(payload({ assets: [] }), null);
     fireEvent.click(screen.getByRole("tab", { name: "Assets" }));
     expect(screen.getByTestId("empty-state")).toBeDefined();
   });
@@ -116,11 +173,9 @@ describe("ShootDetailWorkspace — honest empty per tab (no fake data)", () => {
 
 describe("ShootDetailWorkspace — review-fix regressions", () => {
   it("Budget tab renders real actual_cost even when no estimate exists (not EmptyState)", () => {
-    render(
-      <ShootDetailWorkspace
-        data={payload({ shoot: { ...payload().shoot, estimated_budget: null, actual_cost: 1200 } })}
-        fetchError={null}
-      />,
+    renderWorkspace(
+      payload({ shoot: { ...payload().shoot, estimated_budget: null, actual_cost: 1200 } }),
+      null,
     );
     fireEvent.click(screen.getByRole("tab", { name: "Budget" }));
     expect(screen.queryByTestId("empty-state")).toBeNull();
@@ -128,13 +183,11 @@ describe("ShootDetailWorkspace — review-fix regressions", () => {
   });
 
   it('a "planned" deliverable (the real production status value) counts as not-yet-ready, not muted-unknown', () => {
-    render(
-      <ShootDetailWorkspace
-        data={payload({
-          deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "planned" }],
-        })}
-        fetchError={null}
-      />,
+    renderWorkspace(
+      payload({
+        deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "planned" }],
+      }),
+      null,
     );
     fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
     expect(screen.getByText("· 0/1 ready")).toBeDefined();
@@ -145,7 +198,7 @@ describe("ShootDetailWorkspace — review-fix regressions", () => {
     const data = payload({
       deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "delivered" }],
     });
-    render(<ShootDetailWorkspace data={data} fetchError={null} />);
+    renderWorkspace(data, null);
     fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
     expect(screen.getByText("· 1/1 ready")).toBeDefined();
   });
@@ -154,19 +207,115 @@ describe("ShootDetailWorkspace — review-fix regressions", () => {
     const data = payload({
       deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "Delivered " }],
     });
-    render(<ShootDetailWorkspace data={data} fetchError={null} />);
+    renderWorkspace(data, null);
     fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
     expect(screen.getByText("· 1/1 ready")).toBeDefined();
   });
 
   it("hero renders a non-Cloudinary cover_url as a real image, not the decorative fallback", () => {
-    render(
-      <ShootDetailWorkspace
-        data={payload({ shoot: { ...payload().shoot, cover_url: "https://example.com/real-cover.jpg" } })}
-        fetchError={null}
-      />,
+    renderWorkspace(
+      payload({ shoot: { ...payload().shoot, cover_url: "https://example.com/real-cover.jpg" } }),
+      null,
     );
     const heroImg = screen.getAllByAltText("")[0] as HTMLImageElement;
     expect(heroImg.src).toBe("https://example.com/real-cover.jpg");
+  });
+});
+
+describe("ShootDetailWorkspace — reports real load state to the operator shell (IPI-921)", () => {
+  function renderWithProbe(data: ShootDetailPayload | null, fetchError: string | null) {
+    let state: ShootLoadState | null = null;
+    function Probe() {
+      state = useShootLoadState().shootLoad;
+      return null;
+    }
+    const view = render(
+      <ShootLoadStateProvider>
+        <ActiveBrandProvider>
+          <Probe />
+          <ShootDetailWorkspace data={data} fetchError={fetchError} />
+        </ActiveBrandProvider>
+      </ShootLoadStateProvider>,
+    );
+    return { ...view, readState: () => state };
+  }
+
+  it("marks the shoot loaded when data arrives", () => {
+    const { readState } = renderWithProbe(payload(), null);
+    expect(readState()).toEqual({ loaded: true, failed: false });
+  });
+
+  it("marks the shoot failed when fetchError is set (no fake loaded state)", () => {
+    const { readState } = renderWithProbe(null, "Unable to load this shoot.");
+    expect(readState()).toEqual({ loaded: false, failed: true });
+  });
+
+  it("keeps the shoot unloaded when stale data and fetchError are both present", () => {
+    const { readState } = renderWithProbe(payload(), "Unable to load this shoot.");
+    expect(readState()).toEqual({ loaded: false, failed: true });
+  });
+
+  it("resets the load state when the workspace unmounts (provider outlives it)", () => {
+    let state: ShootLoadState | null = null;
+    function Probe() {
+      state = useShootLoadState().shootLoad;
+      return null;
+    }
+    function Host({ mounted }: { mounted: boolean }) {
+      return (
+        <ShootLoadStateProvider>
+          <ActiveBrandProvider>
+            <Probe />
+            {mounted && <ShootDetailWorkspace data={payload()} fetchError={null} />}
+          </ActiveBrandProvider>
+        </ShootLoadStateProvider>
+      );
+    }
+    const { rerender } = render(<Host mounted />);
+    expect(state).toEqual({ loaded: true, failed: false });
+    rerender(<Host mounted={false} />);
+    expect(state).toEqual({ loaded: false, failed: false });
+  });
+});
+
+describe("ShootDetailWorkspace — active brand follows the open shoot (IPI-927 review)", () => {
+  function renderWithBrandProbe(
+    data: ShootDetailPayload | null,
+    fetchError: string | null,
+    seedStaleBrand = false,
+  ) {
+    let current: string | null = null;
+    function Probe() {
+      const { activeBrandId, setActiveBrandId } = useActiveBrand();
+      current = activeBrandId;
+      useEffect(() => {
+        if (seedStaleBrand) setActiveBrandId("stale-brand");
+      }, [setActiveBrandId]);
+      return null;
+    }
+    const view = render(
+      <ShootLoadStateProvider>
+        <ActiveBrandProvider>
+          <Probe />
+          <ShootDetailWorkspace data={data} fetchError={fetchError} />
+        </ActiveBrandProvider>
+      </ShootLoadStateProvider>,
+    );
+    return { ...view, readBrand: () => current };
+  }
+
+  it("aligns the active brand with the shoot's brand when data loads", () => {
+    const { readBrand } = renderWithBrandProbe(payload(), null);
+    expect(readBrand()).toBe("brand-1");
+  });
+
+  it("overrides a stale global brand when a shoot loads (no contradiction for agents)", () => {
+    const { readBrand } = renderWithBrandProbe(payload(), null, true);
+    expect(readBrand()).toBe("brand-1");
+  });
+
+  it("does not touch the active brand when the shoot failed to load", () => {
+    const { readBrand } = renderWithBrandProbe(null, "Unable to load this shoot.", true);
+    expect(readBrand()).toBe("stale-brand");
   });
 });

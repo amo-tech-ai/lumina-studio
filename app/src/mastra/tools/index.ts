@@ -9,6 +9,7 @@
 //    AFTER a useInterrupt HITL approval — never write durable tables directly
 //    (no silent writes; IPI2-116 pattern). Real write tools (analyzeBrandUrl,
 //    commitApprovedBrandDraft, …) land with their edge functions + auth (IPI2-83/127).
+import { getCurrentPageContext } from "./currentPageContext";
 import { approveShotList } from "./approveShotList";
 import { estimateShootBudget } from "./estimateShootBudget";
 import { explainShootDnaAlerts } from "./explainShootDnaAlerts";
@@ -41,6 +42,7 @@ import { draftBulkAssetApproval } from "./draftBulkAssetApproval";
 // IPI-261 — DESIGN-077: Creative Director asset-intelligence tools (read-only DNA
 // evidence, deterministic retake suggestions, proposal-only bulk approval draft)
 export const agentTools = {
+  getCurrentPageContext,
   recommendShootType,
   planDeliverables,
   lookupShotReferences,   // DB-backed shot type suggestions — call before generateShotListDraft
