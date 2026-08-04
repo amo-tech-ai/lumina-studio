@@ -2,6 +2,13 @@
 
 > Status: **Audit only — no repository changes made in this task.** All file diffs below are proposals.
 > Skills hub: `.claude/skills/pr-agent/SKILL.md` (prior IPI-519 work, Bedrock pilot). This file is the audit + rollout plan.
+>
+> **Single source of truth:** this document — together with `pr-agent-expert.md` and `summary.md` in this
+> directory — is the **authoritative PR-Agent execution plan** for iPix. The earlier scoped plan
+> `tasks/prime/01-plan.md` (config-first calibration, expert docs only after measured misses, full
+> `AGENTS.md` omitted from context, deferred `restricted_mode`) is **superseded** for rollout
+> sequencing and task numbering; its verified config findings (model string, region env, SHA pin,
+> `pr_actions` ↔ `pull_request.types` pairing) are folded into this plan and remain valid.
 
 ## Executive Verdict
 
@@ -18,15 +25,15 @@ accuracy gate) rather than broadened.
 | Area | Status | Evidence | Risk |
 |---|---|---|---|
 | PR-Agent installed | 🟢 | `.github/workflows/pr-agent.yml` (34 lines) + root `.pr_agent.toml`; runs green on 2026-08-03 (runs 30845207358 etc.) | Low — effective |
-| `.pr_agent.toml` | 🟢 | `/home/sk/ipix/.pr_agent.toml` (model `bedrock/qwen.qwen3-coder-next`, `auto_review`, `auto_describe=false`, `auto_improve=false`, `extra_instructions`) | Medium — only `[pr_reviewer]` section; no context/ignore/labels |
+| `.pr_agent.toml` | 🟢 | Repo-root `.pr_agent.toml` already has **three sections**: `[config]` (model `bedrock/qwen.qwen3-coder-next`, `custom_model_max_tokens = 250000`), `[github_action_config]` (`auto_review=true`, `auto_describe=false`, `auto_improve=false`, `pr_actions = ["opened","reopened","ready_for_review"]`), and `[pr_reviewer]` (`extra_instructions`) | Medium — no `repo_context_*` / `ignore_pr_*` keys (`repo_context_files` unset → upstream default `["AGENTS.md"]`) |
 | Automatic review | 🟢 | Workflow triggers `pull_request [opened,reopened,ready_for_review]` → `/review` auto | Medium — no draft/bot-paths skip at the YAML level; emits "No major issues detected" noise |
 | Manual commands | 🟡 | No `issue_comment` trigger wired; CLI possible via pip + Bedrock creds (documented in skill) | Low — intended manual-only is fine, but no slash commands |
 | Repository context | 🟢 | `AGENTS.md` auto-loaded (default `repo_context_files=["AGENTS.md"]` from default branch); `CLAUDE.md` not injected | Medium — reviewer never sees the 20-rule audit contract |
 | Security | 🟢 | Least privilege: `contents: read` / `pull-requests+issues: write` only; no `checks: write`, no `pull_request_target`, no checkout, pinned SHA action, `aws.*` dotted secrets | Low–Med — repo `allowed_actions=all` (org-level); bedrock static secrets planned to OIDC |
 | Duplicate reviewers | 🟡 | **CodeRabbit** (GitHub App) active but hitting free-tier **rate limit** (evidence: PR #791 "Review limit reached"); **GitHub Copilot auto PR review** appears enabled (dynamic agents; no repo-local config file); Vercel bot = deploy only; Bugbot/Codacy = skill/manual only | Medium — 3 comment layers brand noise; CodeRabbit is winning nothing lately |
-| Version pinning | 🟢 | Action pinned to SHA `01569655…` (2026-07-10); latest **GitHub release v0.41.1** (2026-08-01, verified via Releases API; note upstream `pyproject.toml` declares `0.41.0`) | Medium — pin is sound but predates the latest release; bump only as a separate reversible step |
+| Version pinning | 🟢 | Action pinned to SHA `01569655…` (2026-07-10). Upstream versions are three distinct facts (all verified 2026-08-04): **GitHub release tag `v0.41.1`** (published 2026-08-01, GitHub Releases API); **latest PyPI package `0.39.0`** (uploaded 2026-07-05, PyPI JSON API); **source-declared version `0.41.0`** in `pyproject.toml` at tag `v0.41.1` (GitHub contents API) | Medium — pin is sound but predates the latest release; bump only as a separate reversible step (IPI-933 · PRAGENT-010) |
 | Cost control | 🟢 | Auto only `/review`; `auto_describe/auto_improve=false`; no `synchronize`; Qwen3 VS Bedrock ~cheap; `timeout-minutes: 15`; concurrency per-PR. **Measured 2026-08-03:** run 508 review took ~14s LLM latency (13.8s LLM call + 1.1s output), ~11.3K tokens (10K prompt / 331 completion) — well under the 15min budget; runs 507–514 completed in 44–85s wall-clock | Low — measurable, tiny |
-| Review usefulness | 🟢–🟡 | Evidence: PR #791 (IPI-915) → **2 non-trivial findings with file:line**, no generic praise; PR #778 docs → ticket-compliance partial + "no major issues"; PR #792 chore → 1-effort no majors (persistent comment) | Medium — quality fine but noisy headline pattern; effective signal floor |
+| Review usefulness | 🟢–🟡 | Evidence: PR #791 — IPI-915 · AUTH-FIX — E2E evidence: Sign out posts /auth/signout on preview → **2 non-trivial findings with file:line**, no generic praise; PR #778 docs → ticket-compliance partial + "no major issues"; PR #792 chore → 1-effort no majors (persistent comment) | Medium — quality fine but noisy headline pattern; effective signal floor |
 
 ## 1. Plain-Language Summary — What This Plan Changes and What You Need
 
@@ -46,30 +53,35 @@ at 6pm. It caught the issue *and* pointed at the exact lines.
 |---|---|---|---|
 | **Give the inspector the rulebook** | Reads only `AGENTS.md`; gives generic advice | Reads `AGENTS.md` + a new `docs/pr-review-guidelines.md` (the iPix rules, in plain English) | It checks iPix-specific dangers: leaked service-role keys, Supabase migrations without RLS, Node-only APIs on Cloudflare Workers |
 | **Cut the noise** | Posts "No major issues detected" on clean PRs | Only comments when it has real findings; one comment that updates in place | Developers stop skimming past bot comments — every comment means something |
-| **Skip PRs that don't need it** | Reviews everything a human opens | Skips drafts, dependabot/renovate, bot-authored PRs, docs-only PRs, and PRs labeled `skip-ai-review` | No wasted money, no spam on chores |
-| **Keep it an advisor, not a boss** | Can't push code (good), but `/improve` offers rewrites | `restricted_mode = true` — guaranteed it can never edit code or approve; `/improve` stays manual | Humans still make every decision (iPix rule #1) |
+| **Skip PRs that don't need it** | Reviews every human-opened PR on `opened`/`reopened`/`ready_for_review` | Skips drafts, dependabot/renovate, bot-authored PRs, docs-only PRs, and PRs labeled `skip-ai-review` | No wasted money, no spam on chores |
+| **Keep it an advisor, not a boss** | Can't push code (good), but `/improve` offers rewrites | `restricted_mode = true` blocks repo-write operations needing `contents: write`; approvals stay off (`pr_reviewer.approve_pr_on_self_review = false`, upstream default) and committable code suggestions stay off (`pr_code_suggestions.commitable_code_suggestions = false`, upstream default); `/improve` stays manual | Humans still make every decision (iPix rule #1) |
 | **One reviewer, not three** | PR-Agent + CodeRabbit + Copilot review + Vercel all comment | Pause CodeRabbit (it's rate-limited anyway) and keep Copilot review off during the pilot | One clear voice instead of three bickering bots |
-| **Cheaper** | Reviews every push | Reviews only on open/reopened/ready-for-review | Fewer AI calls, smaller AWS bill |
+| **Cheaper** | Runs on `opened`/`reopened`/`ready_for_review` (today's actual trigger set — the workflow has no push/`synchronize` trigger) | Same triggers, plus drafts, bot-authored PRs, and skip-labeled PRs bail out at the job gate before the runner starts | Fewer AI calls, smaller AWS bill |
 
 **What is needed to make it happen** (nothing exotic — mostly decisions, not engineering):
 
 1. **Two labels created** on GitHub: `skip-ai-review` and `docs-only` (2 minutes, manual).
-2. **A docs-only PR** (IPI-661 · PRAGENT-002) with the review contract + 6 expert sheets.
-3. **A config-only PR** (IPI-659 · PRAGENT-003) with 3 files: the new `.pr_agent.toml`
-   and the slimmed-down workflow. No product code changes. Docs and config never share a PR.
+2. **A docs-only PR** (IPI-661 · PRAGENT-003 — Add iPix PR-Agent Review Contract and Expert Guidance)
+   with the review contract + 6 expert sheets.
+3. **A config-only PR** (IPI-659 · PRAGENT-004 — Add Restricted PR-Agent Configuration and GitHub
+   Workflow) with 3 files: the new `.pr_agent.toml` and the slimmed-down workflow. No product code
+   changes. Docs and config never share a PR.
 4. **One owner decision:** pause/downgrade the CodeRabbit GitHub App while PR-Agent runs the
    pilot (it has been hitting its free-tier limit and contributing noise, not reviews).
 5. **Already in place, no action:** AWS Bedrock keys in GitHub Secrets, the pinned action SHA,
-   least-privilege permissions. OIDC (no static keys) is its own later task (PRAGENT-008).
-6. **A short pilot:** let it review ~5 representative PRs (UI, Supabase migration, Mastra,
+   least-privilege permissions. OIDC (no static keys) is its own later task
+   (IPI-522 · PRAGENT-009 — Replace Static AWS Credentials With GitHub OIDC).
+6. **A short initial pilot:** let it review ~5 representative PRs (UI, Supabase migration, Mastra,
    Workers, docs-only), then judge: ≥70% of findings useful, <20% duplicates, <10% wrong.
-   If it passes, keep it; if not, we know exactly what to turn down.
+   This ~5-PR cohort is the **initial pilot only**; the **production promotion gate is a separate,
+   higher bar** — evaluation across at least 20 PRs (see Pilot Plan, Phase D equivalent). If it
+   passes, keep it; if not, we know exactly what to turn down.
 
 **What it does NOT need:** no new servers, no paid subscription, no app install, no rewriting
 of existing code, no change to how PRs are merged. The merge gate stays human.
 
-**Effort estimate:** ~1 focused session to ship PRAGENT-002/003; ~1 week of normal PR traffic for
-the pilot; then a 30-minute review to decide go/no-go.
+**Effort estimate:** ~1 focused session to ship IPI-661 · PRAGENT-003 (docs) and IPI-659 · PRAGENT-004
+(config); ~1 week of normal PR traffic for the pilot; then a 30-minute review to decide go/no-go.
 
 ## 2. Summary Scorecard
 
@@ -86,6 +98,7 @@ the pilot; then a 30-minute review to decide go/no-go.
 ## Current Setup (exact, from disk + GitHub)
 
 ### Files & workflows found
+
 - `.github/workflows/pr-agent.yml` — full diff in "Proposed workflow".
 - `.pr_agent.toml` (repo root) — content in "Proposed `.pr_agent.toml`".
 - `.claude/skills/pr-agent/` — SKILL.md, references/setup.md (secrets + Bedrock-pilot workflow), references/ops.md (CLI smoke, failure table, OIDC-later). **Authoritative prior work** for this task.
@@ -93,18 +106,21 @@ the pilot; then a 30-minute review to decide go/no-go.
 - `docs/pr-reviews/` — legacy post-merge checklists (PR-23, PR-23 post-merge, PR-678 merge record). Not wired to PR-Agent.
 
 ### Deployment type
+
 - **GitHub Action (composite)**, not GitHub App, not Lambda, not Qodo hosted.
 - Model: `bedrock/qwen.qwen3-coder-next` via LiteLLM → AWS Bedrock `us-east-1`. IAM user `pr-agent-github` (~least-privilege, Bedrock only; see `references/setup.md`).
 - Secrets in repo Actions: **`AWS_ACCESS_KEY_ID`**, **`AWS_SECRET_ACCESS_KEY`** (names only; not values). `GITHUB_TOKEN` is the standard runner token.
 
 ### Trigger + behavior (measured)
-- Runs on `opened/reopened/ready_for_review`; concurrency `pr-agent-${{pr}}` with `cancel-in-progress: true`; sender `.type != 'Bot'` at job level.
+
+- Runs on `pull_request` types `[opened, reopened, ready_for_review]` (no push/`synchronize`, no `issue_comment` trigger); concurrency `pr-agent-${{pr}}` with `cancel-in-progress: true`; sender `.type != 'Bot'` at job level.
 - Emits one persistent "PR Reviewer Guide 🔍" comment (persistent inline dedupe on), **no inline comments** (committable suggestions off).
-- No `issue_comment` trigger → no `/review /describe /improve /ask` manual commands online.
+- No `issue_comment` trigger → no `/review /describe /improve /ask` manual commands online today.
 - Output includes ticket-compliance analysis (`require_ticket_analysis_review=true` default) with branch-issue extraction (`extract_issue_from_branch=true` default).
 
 ### Reviewer overlap (production evidence)
-- **CodeRabbit github app** — installed; on PR #791 shows **"Review limit reached"** (free-tier). Posted summarize + rate-limit comments only. Post-merge recipe branches (e.g. `app/coderabbitai` PR list) appear in recent PR history.
+
+- **CodeRabbit github app** — installed; on the PR #791 review it showed **"Review limit reached"** (free-tier). Posted summarize + rate-limit comments only. Post-merge recipe branches (e.g. `app/coderabbitai` PR list) appear in recent PR history.
 - **GitHub Copilot PR review** — dynamic agents `dynamic/agents/copilot-pull-request-reviewer` + `dynamic/copilot-swe-agent/copilot` listed by Actions API; **no repo file** under `.github/copilot/` → org-level or product-managed. Assumed active; confirm at rollout.
 - **Vercel** — deployment link bot only.
 - **Local/manual AI tools in repo**: `cursor review`/`bugbot run` (Skill-harness), Codacy (mentioned in `pr-workflow` SKILL). Not CI auto in GitHub.
@@ -118,12 +134,13 @@ Sources studied (authoritative first):
 - **usage-guide/automations_and_usage** — `github_app.pr_commands` / `push_commands` / `handle_push_trigger`; GitHub Action uses `github_action_config.*` (or falls back); draft PRs **not** auto-feedback by default; `issue_comment` enables slash.
 - **config.toml @ The-PR-Agent/pr-agent@main** — current names verified (packing below). **Deprecated flags removed/renamed**: `num_code_suggestions` (now `num_code_suggestions_per_chunk` under `[pr_code_suggestions]`), `enable_custom_labels`/`ignore_generated_files`/`ignore_pr_folders` **do not exist** — nearest: `pr_description.custom_labels`, `[config].ignore_language_framework`, `.ignore_pr_*` per target. `persistent_comment` still exists in `[pr_reviewer]`/`[pr_code_suggestions]`; `publish_output_no_suggestions` (new) controls the "No major issues detected" noise.
 - **core-abilities (Agent context, tickets, skills, metadata)** — we now get AGENTS.md by default; skills are disabled (`[skills] enabled=false`).
-- **The-PR-Agent/pr-agent repo** — active, MIT. Latest GitHub **release v0.41.1** (2026-08-01, via Releases API) while `main`/`pyproject.toml` declares package version `0.41.0` — the tag and package version differ; treat any "latest version" claim as release-tag evidence only, and map the pinned SHA to a release before bumping.
+- **The-PR-Agent/pr-agent repo** — active, MIT. Upstream version facts are **three distinct values, each with its own source** (all verified 2026-08-04): latest **GitHub release tag `v0.41.1`** (published 2026-08-01 · source: GitHub Releases API); latest **PyPI package `0.39.0`** (uploaded 2026-07-05 · source: PyPI JSON API — the PyPI package trail lags the GitHub releases); **source-declared version `0.41.0`** in `pyproject.toml` at tag `v0.41.1` (source: GitHub contents API) — the tag, the package index, and the in-source version differ; treat any "latest version" claim as release-tag evidence only, and map the pinned SHA to a release before bumping.
 - **Medium /open-intelligence (2026-07)** — promotional context: PR-Agent = OSS legacy repo, Qodo commercial product is separate; no config truth; confirms long-term we build on the OSS action.
 
 (Not individually re-fetched in this audit: docs.pr-agent.ai root, usage-guide/additional_configurations — read enough to satisfy restricted-mode/population; usage advises minimal files.)
 
-### Verified key inventory — from `pr_agent/settings/configuration.toml`:
+### Verified key inventory — from `pr_agent/settings/configuration.toml`
+
 `[config]`: `model`, `fallback_models`, `custom_model_max_tokens`, `max_model_tokens`, `repo_context_files`, `repo_context_from_default_branch`, `repo_context_max_lines`, `publish_output`, `publish_output_progress`, `output_relevant_configurations`, `ignore_pr_title`, `ignore_pr_target/source_branches`, `ignore_pr_labels`, `ignore_pr_authors`, `ignore_repositories`, `large_patch_policy`, `ai_timeout`, `response_language`, `use_repo_settings_file`, `skills.enabled/disabled`, `persistent_inline_comments`.
 `[pr_reviewer]`: `require_estimate_effort_to_review`, `require_security_review`, `require_todo_scan`, `require_ticket_analysis_review`, `persistent_comment`, `num_max_findings`, `publish_output_no_suggestions`, `extra_instructions`, `require_tests_review`.
 `[pr_description]` asks: `extra_instructions`, `generate_ai_title`, `publish_labels`, `publish_description_as_comment`, `add_original_user_description`, `use_bullet_points`.
@@ -152,14 +169,14 @@ Sources studied (authoritative first):
 | Rate-limited CodeRabbit + Copilot third reviewer | Med | Disable/downgrade during pilot (Settings → Apps) |
 | Drafts/bot PRs still triggering | Med | Workflow `if: github.event.pull_request.draft == false`; `ignore_pr_*` set |
 | Fork PRs losing secrets silently | Med | keep `pull_request` (not target) — forks won't get Bedrock; that's acceptable, document |
-| Secrets rotate / OIDC later | Med | rollout leaves `AWS_*`; IPI-522 · PRAGENT-008 (OIDC) is its own security task |
+| Secrets rotate / OIDC later | Med | rollout leaves `AWS_*`; IPI-522 · PRAGENT-009 — Replace Static AWS Credentials With GitHub OIDC is its own security task |
 | Prompt-injection via repo context | Med | `repo_context_from_default_branch = true` (default-branch trust only); never set `--config-branch` from PR input; context files are maintainer-controlled |
 | Model drift on Bedrock Qwen3-Coder | Low | Single model, no `fallback_models` (removed intentionally in PR #23 to avoid flapping); re-verify LiteLLM naming at pin bump |
 | `allow_actions: all` org-wide | Med | Suggest IT/org policy: restrict to `public + private` unless needed; not a blocker |
 
 ## Recommended architecture (target)
 
-```
+```text
 push to PR → GitHub Action pr-agent.yml (pull_request → opened/ready)
   ├─ skip: bot/draft/dependabot/rename (always-on)
   ├─ skip: label in {skip-ai-review, docs-only}
@@ -172,7 +189,11 @@ push to PR → GitHub Action pr-agent.yml (pull_request → opened/ready)
 
 ## Proposed `.pr_agent.toml`
 
-Minimal, all keys verified against upstream `pr_agent/settings/configuration.toml@main` (checked 2026-08-03). **Do not copy the entire upstream file.**
+Minimal, all keys verified against upstream `pr_agent/settings/configuration.toml@01569655…` (checked 2026-08-04). **Do not copy the entire upstream file.**
+
+> **Canonical ownership:** the values in this section are the **single source of truth** for the
+> proposed configuration. `pr-agent-expert.md` §6 mirrors them as a summary-view sample; if the two
+> ever disagree, **this section wins** and the expert doc must be reconciled.
 
 ```toml
 # Minimal iPix config — only touch what iPix needs.
@@ -180,33 +201,37 @@ Minimal, all keys verified against upstream `pr_agent/settings/configuration.tom
 
 [config]
 model = "bedrock/qwen.qwen3-coder-next"                 # prefer to keep over env; re-verify LiteLLM naming at SHA bump
-custom_model_max_tokens = 250000                          # caps output tokens for models not in PR-Agent's default list.
-#                                                         # Empirically validated in IPI-519 (fixed MAX_TOKENS errors,
-#                                                         # see .claude/skills/pr-agent/references/ops.md) and running
-#                                                         # green since July. Re-verify against the Bedrock model's real
-#                                                         # output window on a large-PR test when bumping the SHA.
+custom_model_max_tokens = 250000                          # token-cap override for the custom model: sets the
+#                                                         # model/context capacity PR-Agent may use for this provider
+#                                                         # (NOT a cap on generated output size). Empirically
+#                                                         # validated in IPI-519 (fixed MAX_TOKENS errors, see
+#                                                         # .claude/skills/pr-agent/references/ops.md) and running
+#                                                         # green since July. Re-verify against the Bedrock model's
+#                                                         # real window on a large-PR test when bumping the SHA.
+# — Phase A context baseline (ships with the config PR — measure before expanding) —
 repo_context_files = [
   "AGENTS.md",
   "docs/pr-review-guidelines.md",
-  "docs/engineering/pr-agent/supabase.md",
-  "docs/engineering/pr-agent/mastra.md",
-  "docs/engineering/pr-agent/copilotkit.md",
-  "docs/engineering/pr-agent/cloudflare.md",
-  # Phase C on-demand (uncomment only when measured): 
+  # Phase B — POST-MEASUREMENT ONLY (uncomment after the Phase A measurement gate passes,
+  # see "Making PR-Agent…", §5 of pr-agent-expert.md):
+  # "docs/engineering/pr-agent/supabase.md",
+  # "docs/engineering/pr-agent/mastra.md",
+  # "docs/engineering/pr-agent/copilotkit.md",
+  # "docs/engineering/pr-agent/cloudflare.md",
+  # Phase C — on-demand (uncomment only when Phase B measurements justify):
   # "docs/engineering/pr-agent/commerce.md",
   # "docs/engineering/pr-agent/github-actions.md",
 ]
 repo_context_from_default_branch = true                  # trust DEFAULT branch only, never PR-controlled
-repo_context_max_lines = 800                              # AGENTS(~250) + contract(~120) + up to 4 staged sheets(~90 each) ≈ 730
-#                                                         # Staged (see "Making PR-Agent…", §5): only AGENTS + contract + the
-#                                                         # 4 high-traffic sheets load here; commerce.md + github-actions.md
-#                                                         # stay on-demand so the 6-sheet pack doesn't blow the budget.
-#                                                         # BUDGET IS AN ESTIMATE — the upstream default is 500. Keep the
-#                                                         # contract <= 120 lines and each sheet <= 90 lines, then MEASURE:
-#                                                         # if `output_relevant_configurations` / debug output shows the
-#                                                         # context was truncated, extend `repo_context_max_lines`; if
-#                                                         # sheets are still clipped, shorten the sheets instead.
-# The 6-sheet "expert pack" = contract + supabase/mastra/copilotkit/cloudflare + commerce/github-actions (staged).
+repo_context_max_lines = 500                              # Phase A budget = upstream default (500). MEASURE three
+#                                                         # varied PRs with `output_relevant_configurations` before
+#                                                         # changing this. The ~800-line figure used elsewhere in this
+#                                                         # plan (AGENTS ~250 + contract ~120 + 4 sheets ~90 each ≈ 730)
+#                                                         # is the POST-MEASUREMENT Phase B target, NOT the baseline —
+#                                                         # extend only after debug output shows no truncation at 500.
+# The 6-sheet "expert pack" = contract + supabase/mastra/copilotkit/cloudflare + commerce/github-actions;
+# all six sheets are authored in the docs PR (IPI-661 · PRAGENT-003) but only wired into this list
+# after the staged rollouts above are measured.
 
 ignore_pr_labels = ["skip-ai-review", "docs-only"]        # team ops labels exist beforehand (manual)
 ignore_pr_authors = ["dependabot[bot]", "renovate[bot]"]  # exact GitHub login of the PR author only;
@@ -215,11 +240,18 @@ ignore_pr_authors = ["dependabot[bot]", "renovate[bot]"]  # exact GitHub login o
 #                                                         # by the workflow's `sender.type != 'Bot'` gate.
 ignore_pr_title = ["^\\[Auto", "^release"]               # suppress auto-release PRs
 
-output_relevant_configurations = true                    # DEBUG ONLY: turn OFF (set to false) after the first 2–3
-                                                         # pilot PRs — it puts configuration material into output.
-restricted_mode = true                                    # PR-Agent never pushes code (contents: read only)
+output_relevant_configurations = true                    # DEBUG ONLY: turn OFF (set to false) after the first
+                                                          # 2–3 pilot PRs — it puts configuration material into output.
+restricted_mode = true                                    # skips upstream operations that need contents: write
+#                                                         # (e.g. pushing changelog updates to the repo). This is a
+#                                                         # repo-write guardrail ONLY — it does NOT by itself disable
+#                                                         # approvals or committable suggestions; those stay off via
+#                                                         # the separate controls noted under [pr_reviewer] below.
 
 [pr_reviewer]
+# Reviews never auto-approve and suggestions are never committable — both are upstream
+# defaults that we explicitly pin here so a future config edit cannot silently flip them:
+approve_pr_on_self_review = false                         # no auto-approval after self-review checkbox
 persistent_comment = true                                # one evolving comment per PR
 num_max_findings = 5                                      # cap comment volume
 publish_output_no_suggestions = false                     # NO "No major issues" noise-only comments
@@ -231,10 +263,13 @@ Prioritize in this order:
 1. Security & data isolation (service-role key never client-side)
 2. Supabase — forwarding-only migrations appropriate to the change; any tenant-owned table
    newly exposed via the Data API must present RLS + grants + org-boundary policies (verify
-   policies AND grants; `supabase:verify-rls` must pass)
+   policies AND grants; `supabase:verify-rls` must pass). Grant `authenticated` ONLY for
+   tables the authenticated app actually needs — service-only or reference tables stay
+   service-role-only with a documented access model.
 3. Cloudflare Worker/OpenNext — Worker-bound code must comply with the configured compatibility
-   date and `nodejs_compat`; flag local-filesystem/native-mod/dynamic-file assumptions not proven
-   by the Cloudflare build + smoke tests (do NOT blanket-flag every Node import)
+   date and `nodejs_compat`; flag only local-filesystem, native-module, dynamic-file, or
+   unsupported-runtime assumptions not validated by the Worker build + smoke tests
+   (do NOT blanket-flag every Node import — `fs`/`path` are not automatically defects)
 4. Auth / permission boundaries (PKCE, HITL)
 5. Data ownership (no double-mutable sources between Supabase & external systems)
 6. Mastra/CopilotKit HITL violations
@@ -245,6 +280,9 @@ Avoid: lint repeats, generic praise, speculative claims without file:line, unrel
 Classify every finding: BLOCKING (correctness/security) vs IMPORTANT vs OPTIONAL.
 Task references must match: IPI-### · TASK-ID — Full Task Name.
 """
+
+[pr_code_suggestions]
+commitable_code_suggestions = false                       # /improve output is advice only — never committable
 ```
 
 ### Config notes
@@ -258,7 +296,7 @@ Task references must match: IPI-### · TASK-ID — Full Task Name.
 
 > Note: `enable_custom_labels`, `ignore_generated_files`, `ignore_pr_folders` **are not** valid upstream keys today → not included.
 
-## Proposed workflow (`/home/sk/ipix/.github/workflows/pr-agent.yml` — GitHub Action is the recommended deploy)
+## Proposed workflow (`.github/workflows/pr-agent.yml` at the repo root — GitHub Action is the recommended deploy)
 
 ```yaml
 name: PR Agent — Bedrock Qwen3 Coder Next (restrained)
@@ -266,7 +304,7 @@ name: PR Agent — Bedrock Qwen3 Coder Next (restrained)
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
-  issue_comment:                      # enables manual /describe /improve /ask later — gate with `if`
+  issue_comment:                      # enables manual /review /describe /improve /ask later — gate with `if`
     types: [created]
 
 permissions:
@@ -284,7 +322,7 @@ jobs:
     if: >-
       (
         github.event_name == 'pull_request'
-        && github.event.sender.type != 'Bot'
+        && github.event.pull_request.user.type != 'Bot'
         && github.event.pull_request.draft == false
         && !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
         && !contains(github.event.pull_request.labels.*.name, 'docs-only')
@@ -298,7 +336,16 @@ jobs:
           fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
           github.event.comment.author_association
         )
-        && startsWith(github.event.comment.body, '/')
+        && (
+          github.event.comment.body == '/review'
+          || github.event.comment.body == '/describe'
+          || github.event.comment.body == '/ask'
+          || github.event.comment.body == '/improve'
+          || startsWith(github.event.comment.body, '/review ')
+          || startsWith(github.event.comment.body, '/describe ')
+          || startsWith(github.event.comment.body, '/ask ')
+          || startsWith(github.event.comment.body, '/improve ')
+        )
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -319,6 +366,7 @@ jobs:
 ```
 
 Notes (security decisions, in-repo comments):
+
 - No `actions/checkout` — PR-Agent reads via API only (safe for `issue_comment` too).
 - No `pull_request_target` — fork PRs get no Bedrock creds (documented; acceptable, avoids secret leaks).
 - Pinned commit SHA (re-validate on PR-Agent release); **no @main after pilot**.
@@ -326,9 +374,16 @@ Notes (security decisions, in-repo comments):
   `skip-ai-review` / `docs-only` are checked here AND in `ignore_pr_labels` (app-level backstop).
 - The label check applies to auto-review only: a maintainer can still `/review` a skipped PR manually
   (the `issue_comment` branch deliberately does not check labels).
+- The `pull_request` branch checks **`github.event.pull_request.user.type != 'Bot'`** (the PR author),
+  not `github.event.sender.type` — otherwise a human reopening a bot-authored PR would start the job
+  before `ignore_pr_authors` could apply. The `issue_comment` branch keeps `github.event.sender.type
+  != 'Bot'` because there the sender IS the commenter.
 - `issue_comment` branch also requires `github.event.issue.pull_request` so a `/`-comment on a plain
-  bug issue never launches PR-Agent, plus a **command + author-association allowlist**
-  (`OWNER/MEMBER/COLLABORATOR`) so an unknown external commenter can't spend Bedrock tokens.
+  bug issue never launches PR-Agent, plus a **token-boundary command allowlist** — only `/review`,
+  `/describe`, `/ask`, `/improve` as the whole comment or followed by a space
+  (so `/review-malicious`, `/asker`, or any other slash-prefixed text is rejected) — plus the
+  `OWNER/MEMBER/COLLABORATOR` author-association allowlist, so an unknown external commenter can't
+  spend Bedrock tokens.
 - `timeout 15m` + `cancel-in-progress` concurrency → bounded cost.
 
 If we want optional copy of the git-actions guide at exact steps, see `references/setup.md`.
@@ -338,8 +393,10 @@ If we want optional copy of the git-actions guide at exact steps, see `reference
 **The problem, in plain words.** PR-Agent is a smart reviewer but it started life as a *generic* one.
 Left to itself it knows nothing about iPix specifically — it won't know that a Supabase table missing
 an RLS policy is a merge-blocker, or that `@copilotkit/react-core` v1 imports fail our build, or that
-Node's `fs`/`path` will explode on Cloudflare Workers. This section is how we make it *an expert in
-our stack*, so its reviews read like a senior iPix engineer wrote them.
+Worker-bound code carrying **local-filesystem, native-module, or dynamic-file-load assumptions that our
+Worker build and smoke tests don't validate** will break under OpenNext/Workers (note: with our configured
+`nodejs_compat`, `fs`/`path` usage is *not* automatically a runtime failure). This section is how we make
+it *an expert in our stack*, so its reviews read like a senior iPix engineer wrote them.
 
 **Real-world analogy.** Think of a new quality inspector on a fashion-production line. A generic
 inspection manual is not enough; they need the *line-specific* checklist — "these fabrics can't be
@@ -361,8 +418,11 @@ the line's own checklist, not a book of generic factory advice.
 
 Create six small, hand-written markdown files under `docs/engineering/pr-agent/`, each ≤ ~90 lines.
 They live on the **default branch**, are loaded by `repo_context_files`, and are the single place
-where domain rules for AI review are written. Outline for each (staged: §5 of the expert doc — the
-4 high-traffic sheets ship wired; `commerce` + `github-actions` stay on-demand):
+where domain rules for AI review are written. All six are **authored** in the docs PR, but they are
+**wired into context in stages** (see `pr-agent-expert.md` §5): the Phase A baseline loads only
+`AGENTS.md` + `docs/pr-review-guidelines.md` (500-line budget); the 4 high-traffic sheets
+(`supabase`, `mastra`, `copilotkit`, `cloudflare`) are added in Phase B **only after the Phase A
+measurement gate passes**; `commerce` + `github-actions` stay Phase C on-demand. Outline for each:
 
 | File | Contents (what the reviewer must know) |
 |---|---|
@@ -375,8 +435,11 @@ where domain rules for AI review are written. Outline for each (staged: §5 of t
 
 > **Do not** point the reviewer at massive files — no `docs/architecture/**` firehose, no full `prd.md`,
 > no wireframe dumps. They burn tokens, dilute the signal, and the reviewer stops listening.
-> The staged checklists (≈90 lines each) plus `AGENTS.md` fit comfortably in `repo_context_max_lines = 800`
-> (commerce + github-actions load only on demand, never all 6 at once).
+> Phase A ships at the upstream default `repo_context_max_lines = 500` with only `AGENTS.md` + the
+> contract loaded; the staged checklists (≈90 lines each) plus `AGENTS.md` would fit in a **post-measurement
+> Phase B budget of ~800 lines**, but that raise happens only after `output_relevant_configurations`
+> runs on three varied PRs prove the baseline isn't truncating (commerce + github-actions load only on
+> demand, never all 6 at once).
 
 ### Real-world examples of what this makes the reviewer catch
 
@@ -384,9 +447,12 @@ A pull request adds a Supabase table but forgets an org-scoped RLS policy. **Bef
 might say "nice work". **After** (with `supabase.md`): it flags the missing tenant boundary, names the
 migration lines, and reminds that `supabase:verify-rls` must pass.
 
-A pull request uses `fs.readFile` inside a Cloudflare Worker route handler. **After** (with `cloudflare.md`):
-it flags "Node-only API in a Worker path — breaks under OpenNext/Workers runtime," with the specific
-function call and a suggestion.
+A pull request uses `fs.readFile` inside a Cloudflare Worker route handler to read a **local file at
+runtime that the Worker build doesn't bundle and the smoke tests don't cover**. **After** (with
+`cloudflare.md`): it flags "local-filesystem assumption not validated by the Worker build + smoke tests
+— likely breaks under OpenNext/Workers," with the specific function call and a suggestion. (The module
+import alone is NOT the finding — `nodejs_compat` supports `fs`/`path`; only unproven local-filesystem,
+native-module, dynamic-file, or unsupported-runtime assumptions are findings.)
 
 A PR changes a Mastra agent `id`. **After** (with `mastra.md`): it checks the registry + `useAgent`
 and notes "these three must stay in sync."
@@ -402,16 +468,30 @@ real issue exists** — a clean PR that produces nothing is a pass, not a failur
 
 ## Pilot Plan
 
-Phase A — audit (this task; no repo changes)  [DONE]
-Phase B — manual pilot (3–5 PRs, list):
+The pilot phases below are the rollup of the official task map (see Rollout Gantt); they run **in
+task order** — importantly, online manual slash commands only exist **after** the proposed workflow
+(IPI-659 · PRAGENT-004) merges, so nothing below may schedule a PR-comment `/review` before that
+workflow is live. Until then, out-of-band runs use the documented PR-Agent CLI path
+(`.claude/skills/pr-agent/references/ops.md`).
+
+- **Phase A — audit (this task; no repo changes) [DONE].** Maps to PRAGENT-001.
+- **Phase B — seeded-defect validation** (IPI-930 · PRAGENT-005 — after the config/workflow PR merges):
+  draft test PRs with one known defect each (see `pr-agent-expert.md` §7.1); recall + precision gate.
+- **Phase C — initial pilot, ~5 representative PRs** (IPI-660 · PRAGENT-006):
   a. TypeScript UI PR (e.g. a `/app/**` component change)
   b. Supabase migration / RLS PR (iPix `supabase/migrations/_` family)
   c. Mastra/CopilotKit/HITL PR
   d. Cloudflare/Workers, if exists → worker path
   e. Docs-only PR (assert low noise — nothing worth posting)
-  → run `/review` comment on #1 candidate; capture:
-     useful, duplicate, incorrect, noisy 4-bin counts
-     compare vs CodeRabbit's last season of useful comments (historical)
+  → trigger review on the candidates; capture useful / duplicate / incorrect / noisy 4-bin counts;
+  compare vs CodeRabbit's last season of useful comments (historical).
+  **The docs-only member (e) is special:** once the proposed workflow gates labels, a `docs-only`-labeled
+  PR is skipped by auto-review — so that cohort member is exercised through the **maintainer-only manual
+  `/review` path** (the hardened `issue_comment` gate), or removed from the cohort if that workflow is
+  not yet merged.
+- **Phase D — production promotion gate** (IPI-932 · PRAGENT-008 — a **separate, higher bar** from the
+  ~5-PR initial pilot): production decision only after evaluation across **at least 20 PRs** vs metrics:
+  High-confidence useful ≥70% · duplicates <20% · incorrect <10% · noise acceptable · delay non-blocking · cost in budget + security breaches 0.
 
 Expected "expert" finding per pilot type (pass bar — see "proof of specialty" above). These are the
 **seeded-corpus expectations** (`pr-agent-expert.md` §7.1). On real pilot PRs, only require the finding
@@ -425,13 +505,10 @@ when the defect actually exists — a clean PR must stay quiet, not be forced to
 | TypeScript UI | Real correctness/regression or a11y issue with file:line — no formatting nitpicks |
 | Docs-only | Near-silence: no fabricated findings, ideally one "no action needed" comment or nothing |
 
-Phase C — limited automation (merge proposed config + workflow; auto only `/review`; manual `/describe`)
-Phase D — production decision after >=20 PRs vs metrics:
-  High-confidence useful ≥70% · duplicates <20% · incorrect <10% · noise acceptable · delay non-blocking · cost in budget + security breaches 0.
-
 ## Review-contract outline (`docs/pr-review-guidelines.md`)
 
 Suggested (content embedded above, formal file on roll):
+
 - Title: iPix PR-Agent Review Contract
 - Context: one paragraph on who runs PR-Agent (self-hosted GitHub Action, Bedrock Qwen3)
 - Stack facts (Next.js 16, TypeScript, Supabase + RLS, Mastra/CopilotKit, Cloudflare Workers via OpenNext, Mercur)
@@ -448,67 +525,77 @@ ahead of the config PR (PR 2).
 
 Repo rule: **one concern per PR — docs vs config/CI never mixed.**
 
-- **PR 1 — docs-only**: `docs/pr-review-guidelines.md` + the 6 expert sheets
+- **PR 1 — docs-only** (IPI-661 · PRAGENT-003): `docs/pr-review-guidelines.md` + the 6 expert sheets
   `docs/engineering/pr-agent/{supabase,mastra,copilotkit,cloudflare,commerce,github-actions}.md`.
   Merge first so the files exist on the default branch PR-Agent reads.
-- **PR 2 — config/CI-only**: `.pr_agent.toml` + `.github/workflows/pr-agent.yml` + the two GitHub labels (`skip-ai-review`, `docs-only`). PR-Agent tolerates a missing context file with a warning, so the two PRs can land in either order — but merge PR 1 first for a clean pilot.
+- **PR 2 — config/CI-only** (IPI-659 · PRAGENT-004): `.pr_agent.toml` + `.github/workflows/pr-agent.yml` + the two GitHub labels (`skip-ai-review`, `docs-only`). PR-Agent tolerates a missing context file with a warning, so the two PRs can land in either order — but merge PR 1 first for a clean pilot.
 - **PR 3 (code-only, later, only if needed)**: any Mastra/watch changes. Never mixed with the above.
 
 ## Rollout Gantt
 
-Task names use the required `IPI-XXX · TASK-ID — Full Task Name` format. This table uses the
-reviewer-preferred 9-task sequence; the official `PRAGENT-001..010` Linear IDs (incl. upstream-
-verify) are mapped 1:1 in `tasks/pr-agent/reference-registry.md` §7.
+Task names use the required `IPI-NNN · TASK-ID — Full Task Name` format. This table is the **official
+Linear `PRAGENT-001..010` map** — the single authoritative sequence (`tasks/pr-agent/reference-registry.md`
+carries the upstream-verification evidence for PRAGENT-002, not a parallel numbering scheme).
 
 | Id | Task | Owner | Depends | Status |
 |----|------|-------|---------|--------|
 | 001 | IPI-928 · PRAGENT-001 — Audit Existing PR-Agent and AI Review Configuration | — | — | done (this doc) |
-| 002 | IPI-661 · PRAGENT-002 — Add Review Contract + 6 Expert Sheets | you | 001 | queue |
-| 003 | IPI-659 · PRAGENT-003 — Add Restricted PR-Agent Config and Workflow | you | 002 | queue |
-| 004 | IPI-930 · PRAGENT-004 — Validate With Seeded-Defect Test PRs | you | 003 | queue |
-| 005 | IPI-660 · PRAGENT-005 — Pilot Across Representative PRs | you | 004 | queue |
-| 006 | IPI-931 · PRAGENT-006 — Consolidate Automated PR Reviewers | you | 005 | queue |
-| 007 | IPI-932 · PRAGENT-007 — Measure Accuracy, Noise, and Cost | you (verifier) | 006 | queue |
-| 008 | IPI-522 · PRAGENT-008 — Replace Static AWS Credentials With GitHub OIDC | you | 005 | queue |
-| 009 | IPI-933 · PRAGENT-009 — Test and Upgrade Pinned PR-Agent Action Version | you | 003 | queue |
+| 002 | IPI-929 · PRAGENT-002 — Verify Upstream PR-Agent Best Practices and iPix Architecture Alignment | — | 001 | queue |
+| 003 | IPI-661 · PRAGENT-003 — Add iPix PR-Agent Review Contract and Expert Guidance | you | 002 | queue |
+| 004 | IPI-659 · PRAGENT-004 — Add Restricted PR-Agent Configuration and GitHub Workflow | you | 003 | queue |
+| 005 | IPI-930 · PRAGENT-005 — Validate PR-Agent With Controlled Specialty Test Pull Requests | you | 004 | queue |
+| 006 | IPI-660 · PRAGENT-006 — Pilot PR-Agent Across Representative iPix Pull Requests | you | 005 | queue |
+| 007 | IPI-931 · PRAGENT-007 — Consolidate Automated Pull Request Reviewers | you | 006 | queue |
+| 008 | IPI-932 · PRAGENT-008 — Measure PR-Agent Accuracy, Noise, Security, and Cost | you (verifier) | 007 | queue |
+| 009 | IPI-522 · PRAGENT-009 — Replace Static AWS Credentials With GitHub OIDC | you | 006 | queue |
+| 010 | IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action Version | you | 008 | queue |
 
 Overlap notes:
-- `PRAGENT-002` ships **two PRs** (docs-only first, then config/CI) to respect the one-concern-per-PR
-  rule (see Deliverable Seam). The 6 expert-pack sheets ship with the docs PR.
-- `PRAGENT-006` intentionally lands **after** the pilot: no reviewer is removed until PR-Agent proves
-  it can replace its share without losing coverage.
-- `PRAGENT-008` is a **separate security task** (changes AWS trust policy + auth), never bundled with
-  the measurement task.
-- `PRAGENT-009` (version bump) is last and separate: any user-visible change alters settings/prompts/output.
-- Official Linear numbers differ by +1 from this table because `PRAGENT-002`/IPI-929 (verify upstream)
-  is the reference-registry task, not a rollout step — see registry §7 for the exact map.
+
+- **Docs and config are separate tasks with separate PRs.** PRAGENT-003 owns the docs-only PR (review
+  contract + 6 expert sheets); PRAGENT-004 owns the config/workflow-only PR (`.pr_agent.toml` +
+  `pr-agent.yml` + labels). Neither the audit task (PRAGENT-001) nor the upstream-verification registry
+  task (PRAGENT-002) ships any config or workflow change.
+- **PRAGENT-007** (consolidate reviewers) intentionally lands **after** the pilot: no reviewer is
+  removed until PR-Agent proves it can replace its share without losing coverage.
+- **PRAGENT-009** (OIDC) is a **separate security task** (changes AWS trust policy + auth), never
+  bundled with the measurement task.
+- **PRAGENT-010** (version bump) is **last and depends on PRAGENT-008** (measurement / promotion gate):
+  the pinned Action SHA stays unchanged throughout the pilot and promotion measurement so before/after
+  measurements stay comparable; the upgrade is a separate reversible change, not bundled with config.
 
 ## Final implementation prompt (marked: do NOT run in this audit)
 
 ```text
 Follow-up session prompt — do NOT run during this audit.
 
-Repo: /home/sk/ipix. Plan: tasks/pr-agent/pr-agent-plan.md is approved (PRAGENT-001 done).
-Numbering: reviewer-preferred 9-task sequence (mapped to official Linear IDs in reference-registry.md §7).
+Repo: work in the repository root — resolve it with `git rev-parse --show-toplevel`
+(do not assume a workstation-specific path). Plan: tasks/pr-agent/pr-agent-plan.md is approved
+(PRAGENT-001 done). Numbering: the official Linear PRAGENT-001..010 map in the Rollout Gantt.
 
-Implement IPI-661 · PRAGENT-002 — Add Review Contract + 6 Expert Sheets,
-then IPI-659 · PRAGENT-003 — Add Restricted Config and Workflow, in separate PRs (one concern each — repo rule #1):
+Implement IPI-661 · PRAGENT-003 — Add iPix PR-Agent Review Contract and Expert Guidance,
+then IPI-659 · PRAGENT-004 — Add Restricted PR-Agent Configuration and GitHub Workflow,
+in separate PRs (one concern each — repo rule #1):
 
-PR 1 — docs-only (PRAGENT-002):
+PR 1 — docs-only (IPI-661 · PRAGENT-003):
 - Create docs/pr-review-guidelines.md (contract per "Review-contract outline"; target <=120 lines).
 - Create the 6 expert sheets: docs/engineering/pr-agent/supabase.md, mastra.md, copilotkit.md,
-  cloudflare.md, commerce.md, github-actions.md (each <=90 lines; 4 high-traffic wired into context
-  at PRAGENT-003, commerce + github-actions on-demand per §5).
+  cloudflare.md, commerce.md, github-actions.md (each <=90 lines; all authored here, but wiring
+  stays staged per pr-agent-expert.md §5: Phase A = AGENTS.md + contract only; the 4 high-traffic
+  sheets join in Phase B after the measurement gate; commerce + github-actions on-demand in Phase C).
 - No config, no workflow, no product code.
 
-PR 2 — config/CI-only, after PR 1 merges (PRAGENT-003):
-- Replace root .pr_agent.toml with the verified config (see "Proposed .pr_agent.toml").
-- Replace .github/workflows/pr-agent.yml with the restrained workflow (see "Proposed workflow"),
-  keeping the pinned SHA until a reviewed bump.
+PR 2 — config/CI-only, after PR 1 merges (IPI-659 · PRAGENT-004):
+- Replace root .pr_agent.toml with the verified config (see "Proposed .pr_agent.toml" —
+  Phase A baseline: ignore_pr_labels ["skip-ai-review","docs-only"], num_max_findings 5,
+  repo_context_files ["AGENTS.md", "docs/pr-review-guidelines.md"], repo_context_max_lines 500).
+- Replace .github/workflows/pr-agent.yml with the restrained workflow (see "Proposed workflow":
+  pull_request gate on github.event.pull_request.user.type != 'Bot'; token-boundary 4-command
+  issue_comment allowlist), keeping the pinned SHA until a reviewed bump.
 - Add GitHub labels skip-ai-review and docs-only (Settings → Labels).
 - Do NOT touch app/, supabase/, or any source files.
 
-Then verify on ONE UI PR and ONE database/RLS PR:
+Then verify on ONE UI PR and ONE database/RLS PR (IPI-930 · PRAGENT-005 validation):
 - exactly one auto /review comment per PR,
 - "proof of specialty" findings appear on the seeded-defect corpus + where real issues exist (per pilot table),
 - set output_relevant_configurations back to false after these runs,
@@ -516,5 +603,6 @@ Then verify on ONE UI PR and ONE database/RLS PR:
   (publish_output_no_suggestions caveat).
 
 Keep /improve manual. Do NOT bump the pinned SHA in PR 2 — test an upstream bump later as a
-separate reversible change (PRAGENT-009). Report cost via gh api repos/amo-tech-ai/lumina-studio/actions/runs.
+separate reversible change (IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action
+Version, after PRAGENT-008 measurement). Report cost via gh api repos/amo-tech-ai/lumina-studio/actions/runs.
 ```

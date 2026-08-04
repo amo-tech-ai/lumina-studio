@@ -5,8 +5,9 @@
 > **Companion docs:** `tasks/pr-agent/pr-agent-plan.md` (audit + rollout) and `tasks/pr-agent/summary.md`.
 > **Verdict v2+v3 applied:** reviewer corrections merged into §4, §5, §6, §7, §9 — v2: manual-command
 > allowlist, seeded-defect validation, non-absolute expert rules, docs/config task split, pinned version;
-> v3 (PR #802 review): `[config]` vs `[pr_reviewer]` section placement, `publish_output_no_suggestions = false`,
-> preferred 9-task numbering, 6-sheet expert pack, prompt-injection claim scoped to context files.
+> v3 (PR #802 — docs: PR-Agent (PRAGENT-001/002) audit baseline + reference registry):
+> `[config]` vs `[pr_reviewer]` section placement, `publish_output_no_suggestions = false`,
+> official 10-task numbering, 6-sheet expert pack, prompt-injection claim scoped to context files.
 
 ---
 
@@ -14,9 +15,10 @@
 
 **ADOPT — with staged context loading, a measured context budget, a seeded-defect validated pilot, and a hardened manual-command gate.**
 
-PR-Agent already reviews every opened/reopened PR via the pinned GitHub Action (`.github/workflows/pr-agent.yml`, SHA `01569655d8b4825bbe599fd5b2a8de59d5c58390`, Bedrock `qwen.qwen3-coder-next`, least-privilege permissions). It produces genuinely useful, cross-referenced findings (verified on PR #791: race condition + missing error handling). Its ceiling is **domain knowledge**: without repo-owned expert context it cannot know iPix stack constraints (RLS policy+grant pairs, CopilotKit `/v2` + AG-UI wiring, `@ag-ui/mastra` bindings, Workers `nodejs_compat` + OpenNext stubs, Mercur commerce ownership). This plan closes that gap with a 7-file expert pack, a staged central-contract-first context strategy, an allowlisted manual-command gate so the hosted AWS-backed reviewer can't be freeloaded by unknown commenters, and a pilot that measures precision as well as recall.
+PR-Agent already auto-runs `/review` on PRs via the pinned GitHub Action (`.github/workflows/pr-agent.yml`, SHA `01569655d8b4825bbe599fd5b2a8de59d5c58390`, Bedrock `qwen.qwen3-coder-next`, least-privilege permissions) — its actual trigger set is `pull_request` types `[opened, reopened, ready_for_review]` (no push/`synchronize`, no `issue_comment` trigger today, so no online manual slash commands yet). It produces genuinely useful, cross-referenced findings (verified on PR #791 — IPI-915 · AUTH-FIX — E2E evidence: Sign out posts /auth/signout on preview: race condition + missing error handling). Its ceiling is **domain knowledge**: without repo-owned expert context it cannot know iPix stack constraints (RLS policy+grant pairs, CopilotKit `/v2` + AG-UI wiring, `@ag-ui/mastra` bindings, Workers `nodejs_compat` + OpenNext stubs, Mercur commerce ownership). This plan closes that gap with a 7-file expert pack, a staged central-contract-first context strategy, an allowlisted manual-command gate for the *proposed* workflow so the hosted AWS-backed reviewer can't be freeloaded by unknown commenters, and a pilot that measures precision as well as recall.
 
 **Key constraints verified (drive the design):**
+
 - `skills.paths` is **host-level only** — a repo `.pr_agent.toml` cannot attach hosted Agent Skills. Repo-owned knowledge flows through `repo_context_files` (+ `extra_instructions`).
 - **`repo_context_max_lines` defaults to 500** and `repo_context_files` is a static list that loads on every review — so sheets must stay small and staged; a conditional "load only when domain X changed" is not supported.
 - Context loads from the **default branch** (`repo_context_from_default_branch`). This protects the
@@ -25,7 +27,7 @@ PR-Agent already reviews every opened/reopened PR via the pinned GitHub Action (
   content are still untrusted inputs** that can carry injected instructions; the contract must tell
   the reviewer to treat them as evidence, never as instructions.
 - Manual `/` commands on a PR can consume Bedrock resources — the manual-user branch must be guarded by **command + author-association allowlist** (§6).
-- Upstream version variance: PyPI `0.41.0` vs release tag `v0.41.1`. Keep the pinned SHA unchanged throughout the initial pilot; upgrade the Action later as its own task.
+- Upstream version variance (three distinct facts, each with source + verification date — all verified 2026-08-04): **GitHub release tag `v0.41.1`** (published 2026-08-01 · GitHub Releases API); **latest PyPI package `0.39.0`** (uploaded 2026-07-05 · PyPI JSON API); **source-declared version `0.41.0`** in `pyproject.toml` at tag `v0.41.1` (GitHub contents API). Keep the pinned SHA unchanged throughout the initial pilot and promotion measurement; upgrade the Action later as its own task (IPI-933 · PRAGENT-010).
 
 ---
 
@@ -36,7 +38,7 @@ PR-Agent already reviews every opened/reopened PR via the pinned GitHub Action (
 | Item | Verified state |
 |---|---|
 | Action workflow | Pinned SHA, permissions `contents: read` / `pull-requests: write` / `issues: write`, dotted `aws.*` env keys (Bedrock), `auto_review` enabled |
-| Config | `bedrock/qwen.qwen3-coder-next`, `custom_model_max_tokens = 250000` (PR-Agent's session/token "width" cap override for this custom provider; re-validate against the installed upstream default at implementation, retain IPI-519 evidence) |
+| Config | `bedrock/qwen.qwen3-coder-next`, `custom_model_max_tokens = 250000` (token-cap override for the custom model — sets the model/context capacity PR-Agent may use; **not** a cap on generated output size; re-validate against the installed upstream default at implementation, retain IPI-519 evidence) |
 | Observations | Green runs 2026-08-03; real findings on PR #791; CodeRabbit rate-limited that day ("Review limit reached"); PR-Agent is the dependable channel |
 | Docs so far | `tasks/pr-agent/pr-agent-plan.md`, `tasks/pr-agent/summary.md` (+ this file) |
 
@@ -47,14 +49,14 @@ PR-Agent already reviews every opened/reopened PR via the pinned GitHub Action (
 3. **Context budget unknown** — default 500 lines, never measured.
 4. **No false-positive taxonomy** — no shared model of what *not* to flag.
 5. **No scoring loop and no seeded-defect gate** — there is no way to measure precision vs recall or prove the reviewer is not hallucinating specialty findings.
-6. **Manual `/` commands ungated** — anyone who can comment on a PR can trigger Bedrock-backed commands (needs allowlist in PRAGENT-003 config+workflow task).
+6. **No online manual `/` commands today** — the current workflow has no `issue_comment` trigger, so slash commands are CLI-only for now; when the proposed workflow adds the trigger (IPI-659 · PRAGENT-004 config+workflow task), the manual-command branch must carry the §6 allowlist so unknown commenters cannot trigger Bedrock-backed runs.
 
 ### 2.3 Repo facts the expert pack must encode (verified 2026-08-03)
 
 - **Operator app** `app/` — Next.js 16.2.11, React 19.2.1. CopilotKit `@copilotkit/react-core` + `@copilotkit/runtime` **1.61.0** wired over AG-UI via `@ag-ui/client 0.0.57` + `@ag-ui/mastra 1.1.1`. `MastraAgent` is imported from `@ag-ui/mastra` in `app/src/app/api/copilotkit/[[...slug]]/route.ts` (NOT `@copilotkit/runtime`). Route also uses `getCloudflareContext` (`@opennextjs/cloudflare 1.20.2`), `withOperatorAuth` gate, `rejectTenantKeyRewrite`, stream idle timeout.
 - **Mastra** `app/src/mastra/` — mastra `1.1.0-alpha.3`, `@mastra/core 1.41.0`, `@mastra/memory 1.0.1-alpha.1`, `@mastra/observability 1.16.2`, `@mastra/pg 1.12.0`. Registry `index.ts` exposes agents (`visual-identity`, `social-discovery`, `brand-intelligence`, `model-match`, `crm-assistant`, `booking` + `durableAgents`) and workflows (`shoot-wizard`, `brand-intelligence`). **`REQUIRED_AGENT_IDS = ["default", "production-planner", "creative-director"]` startup guard** — a renaming that drops any of these must fail boot. 25+ tools, storage mode flag `MASTRA_STORAGE_MODE=noop`, observability exposed opt-in (`MASTRA_OBSERVABILITY_EXPORTER=1`, `MASTRA_SCHEMA=mastra`, `SensitiveDataFilter`).
 - **Cloudflare/OpenNext** — `app/wrangler.jsonc`: main `.open-next/worker.js`, `compatibility_flags: ["nodejs_compat"]`, ASSETS, WORKER_SELF_REFERENCE + AI_GATEWAY service bindings (preview/prod), IMAGES, Workers AI `ai` binding (IPI-586), Hyperdrive HYPERDRIVE_FRESH via `getCloudflareContext()` only (IPI-619), observability head_sampling_rate 1, per-env `vars` + `secrets.required: [GEMINI_API_KEY, SUPABASE_SERVICE_ROLE_KEY]`. `open-next.config.ts` = `defineCloudflareConfig` with buildCommand `IPIX_CF_BUNDLE_STUBS=1 MASTRA_STORAGE_MODE=noop npm run build`. **Intentional Wrangler `alias` stubs** (`@ast-grep/napi`, `shiki`, `mermaid`, `katex`, `@copilotkit/web-inspector`) — NOT findings. `@mastra/pg`/`pg` deliberately NOT stubbed (Hyperdrive).
-- **Supabase** — 283 migrations, monotonic `YYYYMMDDHHMMSS_name.sql`. Platform patterns (IPI-903/IPI-896): `security invoker`, `set search_path`, explicit `auth.uid()` null check via 42501; **IPI-896 rule: new public tables need explicit `grant … to authenticated` in the same migration** — "RLS on, zero policies, still granted" is the loaded-half/safety-catch model. Findings must verify **policies AND grants**.
+- **Supabase** — 283 migrations, monotonic `YYYYMMDDHHMMSS_name.sql`. Platform patterns (IPI-903/IPI-896): `security invoker`, `set search_path`, explicit `auth.uid()` null check via 42501; **IPI-896 rule (scoped): IPI-896 revoked unsafe default privileges; a new `public` table needs an explicit `grant … to authenticated` in the same migration only when the authenticated app actually needs to reach that table** — "RLS on, zero policies, still granted" is the loaded-half/safety-catch model for app-facing tables. Service-only or reference tables may intentionally stay `service_role`-only, but then need an explicitly documented access model (matches the corrected §4.2 rule). Findings must verify **policies AND grants** — and must not recommend expanding access to tables that don't need it.
 - **Commerce ownership split** — Mercur/Medusa (`my-marketplace/`, Postgres :5433) owns products, variants, inventory, carts, orders, sellers, commissions, payments, fulfillment, payouts. Supabase owns identity, asset metadata, brand intelligence, product links, AI agent logs, analytics, embeddings.
 - **Doc surface** — no `docs/engineering/` directory yet (creation is part of the docs task). Root `AGENTS.md` + `app/AGENTS.md` are the current baseline.
 
@@ -73,7 +75,7 @@ Priority: **installed iPix code/versions > official docs > official repos/exampl
 | `restricted_mode`, `ignore_pr_labels`, `ignore_pr_authors` (under `[config]`); `persistent_comment`, `publish_output_no_suggestions`, `num_max_findings`, `extra_instructions` (under `[pr_reviewer]`) | Verified | same `configuration.toml` — section placement confirmed from the pinned file |
 | `repo_context_files` is a static list — no conditional load per changed domain; repositories should override only the settings they need | Verified | configuration options docs warning |
 | `github.repo` is the default context set; verify repo context resolution works in the Action runtime (repo checkout present) before relying on it at implementation | Verified | action runtime behavior to re-check |
-| Release tag `v0.41.1` (2026-08-01) vs PyPI `0.41.0` | Verified | releases vs `pyproject.toml` — pin SHA, upgrade later |
+| Versions are three distinct values: GitHub release tag `v0.41.1` (published 2026-08-01) ≠ latest PyPI package `0.39.0` (uploaded 2026-07-05) ≠ source-declared `0.41.0` in `pyproject.toml` at tag `v0.41.1` | Verified | GitHub Releases API / PyPI JSON API / `pyproject.toml` via contents API — all verified 2026-08-04; pin SHA, upgrade later |
 | `custom_model_max_tokens` = PR-Agent's model-token-cap override for the external model (not a final-report or output limit) | Verified | settings docs — describe as token-cap override, retain IP-519 evidence |
 
 ### 3.2 CopilotKit / AG-UI
@@ -156,17 +158,20 @@ New docs-only files; neither wired into CI nor auto-imported. Each 50–100 line
 
 ### 4.2 Expert-rule corrections (reviewer-seated — adopt exactly)
 
-**Supabase**
+#### Supabase
+
 - Replace "every table needs an org-scoped RLS policy" with:
   > Every tenant-owned table exposed through the Data API must have RLS enabled, appropriate grants, and policies that enforce the correct organization or ownership boundary. Reference and service-only tables require an explicitly documented access model.
 - Replace "migrations must be reversible" with:
   > Migrations must be forward-safe for existing production data and include rollback, recovery, or roll-forward instructions appropriate to the change.
 
-**CopilotKit**
+#### CopilotKit
+
 - Replace "only `/v2` imports are valid" with:
   > Use import paths and APIs supported by the versions installed in `app/package.json`. Flag imports that conflict with the repository’s proven CopilotKit v2 integration and the TypeScript build.
 
-**Cloudflare**
+#### Cloudflare
+
 - Replace "Workers have no Node runtime" with:
   > Worker-bound code must comply with the configured compatibility date and `nodejs_compat`. Flag local-filesystem assumptions, native-module assumptions, unsupported Node APIs, dynamic file loading, or packages not proven by the Cloudflare build and smoke tests. `nodejs_compat` supports many Node APIs, so `path`/`fs` are not automatically defects — the runtime must be tested against the actual Worker configuration.
 
@@ -174,22 +179,28 @@ New docs-only files; neither wired into CI nor auto-imported. Each 50–100 line
 
 ## 5. Proposed context strategy (staged, central-contract-first)
 
-PR-Agent's `repo_context_files` is a static list loaded on every review with a 500‑line default budget. Therefore it cannot conditionally load a sheet when only a given domain changes. The strategy:
+PR-Agent's `repo_context_files` is a static list loaded on every review with a 500‑line default budget. Therefore it cannot conditionally load a sheet when only a given domain changes. The strategy (**Phase A is what the config PR wires; Phases B–C and any 800-line budget are strictly post-measurement**):
 
-1. **Phase A — baseline.** `repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md"]`, `repo_context_max_lines = 500`. The contract (file #1) holds the essential cross-domain rules so even the baseline has stack context.
-2. **Measure.** Log the effective context size from the run output on 3 varied PRs. Record the number (must be ≤ budget without truncation).
-3. **Phase B — specialist sheets.** Add `supabase.md`, `mastra.md`, `copilotkit.md`, `cloudflare.md` **only if** the Phase A pilot shows the domain adds review value vs the contract already encoding their essential rules. Re-measure each addition.
-4. **Phase C — niche sheets.** Add `commerce.md`, `github-actions.md` only after B measured; these fire less often (few commerce PRs; workflows rare) so they are the most token-expensive per review.
+1. **Phase A — baseline (ships first).** `repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md"]`, `repo_context_max_lines = 500` (upstream default). Only these two files load. The contract (file #1) holds the essential cross-domain rules so even the baseline has stack context.
+2. **Measure (mandatory gate).** Log the effective context size from the run output on **three varied PRs** (e.g. UI, Supabase migration, Cloudflare). Record the number (must be ≤ budget without truncation). No expansion happens before this gate passes.
+3. **Phase B — specialist sheets (post-measurement only).** Add `supabase.md`, `mastra.md`, `copilotkit.md`, `cloudflare.md` **only if** the Phase A measurements show the domains add review value vs the contract already encoding their essential rules. Any budget raise toward ~800 lines happens here, driven by measurement — never as the initial value. Re-measure each addition.
+4. **Phase C — niche sheets (post-measurement only).** Add `commerce.md`, `github-actions.md` only after B measured; these fire less often (few commerce PRs; workflows rare) so they are the most token-expensive per review.
 5. **Advanced option (preferred at Phase C):** keep the essential rules of each domain in the central contract and keep the larger files as maintainers' references (loaded only if specifically justified / on demand), because the static list can't conditionally load per-path.
 
-**Guardrails**
+### Guardrails
+
 - Never load all 7 on iteration 1 (would overflow the 500 default and silently truncate).
 - Do not ship `output_relevant_configurations` as permanent output; use it only during measurement, then remove.
-- The **existing pinned Action SHA stays unchanged throughout the pilot** (PRAGENT-009 owns any version bump later).
+- The **existing pinned Action SHA stays unchanged throughout the pilot and the promotion measurement** (IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action Version owns any bump later).
 
 ---
 
 ## 6. Proposed minimal `.pr_agent.toml` + workflow hardening (verified keys only)
+
+> **Canonical values:** this §6 sample mirrors the **single source of truth** in
+> `pr-agent-plan.md` §Proposed `.pr_agent.toml` — same Phase A context baseline, same
+> `ignore_pr_labels = ["skip-ai-review", "docs-only"]`, same `num_max_findings = 5`.
+> If they ever disagree, the plan document wins and this section must be reconciled.
 
 ```toml
 # Keys verified against pr_agent/settings/configuration.toml (v0.41.x, pinned 01569655…).
@@ -199,29 +210,39 @@ PR-Agent's `repo_context_files` is a static list loaded on every review with a 5
 [config]
 # — model (existing): keep pinned bedrock/qwen.qwen3-coder-next —
 model = "bedrock/qwen.qwen3-coder-next"
-# custom_model_max_tokens = 250000   # force token cap override; re-validate vs upstream default at implement
+custom_model_max_tokens = 250000   # token-cap override for the custom model (model/context
+#                                        # capacity), NOT a cap on generated output size;
+#                                        # re-validate vs upstream default at implement
 
-# — knowledge (staged, §5) —
+# — knowledge (staged, §5: Phase A ships first) —
 repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md"]
 repo_context_from_default_branch = true   # verified key under [config]
-# repo_context_max_lines = 500            # default; raise ONLY after measured overflow (§5)
-# Phase B/C entries appended to the list, one config-only PR each
+repo_context_max_lines = 500              # upstream default; raise ONLY after the §5 measured gate
+# Phase B/C entries appended to the list, one config-only PR each — POST-MEASUREMENT ONLY
 
 # — noise control (repo-wide) —
-restricted_mode = true            # cite-only findings (file:line)
-ignore_pr_labels = ["dependencies"]
+restricted_mode = true            # upstream: skips operations that need contents: write (e.g. pushing
+#                                   # changelog updates to the repo). A repo-write guardrail ONLY — it does
+#                                   # NOT by itself disable approvals or committable code suggestions;
+#                                   # those are pinned off separately below.
+ignore_pr_labels = ["skip-ai-review", "docs-only"]
 ignore_pr_authors = ["dependabot[bot]", "renovate[bot]"]
 ignore_pr_title = ["^\\[Auto", "^release"]   # optional
 
 [pr_reviewer]
-num_max_findings = 15
+num_max_findings = 5
 persistent_comment = true        # one evolving top-level comment, not a new comment per run
 publish_output_no_suggestions = false   # FALSE suppresses empty "no major issues" noise (set false, not true)
+approve_pr_on_self_review = false       # explicit pin of the upstream default: reviews never auto-approve
 # caveat (verified upstream): this can also suppress labels + security-only info on clean PRs —
 # verify during the seed-defect pilot (§7) that security/ticket lines still appear when needed.
+
+[pr_code_suggestions]
+commitable_code_suggestions = false   # explicit pin of the upstream default: /improve output is advice
+#                                       # only — never a committable suggestion.
 ```
 
-**Manual-command trigger (what goes into the config/rollout workflow PR)** — harden the `issue_comment` branch so an unknown external commenter cannot spend Bedrock tokens or run unsupported commands. Use a command **and** an author-association allowlist:
+**Manual-command trigger (what goes into the config/rollout workflow PR)** — harden the `issue_comment` branch so an unknown external commenter cannot spend Bedrock tokens or run unsupported commands. Use a **token-boundary** command allowlist (exact command, or command followed by a space — `/review-malicious`-style matches are rejected) **and** an author-association allowlist, and keep the "comment is on a PR" and non-bot-sender checks:
 
 ```yaml
 (
@@ -233,13 +254,20 @@ publish_output_no_suggestions = false   # FALSE suppresses empty "no major issue
     github.event.comment.author_association
   )
   && (
-    startsWith(github.event.comment.body, '/review')
-    || startsWith(github.event.comment.body, '/describe')
-    || startsWith(github.event.comment.body, '/ask')
-    || startsWith(github.event.comment.body, '/improve')
+    github.event.comment.body == '/review'
+    || github.event.comment.body == '/describe'
+    || github.event.comment.body == '/ask'
+    || github.event.comment.body == '/improve'
+    || startsWith(github.event.comment.body, '/review ')
+    || startsWith(github.event.comment.body, '/describe ')
+    || startsWith(github.event.comment.body, '/ask ')
+    || startsWith(github.event.comment.body, '/improve ')
   )
 )
 ```
+
+Only these four commands are ever accepted: `/review`, `/describe`, `/ask`, `/improve`. Any other
+slash-prefixed comment (`/review-malicious`, `/asker`, `/config`, …) must leave the job unstarted.
 
 Explicitly **not** set here: `skills.paths` (host-only), `output_relevant_configurations` (pilot-only debug), `auto_describe`/`auto_improve`.
 
@@ -281,7 +309,7 @@ Pilot across 5 real PR types: Supabase migration/RLS · Mastra/CopilotKit · Clo
 
 - **≥70% useful**, **<20% duplicates**, **<10% incorrect**, **0 security incidents** → keep expert sheets + authority.
 - Gate failure → roll back phase, fix the sheet (docs PR), re-run on the same corpus.
-- **Consolidation of reviewers is a gate condition:** if multiple AI reviewers (CodeRabbit, Seer, Copilot, etc.) remain enabled, pilot measurements are distorted and noise doubles. So, **before promotion**, align reviewers (see PRAGENT-006).
+- **Consolidation of reviewers is a gate condition:** if multiple AI reviewers (CodeRabbit, Seer, Copilot, etc.) remain enabled, pilot measurements are distorted and noise doubles. So, **before promotion**, align reviewers (see IPI-931 · PRAGENT-007 — Consolidate Automated Pull Request Reviewers).
 
 ---
 
@@ -290,7 +318,7 @@ Pilot across 5 real PR types: Supabase migration/RLS · Mastra/CopilotKit · Clo
 | Risk | Control |
 |---|---|
 | Context overflow silently truncates (default 500) | Measured log per phase (§5) |
-| Reviewer greedy on stubs / `nodejs_compat` / opt-in flags | "Acceptable patterns" + cite-only `restricted_mode` |
+| Reviewer greedy on stubs / `nodejs_compat` / opt-in flags | "Acceptable patterns" + repo-write guardrail `restricted_mode` (skips contents:write operations) + approvals/committable suggestions pinned off |
 | "No Node on Workers" absolute claim | §4.2 Cloudflare rewrite — compatibility date + `nodejs_compat`, build/smoke-evidence |
 | CopilotKit version drift after upgrade | Sheets pin to installed versions; re-validate at implementation |
 | RLS findings ignoring grants | Sheet requires policy+grant verification + `supabase:verify-rls` |
@@ -298,7 +326,7 @@ Pilot across 5 real PR types: Supabase migration/RLS · Mastra/CopilotKit · Clo
 | Host-only `skills.paths` misuse | Noted once — mechanism is `repo_context_files` |
 | Untrusted commenter triggers manual `/review` | §6 allowlist (owner/member/collab + command list) |
 | Token cost of 7-sheet static load | Phased; central-contract-first; niche sheets on demand |
-| Version drift during pilot (0.41.0 vs v0.41.1) | SHA pinned; version upgrade = separate PR (#9) |
+| Version drift during pilot (release tag v0.41.1 vs PyPI 0.39.0 vs pyproject 0.41.0) | SHA pinned; version upgrade = separate task (IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action Version), only after PRAGENT-008 measurement |
 | Duplicate noise vs CodeRabbit | First consolidate reviewers (§7.4), then measure duplicates |
 | `custom_model_max_tokens` misdescribed | Describe as token-cap override with IP-519 evidence |
 
@@ -306,54 +334,56 @@ Pilot across 5 real PR types: Supabase migration/RLS · Mastra/CopilotKit · Clo
 
 ## 9. Dependency-ordered task plan
 
-> **Numbering note:** this table uses the reviewer-preferred **9-task sequence** (007 = measure,
-> 008 = OIDC, 009 = version bump), which `pr-agent-plan.md` (Rollout Gantt) and `summary.md` §8 also
-> use. Official Linear IDs include the extra verify-upstream task (IPI-929), so official numbers are
-> +1 for rows 2–9; the exact preferred↔official map lives in `reference-registry.md` §7.
+> **Numbering note:** this table is the **official Linear `PRAGENT-001..010` map** with full task names,
+> which `pr-agent-plan.md` (Rollout Gantt) and `summary.md` §8 also use. `reference-registry.md`
+> (PRAGENT-002 deliverable) carries the upstream-verification evidence — there is no parallel numbering
+> scheme.
 
-Each task = one concern (AGENTS.md): docs never mixed with code; **docs vs config vs pilot** separated. Task IDs provisional; Linear assigns finals.
+Each task = one concern and **one PR** (AGENTS.md): docs never mixed with code; **docs vs config vs pilot** separated; neither the audit task nor the registry task ships any config or workflow change.
 
-| Order | ID | Full task name | Contains |
-|---|---|---|---|
-| 1 | PRAGENT-001 | Audit Existing AI Review Configuration | (done in `pr-agent-plan.md`; reuse, no new work unless gap) |
-| 2 | PRAGENT-002 | Add PR-Agent Review Contract and Expert Sheets | docs-only: `docs/pr-review-guidelines.md` + all 6 expert sheets (`supabase`, `mastra`, `copilotkit`, `cloudflare`, `commerce`, `github-actions`). Authoring is one docs concern; only the 4 core sheets are wired into context at PRAGENT-003 (§5 ordering) |
-| 3 | PRAGENT-003 | Add Restricted PR-Agent Configuration and GitHub Workflow | config-only + workflow: `repo_context_files` staged Phase A/B (§5), allowlists (manual-command §6), ignore lists, restricted_mode — one config-only PR |
-| 4 | PRAGENT-004 | Validate with Controlled Seeded-Defect Test PRs | config/test only: §7.1 corpus; expect 1 finding each, quiet on clean; revert defects |
-| 5 | PRAGENT-005 | Pilot across Representative Production PRs | pilot run on 5 real PRs §7.2, scored §7.3 |
-| 6 | PRAGENT-006 | Consolidate Automated PR Reviewers | single champion (per §7.4 alignment) |
-| 7 | PRAGENT-007 | Measure Accuracy, Noise, and Cost | report/gates per §7.3 / 7.4 |
-| 8 | PRAGENT-008 | Replace static AWS creds with GitHub OIDC | infra; dependent on pilot quality |
-| 9 | PRAGENT-009 | Test and Upgrade Pinned PR-Agent Action Version | separate because any user-visible change alters settings/prompts/output |
+| Order | Task | Contains |
+|---|---|---|
+| 1 | IPI-928 · PRAGENT-001 — Audit Existing PR-Agent and AI Review Configuration | (done in `pr-agent-plan.md`; reuse, no new work unless gap) |
+| 2 | IPI-929 · PRAGENT-002 — Verify Upstream PR-Agent Best Practices and iPix Architecture Alignment | reference registry docs (`reference-registry.md`) — upstream evidence, not a rollout step |
+| 3 | IPI-661 · PRAGENT-003 — Add iPix PR-Agent Review Contract and Expert Guidance | **docs-only**: `docs/pr-review-guidelines.md` + all 6 expert sheets (`supabase`, `mastra`, `copilotkit`, `cloudflare`, `commerce`, `github-actions`). Authoring is one docs concern; wiring into context is staged per §5 by PRAGENT-004 |
+| 4 | IPI-659 · PRAGENT-004 — Add Restricted PR-Agent Configuration and GitHub Workflow | **config-only + workflow**: `repo_context_files` Phase A baseline (§5), token-boundary manual-command allowlist (§6), ignore lists, `restricted_mode` + approval/committable-suggestion pins — one config-only PR |
+| 5 | IPI-930 · PRAGENT-005 — Validate PR-Agent With Controlled Specialty Test Pull Requests | config/test only: §7.1 corpus; expect 1 finding each, quiet on clean; revert defects |
+| 6 | IPI-660 · PRAGENT-006 — Pilot PR-Agent Across Representative iPix Pull Requests | **initial pilot** on ~5 real PRs §7.2, scored §7.3 |
+| 7 | IPI-931 · PRAGENT-007 — Consolidate Automated Pull Request Reviewers | single champion (per §7.4 alignment) |
+| 8 | IPI-932 · PRAGENT-008 — Measure PR-Agent Accuracy, Noise, Security, and Cost | report/gates per §7.3 / 7.4; **promotion gate needs ≥20 PRs evaluated** |
+| 9 | IPI-522 · PRAGENT-009 — Replace Static AWS Credentials With GitHub OIDC | infra/security; dependent on pilot quality |
+| 10 | IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action Version | **after PRAGENT-008 measurement**: the pin stays fixed through pilot + promotion measurement so before/after comparisons stay valid |
 
-Ordering rationale: docs → config → sealed validation → pilot → consolidate → measure → OIDC → version-upgrade last.
+Ordering rationale: audit → upstream verification → docs → config/workflow → sealed validation → pilot → consolidate → measure → OIDC → version-upgrade last.
 
 ---
 
 ## 10. Implementation prompt (copy/paste only on the implementation task, not now)
 
-```
-IPI-661 · PRAGENT-002 — Implement iPix PR-Agent expert configuration (review contract + 6 sheets).
+```text
+IPI-661 · PRAGENT-003 — Add iPix PR-Agent Review Contract and Expert Guidance (review contract + 6 sheets).
 
 follow tasks/pr-agent/pr-agent-expert.md §1–§8. Rules:
-1. DOCS/CONFIG ONLY. No source code, no workflow change beyond PR #003's allowlist,
+1. DOCS/CONFIG ONLY. No source code, no workflow change beyond IPI-659 · PRAGENT-004's allowlist,
    no label/secret/GitHub surface changes outside the stated tasks.
-2. One concern per commit/PR (AGENTS.md). Sheets = docs-only PRs. Config = config-only PR
+2. One concern per commit/PR (AGENTS.md). Sheets = docs-only PR. Config = config-only PR
    (with the §6 workflow allowlist). Pilot = separate.
 3. Every sheet uses the 8-section skeleton (§4.1) and cites exact official URLs (§3).
 4. Source priority: installed iPix code/versions → official docs → official repos → iPix
    architecture/tests → blogs. Never invent versions or URLs.
-5. Verify before claiming: RLS = policies AND grants (IPI-896); CopilotKit imports vs installed
-   /v2 + @ag-ui/mastra; Mastra registry keys vs REQUIRED_AGENT_IDS; Workers → build/smoke
-   evidence via compatibility date + nodejs_compat (§4.2).
-6. Context = §5 staged. Start AGENTS.md + pr-review-guidelines.md at 500; measure; then add 4
-   specialist sheets; niche sheets (commerce, github-actions) on demand only. Do NOT load all
-   sheets at once.
-7. Control: PR #004 seeded-defect corpus must flag and pass precision (quiet on clean).
+5. Verify before claiming: RLS = policies AND grants (IPI-896, scoped to tables the authenticated
+   app needs); CopilotKit imports vs installed /v2 + @ag-ui/mastra; Mastra registry keys vs
+   REQUIRED_AGENT_IDS; Workers → build/smoke evidence via compatibility date + nodejs_compat (§4.2).
+6. Context = §5 staged. Start AGENTS.md + pr-review-guidelines.md at 500; measure on three varied
+   PRs; then add 4 specialist sheets (post-measurement); niche sheets (commerce, github-actions)
+   on demand only. Do NOT load all sheets at once.
+7. Control: the IPI-930 · PRAGENT-005 seeded-defect corpus must flag and pass precision (quiet on clean).
 8. Do NOT set skills.paths (host-only) nor auto_describe/auto_improve. No manual commands
-   outside the §6 allowlist.
-9. Pilot gates → promotion (≥70% useful, <20% duplicates, <10% incorrect, 0 incidents) before
-   any config expansion, single champion after consolidation.
-10. Keep the pinned Action SHA during pilot. Version bump = PR #009 separate.
+   outside the §6 token-boundary allowlist (/review /describe /ask /improve only).
+9. Pilot gates → promotion (≥70% useful, <20% duplicates, <10% incorrect, 0 incidents, measured
+   across ≥20 PRs) before any config expansion, single champion after consolidation.
+10. Keep the pinned Action SHA during pilot and promotion measurement. Version bump =
+    IPI-933 · PRAGENT-010 — Test and Upgrade the Pinned PR-Agent Action Version (separate).
 11. Close out: update .claude/skills/pr-agent/ + tasks/pr-agent/summary.md.
 ```
 
