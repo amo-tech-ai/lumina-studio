@@ -678,6 +678,8 @@ type GateApprovalRow = {
   approved_at: string | null;
 };
 
+const TERMINAL_INSTANCE_STATUSES = new Set(["completed", "archived", "cancelled"]);
+
 // Pure status resolution — unit-tested without a Supabase mock. Approved only
 // when a persisted row says so; tasks-done alone never yields Approved.
 export function resolveInstanceGates(
@@ -689,6 +691,7 @@ export function resolveInstanceGates(
 ): InstanceGate[] {
   const approvalByPhase = new Map(approvals.map((row) => [row.phase_id, row]));
   const gates: InstanceGate[] = [];
+  const instanceTerminal = TERMINAL_INSTANCE_STATUSES.has(instance.status);
 
   for (const phase of phases) {
     if (!phase.gateType) continue;
@@ -699,9 +702,15 @@ export function resolveInstanceGates(
 
     if (persisted?.status === "approved") {
       status = "approved";
+    } else if (persisted?.status === "discarded") {
+      // Discard is durable: keep the gate unmet/locked until an explicit
+      // regeneration clears or replaces the discarded row (do not auto-reoffer).
+      status = "discarded";
+    } else if (instanceTerminal) {
+      // Matches planner_approve_gate INSTANCE_TERMINAL — never advertise Ready.
+      status = "locked";
+      reason = "This plan is completed, archived, or cancelled.";
     } else {
-      // Discarded proposals can be regenerated: if conditions still pass, surface
-      // Reachable again (RPC allows re-approve after discard).
       const check = gateEngine.checkGate(
         instance,
         phase,
@@ -711,9 +720,6 @@ export function resolveInstanceGates(
       );
       if (check.passed) {
         status = "reachable";
-      } else if (persisted?.status === "discarded") {
-        status = "discarded";
-        reason = check.reason;
       } else {
         status = "locked";
         reason = check.reason;

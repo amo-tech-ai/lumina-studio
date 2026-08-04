@@ -1124,6 +1124,34 @@ describe("approveGate", () => {
     });
   });
 
+  it("normalizes omitted lagDays to 0 before dependency CAS payload", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "approved",
+      phaseId: "ph-cast",
+      approvalId: "ga-1",
+      approvedAt: "2026-08-02T12:00:00.000Z",
+      approvedBy: "u1",
+      changedTasks: [],
+    });
+
+    await approveGate(
+      {
+        ...BASE_APPROVE,
+        // Runtime callers may still omit zero-day lag; type requires lagDays.
+        expectedDependencyEdges: [
+          { fromTaskId: "t1", toTaskId: "t2" } as { fromTaskId: string; toTaskId: string; lagDays: number },
+        ],
+      },
+      client,
+    );
+
+    expect(rpcMock.mock.calls[0][1].p_expected_dependency_edges).toEqual([
+      { fromTaskId: "t1", toTaskId: "t2", lagDays: 0 },
+    ]);
+  });
+
   it("surfaces replayed:true from an idempotent retry", async () => {
     const { client } = mockRpcJson({
       ok: true,

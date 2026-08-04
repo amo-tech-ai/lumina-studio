@@ -556,8 +556,20 @@ export type GateChangedTask = {
 export type GateDependencyEdge = {
   fromTaskId: string;
   toTaskId: string;
-  lagDays?: number;
+  /** Required — RPC JSON CAS compares lagDays exactly (default 0 edges include it). */
+  lagDays: number;
 };
+
+/** Normalize edge snapshots so omitted/undefined lagDays become 0 before RPC CAS. */
+export function normalizeGateDependencyEdges(
+  edges: Array<{ fromTaskId: string; toTaskId: string; lagDays?: number }>,
+): GateDependencyEdge[] {
+  return edges.map((edge) => ({
+    fromTaskId: edge.fromTaskId,
+    toTaskId: edge.toTaskId,
+    lagDays: edge.lagDays ?? 0,
+  }));
+}
 
 export type ApproveGateResult = {
   replayed: boolean;
@@ -622,14 +634,22 @@ export async function approveGate(
     return gateMutationError("planner_approve_gate", "INVALID_INPUT");
   }
 
+  // RPC builds live edges with lagDays always present; normalize so a type-valid
+  // omit (or older caller) cannot false-fail DEPENDENCY_CHANGED on lag 0.
+  const expectedEdges = normalizeGateDependencyEdges(expectedDependencyEdges);
+  const proposedEdges =
+    proposedDependencyEdges === undefined || proposedDependencyEdges === null
+      ? proposedDependencyEdges
+      : normalizeGateDependencyEdges(proposedDependencyEdges);
+
   const { data, error } = await client.rpc("planner_approve_gate", {
     p_instance_id: instanceId,
     p_phase_id: phaseId,
     p_idempotency_key: idempotencyKey,
     p_changed_tasks: changedTasks as unknown as Json,
-    p_expected_dependency_edges: expectedDependencyEdges as unknown as Json,
-    ...(proposedDependencyEdges !== undefined
-      ? { p_proposed_dependency_edges: proposedDependencyEdges as unknown as Json }
+    p_expected_dependency_edges: expectedEdges as unknown as Json,
+    ...(proposedEdges !== undefined
+      ? { p_proposed_dependency_edges: proposedEdges as unknown as Json }
       : {}),
   });
 

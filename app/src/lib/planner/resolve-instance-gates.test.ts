@@ -89,7 +89,7 @@ describe("resolveInstanceGates", () => {
     expect(gates[0].approvalId).toBe("ga-1");
   });
 
-  it("returns Reachable again after discard when conditions still pass", () => {
+  it("keeps Discarded when a discarded row exists even if tasks/role still pass", () => {
     const phases = [phase({ id: "ph-cast", name: "Casting", orderIndex: 1 })];
     const tasks = [task({ id: "t1", phaseId: "ph-cast", status: "done" })];
     const gates = resolveInstanceGates({ ...instance, tasks }, phases, [manager], "u1", [
@@ -101,8 +101,25 @@ describe("resolveInstanceGates", () => {
         approved_at: null,
       },
     ]);
-    expect(gates[0].status).toBe("reachable");
+    expect(gates[0].status).toBe("discarded");
   });
+
+  it.each(["completed", "archived", "cancelled"] as const)(
+    "does not advertise Reachable on terminal instance status=%s",
+    (status) => {
+      const phases = [phase({ id: "ph-cast", name: "Casting", orderIndex: 1 })];
+      const tasks = [task({ id: "t1", phaseId: "ph-cast", status: "done" })];
+      const gates = resolveInstanceGates(
+        { ...instance, status, tasks },
+        phases,
+        [manager],
+        "u1",
+        [],
+      );
+      expect(gates[0].status).toBe("locked");
+      expect(gates[0].reason).toMatch(/completed|archived|cancelled/i);
+    },
+  );
 
   it("skips phases without a gateType", () => {
     const phases = [
