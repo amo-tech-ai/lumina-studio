@@ -2,6 +2,8 @@
 
 import { useAgentContext } from "@copilotkit/react-core/v2";
 
+import { fenceUntrusted } from "@/lib/crm/relationship-evidence";
+
 const STEP_LABELS = ["Basics", "Brief", "Deliverables", "Shot List", "Budget", "Done"];
 
 const STEP_NEXT_ACTIONS: Record<number, string[]> = {
@@ -38,7 +40,7 @@ export function useShootWizardContext({
   const nextActions = STEP_NEXT_ACTIONS[step] ?? [];
 
   useAgentContext({
-    description: `Shoot wizard — operator is on the ${stepLabel} step. ${brandName ? `Planning a shoot for ${brandName}` : "No brand selected yet"}. Campaign: "${shootName || "unnamed"}". Channels: ${channels.length ? channels.join(", ") : "none selected"}. ${brief ? "Creative brief has been written." : "Brief not yet generated."} You can help with: ${nextActions.join(", ")}.`,
+    description: `Shoot wizard — operator is on the ${stepLabel} step. ${brandName ? `Planning a shoot for ${fenceUntrusted(brandName)}` : "No brand selected yet"}. Campaign: ${fenceUntrusted(shootName || "unnamed")}. Channels: ${channels.length ? fenceUntrusted(channels.join(", ")) : "none selected"}. ${brief ? "Creative brief has been written." : "Brief not yet generated."} You can help with: ${nextActions.join(", ")}.`,
     value: {
       wizard_step: stepLabel,
       step_number: step + 1,
@@ -46,7 +48,6 @@ export function useShootWizardContext({
       brand_id: brandId,
       brand_name: brandName,
       selected_channels: channels,
-      current_brief: brief || null,
       brief_written: (brief ?? "").trim().length > 50,
       deliverable_count: ((deliverables ?? []) as unknown[]).length,
       shot_count: ((shots ?? []) as unknown[]).length,

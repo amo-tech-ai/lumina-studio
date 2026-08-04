@@ -19,7 +19,8 @@ const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/roster", "booking"],  // IPI-348
   ["/app/matching", "model-match"],  // IPI-308 · MODEL-P2 (was social-discovery — a placeholder route, never functionally exercised)
   ["/app/preview", "visual-identity"],  // IPI-247
-  ["/app/onboarding", "brand-intelligence"],  // IPI-247
+  ["/app/onboarding", "brand-intelligence"],  // IPI-247 — legacy path redirects (IPI-945)
+  ["/onboarding", "brand-intelligence"], // IPI-945 — standalone v2
 ];
 
 export function resolveAgentId(pathname: string): string {

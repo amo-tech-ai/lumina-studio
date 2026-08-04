@@ -2,6 +2,7 @@
 
 /**
  * IPI-927 · COPILOT-AUTH-LOCAL-001 — session-aware CopilotKit mount.
+ * IPI-934 · COPILOT-AUTH-LOCAL-002 — hydrate error UI + late-session recovery.
  *
  * Operator layout cannot read rotating browser JWTs (Server Component).
  * Wait for Supabase session hydration, then mount CopilotKit with Bearer.
@@ -14,13 +15,25 @@ import { CopilotKit } from "@copilotkit/react-core/v2";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { OperatorPanel } from "@/components/operator-panel/operator-panel";
+import { ShootLoadStateProvider } from "@/components/shoot/shoot-load-state";
 import { ActiveBrandProvider } from "@/context/active-brand-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import "@copilotkit/react-core/v2/styles.css";
 
-const AUTH_HYDRATE_MS = 2500;
+/** Exported for focused hydrate-race tests (IPI-934). */
+export const AUTH_HYDRATE_MS = 2500;
 
-type AuthPhase = "loading" | "authed" | "signed-out";
+type AuthPhase = "loading" | "authed" | "signed-out" | "error";
+
+const shellStyle = {
+  minHeight: "100dvh",
+  display: "grid",
+  placeContent: "center",
+  gap: "0.75rem",
+  padding: "1.5rem",
+  textAlign: "center",
+  fontFamily: "var(--font-sans, Outfit, system-ui, sans-serif)",
+} as const;
 
 export function AuthenticatedCopilotProvider({
   children,
@@ -29,23 +42,58 @@ export function AuthenticatedCopilotProvider({
 }) {
   const [phase, setPhase] = useState<AuthPhase>("loading");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [hydrateAttempt, setHydrateAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    let settled = false;
-    const supabase = createSupabaseBrowserClient();
+    let hasToken = false;
+    // Terminal: rejected/error getSession — do not soft-settle after AUTH_HYDRATE_MS.
+    let hydrateFailed = false;
+    let hydrateTimer: ReturnType<typeof setTimeout> | undefined;
+    // Bumped only on decisive SIGNED_OUT so in-flight getSession cannot remount
+    // CopilotKit with a stale bearer after cross-tab / concurrent logout.
+    let logoutEpoch = 0;
 
-    const apply = (token: string | null) => {
+    const applyToken = (token: string) => {
       if (cancelled) return;
-      settled = true;
-      if (token) {
-        setAccessToken(token);
-        setPhase("authed");
-      } else {
-        setAccessToken(null);
-        setPhase("signed-out");
-      }
+      hasToken = true;
+      setAccessToken(token);
+      setPhase("authed");
     };
+
+    /** Soft settle (timeout null) — late valid session may still promote. */
+    const applySignedOutSoft = () => {
+      if (cancelled) return;
+      hasToken = false;
+      setAccessToken(null);
+      setPhase("signed-out");
+    };
+
+    /** Decisive logout — invalidate in-flight session reads. */
+    const applySignedOutDecisive = () => {
+      if (cancelled) return;
+      hasToken = false;
+      logoutEpoch += 1;
+      setAccessToken(null);
+      setPhase("signed-out");
+    };
+
+    const failHydrate = () => {
+      if (cancelled || hasToken || hydrateFailed) return;
+      hydrateFailed = true;
+      if (hydrateTimer !== undefined) clearTimeout(hydrateTimer);
+      setAccessToken(null);
+      setPhase("error");
+    };
+
+    let supabase: ReturnType<typeof createSupabaseBrowserClient>;
+    try {
+      supabase = createSupabaseBrowserClient();
+    } catch {
+      // Sync factory only — no async constructor path in @/lib/supabase/client.
+      failHydrate();
+      return;
+    }
 
     const {
       data: { subscription },
@@ -55,36 +103,70 @@ export function AuthenticatedCopilotProvider({
       // Null INITIAL_SESSION is not decisive — cookies may still hydrate (OAuth).
       if (event === "INITIAL_SESSION" && !token) return;
       if (event === "SIGNED_OUT") {
-        apply(null);
+        applySignedOutDecisive();
         return;
       }
       if (token) {
-        apply(token);
+        applyToken(token);
       }
     });
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || settled) return;
-      if (session?.access_token) apply(session.access_token);
-    });
+    const handleSessionResult = (
+      startedEpoch: number,
+      result: {
+        data: { session: { access_token?: string } | null };
+        error: { message?: string } | null;
+      },
+      onNullSession: "wait" | "soft-out",
+    ) => {
+      if (cancelled) return;
+      // Drop reads that started before a decisive SIGNED_OUT.
+      if (startedEpoch !== logoutEpoch) return;
+      if (result.error) {
+        failHydrate();
+        return;
+      }
+      const token = result.data.session?.access_token ?? null;
+      if (token) {
+        applyToken(token);
+        return;
+      }
+      if (onNullSession === "soft-out" && !hasToken) {
+        applySignedOutSoft();
+      }
+      // "wait": leave loading for timer / SIGNED_OUT / late auth event.
+    };
 
-    const timer = setTimeout(() => {
-      if (cancelled || settled) return;
-      void supabase.auth.getSession().then(({ data: { session } }) => {
-        if (cancelled || settled) return;
-        apply(session?.access_token ?? null);
-      });
+    const readSession = (onNullSession: "wait" | "soft-out") => {
+      const startedEpoch = logoutEpoch;
+      return supabase.auth.getSession().then(
+        (result) => handleSessionResult(startedEpoch, result, onNullSession),
+        () => {
+          if (cancelled || startedEpoch !== logoutEpoch) return;
+          failHydrate();
+        },
+      );
+    };
+
+    void readSession("wait");
+
+    hydrateTimer = setTimeout(() => {
+      // Never clear an already-applied access token or a terminal hydrate error.
+      if (cancelled || hasToken || hydrateFailed) return;
+      // Soft-settle immediately so a hanging getSession (e.g. Supabase network
+      // timeout) cannot leave the operator on infinite loading. A later token
+      // from this read or onAuthStateChange may still promote.
+      applySignedOutSoft();
+      void readSession("wait");
     }, AUTH_HYDRATE_MS);
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      if (hydrateTimer !== undefined) clearTimeout(hydrateTimer);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [hydrateAttempt]);
 
-  // Stable headers object — Authorization only via prop (not also setHeaders).
-  // Mount is gated on accessToken so the first /info already carries Bearer.
   const headers = useMemo(
     () =>
       accessToken
@@ -92,6 +174,12 @@ export function AuthenticatedCopilotProvider({
         : undefined,
     [accessToken],
   );
+
+  const retryHydrate = () => {
+    setAccessToken(null);
+    setPhase("loading");
+    setHydrateAttempt((n) => n + 1);
+  };
 
   if (phase === "loading") {
     return (
@@ -105,20 +193,38 @@ export function AuthenticatedCopilotProvider({
     );
   }
 
+  if (phase === "error") {
+    return (
+      <div role="alert" data-testid="copilot-auth-error" style={shellStyle}>
+        <p style={{ margin: 0 }}>
+          We couldn&apos;t load your session. Retry or sign in again.
+        </p>
+        <button
+          type="button"
+          data-testid="copilot-auth-retry"
+          onClick={retryHydrate}
+          style={{
+            cursor: "pointer",
+            border: "1px solid var(--primary, #E87C4D)",
+            background: "transparent",
+            color: "var(--primary, #E87C4D)",
+            borderRadius: "0.375rem",
+            padding: "0.5rem 1rem",
+            fontFamily: "inherit",
+          }}
+        >
+          Retry
+        </button>
+        <Link href="/login" style={{ color: "var(--primary, #E87C4D)" }}>
+          Sign in
+        </Link>
+      </div>
+    );
+  }
+
   if (phase === "signed-out" || !accessToken || !headers) {
     return (
-      <div
-        data-testid="copilot-auth-signed-out"
-        style={{
-          minHeight: "100dvh",
-          display: "grid",
-          placeContent: "center",
-          gap: "0.75rem",
-          padding: "1.5rem",
-          textAlign: "center",
-          fontFamily: "var(--font-sans, Outfit, system-ui, sans-serif)",
-        }}
-      >
+      <div data-testid="copilot-auth-signed-out" style={shellStyle}>
         <p style={{ margin: 0 }}>
           Sign in to use the operator workspace and AI assistants.
         </p>
@@ -138,7 +244,12 @@ export function AuthenticatedCopilotProvider({
       headers={headers}
     >
       <ActiveBrandProvider>
-        <OperatorPanel>{children}</OperatorPanel>
+        {/* IPI-921 — ShootLoadState must outlive the shoot page (it resets on
+            unmount); mounted here so the operator shell can key suggestions off
+            the real load outcome instead of the URL. */}
+        <ShootLoadStateProvider>
+          <OperatorPanel>{children}</OperatorPanel>
+        </ShootLoadStateProvider>
       </ActiveBrandProvider>
     </CopilotKit>
   );

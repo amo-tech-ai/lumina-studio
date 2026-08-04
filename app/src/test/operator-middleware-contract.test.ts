@@ -49,6 +49,13 @@ describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-110)", () =
     expect(src).toMatch(/pathname\.startsWith\("\/onboarding\/"\)/);
   });
 
+  // IPI-945 — legacy /app/onboarding must redirect before the auth gate.
+  it("rewrites legacy /app/onboarding to standalone /onboarding", () => {
+    const src = readFileSync(SRC_MIDDLEWARE, "utf8");
+    expect(src).toMatch(/pathname === "\/app\/onboarding"/);
+    expect(src).toMatch(/pathname\.slice\("\/app\/onboarding"\.length\)/);
+  });
+
   it("the matcher does not exclude /onboarding from session refresh", () => {
     const [pattern] = config.matcher;
     // The matcher is a negative lookahead of excluded prefixes; /onboarding must

@@ -27,3 +27,39 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+
+/* IPI-945 — zero-brand redirect lands outside OperatorPanel; keep Sign out reachable. */
+.onboarding-sign-out {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+}
+
+.onboarding-sign-out form {
+  margin: 0;
+}
+
+.onboarding-sign-out button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--onboarding-sub, #6b6560);
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+}
+
+.onboarding-sign-out button:hover {
+  color: var(--onboarding-card, #1e293b);
+  background: color-mix(in srgb, var(--onboarding-card, #1e293b) 8%, transparent);
+}
+
+.onboarding-sign-out button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
