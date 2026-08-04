@@ -9,7 +9,7 @@ alwaysApply: true
 
 When Maya plans Spring Campaign in Command Center, Linear must show who owns what and what is Done — not a stale markdown tracker. Agents that trust repo summaries invent wrong blockers and mark AI chat “fixed” when `/info` still 403s. This rule forces **live Linear** reads, safe writes, and evidence-backed Done.
 
-**Real-world iPix:** Operator signs in → brand/org resolves → CopilotKit `/info` 200 → Production Planner. Governance mistakes (wrong project, fake Done, cycle spam) hide the real failure (e.g. missing `org_members` on **IPI-935**).
+**Real-world iPix:** Operator signs in → brand/org resolves → CopilotKit `/info` 200 → Production Planner. Governance mistakes (wrong project, fake Done, cycle spam) hide the real failure (e.g. missing `org_members` on **IPI-935 · COPILOT-AUTHZ-LOCAL-001 — Fix Signed-In Operator /info 403 (org membership)**).
 
 ## Scope
 

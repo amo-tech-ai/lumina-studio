@@ -88,7 +88,9 @@ Repo trackers (`Universal-design-prompt-4/progress.md`, `todo.md`) → separate 
 
 ## Project updates
 
-After material governance changes, post a project status update (`onTrack` / `atRisk` / `offTrack`) with a plain-English table when MCP allows.
+After material governance changes, **propose** a project status update (`onTrack` / `atRisk` / `offTrack`) with a plain-English table when MCP allows.
+
+Do **not** call `save_status_update` automatically. Ask for explicit user approval immediately before posting; skip if declined or MCP unavailable.
 
 ## Tool map (discover first)
 
