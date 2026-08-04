@@ -61,6 +61,10 @@ beforeEach(() => {
 });
 
 describe("POST /api/brands/[id]/restart-analysis", () => {
+  it("exports maxDuration 120 for the crawl + brand-intelligence window", async () => {
+    const { maxDuration } = await import("./route");
+    expect(maxDuration).toBe(120);
+  });
   it("delegates to restartFailedBrandAnalysis with JWT actor client", async () => {
     const { POST } = await import("./route");
     const res = await POST(req({ websiteUrl: "https://aureliajewelry.com/" }), {
