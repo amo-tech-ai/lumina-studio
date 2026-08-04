@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import "../onboarding.css";
 import { OnboardingFlowLoader } from "./onboarding-flow-loader";
+import { OnboardingSignOut } from "./onboarding-sign-out";
 
 /**
  * IPI-833 · ONB2-UI-001 — /onboarding
@@ -19,7 +20,7 @@ import { OnboardingFlowLoader } from "./onboarding-flow-loader";
  * `onboarding` class (see onboarding.css). Nothing is loaded twice.
  *
  * IPI-835 · B1+C: real onboarding_sessions draft + screen 12 Realtime crawl progress.
- * Approval (Slice D) comes next. Legacy /app/onboarding stays until Slice E after IPI-836.
+ * IPI-945 · Slice E: `/app` zero-brand + `/app/onboarding` redirect here (legacy page retired).
  *
  * Auth is enforced in src/middleware.ts, which gates /onboarding exactly like
  * /app/*. That is UI protection only — data authorization stays with RLS.
@@ -39,6 +40,7 @@ export default function OnboardingPage() {
       data-testid="onboarding-shell"
       className="onboarding fixed inset-0 overflow-y-auto bg-[var(--onboarding-bg)]"
     >
+      <OnboardingSignOut />
       <OnboardingFlowLoader />
     </div>
   );

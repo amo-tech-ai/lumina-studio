@@ -173,7 +173,8 @@ describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
     expect(order).toEqual(["start-brand-crawl", "brand-intelligence"]);
   });
 
-  it("page calls createOrgAndBrand (RPC) before invokeBrandIntelligence", async () => {
+  // IPI-945 · ONB2-ROUTE-001 — legacy /app/onboarding is a redirect to v2 /onboarding.
+  it("legacy /app/onboarding page redirects to standalone /onboarding", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const { fileURLToPath } = await import("node:url");
@@ -184,19 +185,8 @@ describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
       ),
       "utf8",
     );
-    const runBlock = src.match(/const runAnalysis = async \(\) => \{[\s\S]*?\n  \};/)?.[0];
-    expect(runBlock).toBeTruthy();
-    if (!runBlock) return;
-    const shellIdx = runBlock.indexOf("await createOrgAndBrand");
-    const crawlIdx = runBlock.indexOf("await invokeStartBrandCrawl");
-    const edgeIdx = runBlock.indexOf("await invokeBrandIntelligence");
-    expect(shellIdx).toBeGreaterThan(-1);
-    expect(crawlIdx).toBeGreaterThan(shellIdx);
-    expect(edgeIdx).toBeGreaterThan(crawlIdx);
-    expect(runBlock).toMatch(/idempotencyKey/);
-    expect(runBlock).toMatch(/start-brand-crawl failed, continuing with brand intelligence/);
-    expect(src).not.toMatch(/invoke\("brand-intelligence"/);
-    expect(src).toMatch(/setShell/);
-    expect(src).toMatch(/setIdempotencyKey/);
+    expect(src).toMatch(/redirect\(["']\/onboarding["']\)/);
+    expect(src).not.toMatch(/runAnalysis/);
+    expect(src).not.toMatch(/invokeBrandIntelligence/);
   });
 });

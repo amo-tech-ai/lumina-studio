@@ -10,7 +10,12 @@ import {
   updateOnboardingSessionDraft,
   type OnboardingSession,
 } from "@/lib/onboarding";
-import { getOrCreateOnboardingIdempotencyKey } from "./idempotency-key";
+import {
+  getOrCreateOnboardingIdempotencyKey,
+  rotateOnboardingIdempotencyKey,
+  stripFreshOnboardingQueryFromUrl,
+  wantsFreshOnboardingSession,
+} from "./idempotency-key";
 import {
   ONBOARDING_AUTH_REQUIRED,
   resolveOnboardingAuthUser,
@@ -57,7 +62,8 @@ const SAVE_DEBOUNCE_MS = 400;
 
 type Deps = {
   createClient?: () => SupabaseClient;
-  getIdempotencyKey?: () => string;
+  /** Must be user-scoped (IPI-945). Default: getOrCreateOnboardingIdempotencyKey(userId). */
+  getIdempotencyKey?: (userId: string) => string;
   /** Override auth cookie hydrate wait (tests only). */
   authHydrateTimeoutMs?: number;
 };
@@ -78,8 +84,6 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
 
   useEffect(() => {
     let cancelled = false;
-    const getIdempotencyKey =
-      depsRef.current.getIdempotencyKey ?? getOrCreateOnboardingIdempotencyKey;
     setBootstrap({ status: "loading" });
     sessionRef.current = null;
 
@@ -100,10 +104,18 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         });
         // Auth wait can take up to hydrateTimeoutMs — bail if the effect cleaned up.
         if (cancelled) return;
-        const key = getIdempotencyKey();
+        // IPI-945: key is per userId — never reuse a browser-global token across accounts.
+        // `?new=1` (Add brand) rotates so a completed session is not resumed.
+        const customKey = depsRef.current.getIdempotencyKey;
+        const key = customKey
+          ? customKey(user.id)
+          : wantsFreshOnboardingSession()
+            ? rotateOnboardingIdempotencyKey(user.id)
+            : getOrCreateOnboardingIdempotencyKey(user.id);
         const session = await getOrCreateOnboardingSession(supabase, user.id, key);
         if (cancelled) return;
         sessionRef.current = session;
+        stripFreshOnboardingQueryFromUrl();
 
         // Materialized sessions cannot autosave current_screen (RLS). Derive
         // resume screen from brand intake so refresh on DNA review lands on 13.
