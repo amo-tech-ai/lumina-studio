@@ -171,7 +171,15 @@ export async function shiftTask(
     rootTaskId,
     deltaDays,
     idempotencyKey,
-  }: { instanceId: string; rootTaskId: string; deltaDays: number; idempotencyKey: string },
+    expectedUpdatedAt,
+  }: {
+    instanceId: string;
+    rootTaskId: string;
+    deltaDays: number;
+    idempotencyKey: string;
+    /** Client-observed root `updatedAt` from the preview the operator confirmed. */
+    expectedUpdatedAt: string;
+  },
   client: Db,
 ): Promise<MutationResult<ShiftTaskResult>> {
   const [detailResult, depsResult] = await Promise.all([
@@ -214,6 +222,17 @@ export async function shiftTask(
   }
 
   const freshById = new Map(freshRows.map((row) => [row.id, row]));
+
+  // Bind confirmation to the previewed root version — if another operator
+  // moved this task after the UI proposal was shown, reject rather than
+  // applying the delta to dates the user never reviewed.
+  const rootFresh = freshById.get(rootTaskId);
+  if (!rootFresh) {
+    return taskMutationError("planner_shift_task", "NOT_FOUND");
+  }
+  if (rootFresh.updated_at !== expectedUpdatedAt) {
+    return taskMutationError("planner_shift_task", "STALE_VERSION");
+  }
 
   // Overlay fresh dates onto every task the engine is about to reason
   // about (dependency-graph participants, not just the ones that end up
