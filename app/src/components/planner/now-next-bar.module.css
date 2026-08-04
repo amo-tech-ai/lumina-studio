@@ -99,6 +99,53 @@
   background: var(--color-bg-subtle);
 }
 
+/* IPI-483 — SCR-32 amber next-approval card when a gate is reachable. */
+.cardApproval {
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.iconWrapApproval {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-review);
+}
+
+.subApproval {
+  font-size: 12px;
+  color: var(--color-review);
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.reviewButton {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-review);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-action-text, #fff);
+  cursor: pointer;
+}
+
+.reviewButton:hover {
+  filter: brightness(0.95);
+}
+
 @media (max-width: 767px) {
   .bar {
     grid-template-columns: 1fr;
@@ -108,7 +155,8 @@
 /* ponytail: AdaptivePanel lives in .intelligencePanel, which operator-shell
    hides at ≤1024px. Suppress View until IPI-557 ships a mobile detail surface. */
 @media (max-width: 1024px) {
-  .viewButton {
+  .viewButton,
+  .reviewButton {
     display: none;
   }
 }
