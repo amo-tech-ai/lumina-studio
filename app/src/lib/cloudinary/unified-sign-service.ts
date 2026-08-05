@@ -185,6 +185,14 @@ async function signWidgetRequest(
     return { error: pairError, status: 400 };
   }
 
+  // Validate timestamp early to prevent replay attacks
+  const timestamp =
+    typeof paramsToSign.timestamp === "number" ? paramsToSign.timestamp : Number(paramsToSign.timestamp);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(timestamp) || timestamp <= 0 || Math.abs(timestamp - now) > SIGNATURE_TTL_SECONDS) {
+    return { error: "Invalid timestamp", status: 400 };
+  }
+
   const validationError = validateParamsToSign(paramsToSign);
   if (validationError) {
     return { error: validationError, status: 400 };
@@ -193,6 +201,11 @@ async function signWidgetRequest(
   const brandId = parseBrandIdFromCloudinaryContext(paramsToSign.context);
   if (!brandId) {
     return { error: "Invalid brand_id in context", status: 400 };
+  }
+
+  // dev-unauthenticated only allowed in development environment
+  if (operatorId === "dev-unauthenticated" && process.env.NODE_ENV !== "development") {
+    return { error: "Unauthorized", status: 401 };
   }
 
   let orgId: string | null = null;
@@ -212,12 +225,6 @@ async function signWidgetRequest(
       error: "Brand has no organization — DAM taxonomy uploads require org_id. Assign the brand to an org first.",
       status: 400,
     };
-  }
-
-  const timestamp =
-    typeof paramsToSign.timestamp === "number" ? paramsToSign.timestamp : Number(paramsToSign.timestamp);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) {
-    return { error: "Invalid timestamp", status: 400 };
   }
 
   const resourceType =
