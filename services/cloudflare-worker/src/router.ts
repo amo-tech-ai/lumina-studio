@@ -108,9 +108,28 @@ export async function handleChat(
   req: ChatCompletionRequest,
   env: Env,
 ): Promise<Response> {
-  const { provider, config, entry } = selectProvider(req.model, env);
-  const registry = registryOverride(env);
   const requestId = newRequestId();
+
+  // selectProvider throws on an unroutable model or an unknown provider in
+  // MODEL_REGISTRY_OVERRIDE. Resolved before the provider-failure try below so a
+  // configuration fault returns the sanitized envelope handleEmbed already uses
+  // instead of escaping to the worker's top-level catch.
+  let resolved: ReturnType<typeof selectProvider>;
+  try {
+    resolved = selectProvider(req.model, env);
+  } catch (err) {
+    console.error(`[gateway] model resolution failed`, {
+      requestId,
+      model: req.model,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    return gatewayErrorResponse(500, "internal_error", "AI gateway is not configured for this model", {
+      retryable: false,
+      requestId,
+    });
+  }
+  const { provider, config, entry } = resolved;
+  const registry = registryOverride(env);
   const startTime = Date.now();
 
   console.log(`[gateway] chat request started`, {
@@ -378,7 +397,20 @@ export async function handleRequest(
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
 
-  const body = await request.json() as Record<string, unknown>;
+  let body: Record<string, unknown>;
+  try {
+    const parsed = await request.json();
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      throw new Error("body must be a JSON object");
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    // Without this the parse failure reached the top-level catch as an opaque 500;
+    // a malformed body is a client error and callers need the 400 to stop retrying.
+    return gatewayErrorResponse(400, "invalid_request", "Request body must be a JSON object", {
+      retryable: false,
+    });
+  }
 
   if (url.pathname === "/v1/chat/completions") {
     const model = (body.model as string) ?? "default";
