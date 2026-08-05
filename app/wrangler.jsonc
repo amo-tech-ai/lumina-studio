@@ -108,7 +108,9 @@
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
-        "DAM_ENV": "staging"
+        "DAM_ENV": "staging",
+        // OAuth callback redirectOrigin() — preview workers.dev is excluded from SITE_URL by design.
+        "TRUSTED_OAUTH_FORWARDED_HOSTS": "ipix-operator-preview.sk-498.workers.dev"
       },
       "ai": {
         "binding": "AI"
