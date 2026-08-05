@@ -26,7 +26,7 @@ const requireServiceRole =
   process.env.REQUIRE_SERVICE_ROLE === "true";
 
 if (!url || !anonKey) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (or VITE_* aliases)");
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY");
   process.exit(1);
 }
 

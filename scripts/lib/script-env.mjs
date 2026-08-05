@@ -2,12 +2,12 @@
  * Shared dotenv loading + Supabase env resolution for scripts/*.mjs.
  *
  * Every verification / probe / seed script used to carry its own copy of the
- * `.env.local` parser and its own `NEXT_PUBLIC_* ?? NEXT_* ?? VITE_*` chain.
- * The copies had drifted (some stripped quotes, some did not; the alias
- * precedence differed per script), so they are consolidated here.
+ * `.env.local` parser and its own alias chain. The copies had drifted (some
+ * stripped quotes, some did not; the alias precedence differed per script), so
+ * they are consolidated here.
  *
- * Alias precedence is `NEXT_PUBLIC_*` → `NEXT_*` → `VITE_*` → bare, matching
- * AGENTS.md: the Next.js operator app is canonical, the Vite app is retiring.
+ * Alias precedence is `NEXT_PUBLIC_*` → `NEXT_*` → bare. Retired `VITE_*` names
+ * are deliberately not resolved (CLAUDE.md: Vite is retired).
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -18,14 +18,12 @@ export const repoRoot = resolve(import.meta.dirname, "..", "..");
 export const SUPABASE_URL_ALIASES = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_SUPABASE_URL",
-  "VITE_SUPABASE_URL",
   "SUPABASE_URL",
 ];
 
 export const SUPABASE_ANON_KEY_ALIASES = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_SUPABASE_PUBLISHABLE_KEY",
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
 ];
 
 export const SUPABASE_DB_URL_ALIASES = ["SUPABASE_DB_URL", "DATABASE_URL"];

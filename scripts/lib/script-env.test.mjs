@@ -61,20 +61,33 @@ test("firstEnv returns the first non-empty alias", () => {
   assert.equal(firstEnv(["MISSING"], env), undefined);
 });
 
-test("resolveSupabaseEnv prefers NEXT_PUBLIC over NEXT and VITE aliases", () => {
+test("resolveSupabaseEnv prefers NEXT_PUBLIC over the NEXT and bare aliases", () => {
   const env = {
     NEXT_PUBLIC_SUPABASE_URL: "next-public",
     NEXT_SUPABASE_URL: "next",
-    VITE_SUPABASE_URL: "vite",
-    VITE_SUPABASE_PUBLISHABLE_KEY: "vite-anon",
+    SUPABASE_URL: "bare",
+    NEXT_SUPABASE_PUBLISHABLE_KEY: "next-anon",
     SUPABASE_SERVICE_ROLE_KEY: "service",
     DATABASE_URL: "postgres://db",
   };
   assert.deepEqual(resolveSupabaseEnv(env), {
     url: "next-public",
-    anonKey: "vite-anon",
+    anonKey: "next-anon",
     serviceRoleKey: "service",
     dbUrl: "postgres://db",
+  });
+});
+
+test("resolveSupabaseEnv ignores retired VITE_* names", () => {
+  const env = {
+    VITE_SUPABASE_URL: "vite",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "vite-anon",
+  };
+  assert.deepEqual(resolveSupabaseEnv(env), {
+    url: undefined,
+    anonKey: undefined,
+    serviceRoleKey: undefined,
+    dbUrl: undefined,
   });
 });
 

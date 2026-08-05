@@ -7,7 +7,7 @@
  *   node scripts/seed-sample-brand.mjs --email you@example.com
  *   SEED_BRAND_USER_EMAIL=you@example.com node scripts/seed-sample-brand.mjs
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_SUPABASE_URL (or VITE_* equivalents).
+ * Requires SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_SUPABASE_URL.
  */
 import { createClient } from "@supabase/supabase-js";
 
@@ -19,7 +19,7 @@ const { url, serviceRoleKey: serviceKey } = resolveSupabaseEnv();
 
 if (!url || !serviceKey) {
   console.error(
-    "Missing Supabase URL (VITE_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_URL, or NEXT_SUPABASE_URL) and/or SUPABASE_SERVICE_ROLE_KEY",
+    "Missing Supabase URL (NEXT_PUBLIC_SUPABASE_URL or NEXT_SUPABASE_URL) and/or SUPABASE_SERVICE_ROLE_KEY",
   );
   process.exit(1);
 }
