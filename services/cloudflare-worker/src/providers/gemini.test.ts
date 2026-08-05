@@ -198,16 +198,26 @@ describe("geminiProvider.chatStream", () => {
 
     const out = await readAll(response);
     expect(out).toContain('"content":"partial"');
-    expect(out).toContain("upstream_stream_error");
-    expect(out).toContain("upstream reset");
+    expect(out).toContain('"code":"provider_error"');
+    // the cause belongs in the worker log, not in the client's stream
+    expect(out).not.toContain("upstream reset");
     expect(out.trimEnd().endsWith("data: [DONE]")).toBe(true);
+  });
+
+  it("reuses one completion id across every chunk of a stream", async () => {
+    const response = await startStream(streamOf([sseFrame("one"), sseFrame("two")]));
+
+    const out = await readAll(response);
+    const ids = [...out.matchAll(/"id":"(chatcmpl-[^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(1);
   });
 
   it("surfaces malformed SSE JSON instead of silently dropping it", async () => {
     const response = await startStream(streamOf(["data: {not json}\n\n"]));
 
     const out = await readAll(response);
-    expect(out).toContain("upstream_stream_error");
+    expect(out).toContain('"code":"provider_error"');
     expect(out).toContain("data: [DONE]");
   });
 
@@ -220,7 +230,8 @@ describe("geminiProvider.chatStream", () => {
     );
 
     const out = await readAll(response);
-    expect(out).toContain("Gemini stream response had no body");
+    expect(out).toContain('"code":"provider_error"');
+    expect(out).not.toContain("no body");
     expect(out).toContain("data: [DONE]");
   });
 });

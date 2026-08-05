@@ -134,6 +134,8 @@ export const geminiProvider: AiProvider = {
     // SSE lines can be split across chunks; a `data:` line held here until its
     // newline arrives is the difference between resuming it and dropping the token.
     let pending = "";
+    // One id for the whole completion, as OpenAI-compatible clients expect.
+    const completionId = createCompletionId();
 
     const emit = async (line: string): Promise<void> => {
       if (!line.startsWith("data: ")) return;
@@ -144,7 +146,7 @@ export const geminiProvider: AiProvider = {
       const part = candidate?.content?.parts?.[0]?.text ?? "";
       if (!part) return;
       const openaiChunk = {
-        id: createCompletionId(),
+        id: completionId,
         object: "chat.completion.chunk",
         model: req.model,
         choices: [
@@ -195,12 +197,19 @@ export const geminiProvider: AiProvider = {
         await writer.close();
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        console.error("[gemini] stream failed", message);
+        // Cause stays server-side: upstream text and request URLs can carry the
+        // provider API key. The frame mirrors the gateway error envelope.
+        console.error("[gemini] stream failed", { completionId, message });
         try {
           await writer.write(
             encoder.encode(
               `data: ${JSON.stringify({
-                error: { message: `Gemini stream failed: ${message}`, type: "upstream_stream_error" },
+                error: {
+                  code: "provider_error",
+                  message: "Gemini stream failed",
+                  retryable: true,
+                  completionId,
+                },
               })}\n\n`,
             ),
           );
