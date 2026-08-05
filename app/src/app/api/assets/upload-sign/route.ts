@@ -69,6 +69,24 @@ export async function POST(request: Request) {
     workId = rawWorkId;
   }
 
+  // Validate context.shootId and context.campaignId at route boundary
+  if (context !== undefined && context !== null) {
+    if (typeof context !== "object" || Array.isArray(context)) {
+      return NextResponse.json({ error: "Invalid context" }, { status: 400 });
+    }
+    const { shootId, campaignId } = context;
+    if (shootId !== undefined && shootId !== null) {
+      if (typeof shootId !== "string" || !UUID_RE.test(shootId)) {
+        return NextResponse.json({ error: "Invalid context.shootId" }, { status: 400 });
+      }
+    }
+    if (campaignId !== undefined && campaignId !== null) {
+      if (typeof campaignId !== "string" || !UUID_RE.test(campaignId)) {
+        return NextResponse.json({ error: "Invalid context.campaignId" }, { status: 400 });
+      }
+    }
+  }
+
   const supabase = await createOperatorSupabaseClient(request);
   const requestPayload: ServerSignRequest = {
     mode: "server",

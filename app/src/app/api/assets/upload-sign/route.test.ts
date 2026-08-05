@@ -183,6 +183,70 @@ describe("POST /api/assets/upload-sign — workId validation", () => {
   });
 });
 
+describe("POST /api/assets/upload-sign — context validation", () => {
+  it("rejects non-string context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: 42 } as Record<string, unknown> }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.shootId");
+  });
+
+  it("rejects non-UUID context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: "not-a-uuid" } }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.shootId");
+  });
+
+  it("rejects non-string context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: 42 } as Record<string, unknown> }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.campaignId");
+  });
+
+  it("rejects non-UUID context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: "not-a-uuid" } }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.campaignId");
+  });
+
+  it("accepts valid UUID context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: VALID_SHOOT_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts valid UUID context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: VALID_CAMPAIGN_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts context when both IDs are valid", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: VALID_SHOOT_WORK_ID, campaignId: VALID_CAMPAIGN_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts context when omitted", async () => {
+    const res = await post(uploadBody());
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("POST /api/assets/upload-sign — pair consistency", () => {
   it("requires workId for shoots", async () => {
     const res = await post(uploadBody({ workType: "shoots" }));

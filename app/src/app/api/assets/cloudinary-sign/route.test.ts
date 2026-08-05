@@ -41,6 +41,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
 });
@@ -69,11 +70,12 @@ describe("POST /api/assets/cloudinary-sign", () => {
     vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
     vi.stubEnv("CLOUDINARY_API_KEY", "");
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paramsToSign: { timestamp: 1_784_000_000, context: `brand_id=${VALID_BRAND_ID}` } }),
+        body: JSON.stringify({ paramsToSign: { timestamp: now, context: `brand_id=${VALID_BRAND_ID}` } }),
       }),
     );
     expect(res.status).toBe(500);
@@ -178,7 +180,6 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(res.status).toBe(401);
     const data = await res.json();
     expect(data.error).toBe("Unauthorized");
-    vi.useRealTimers();
   });
 
   it("signs widget params when type is omitted", async () => {
