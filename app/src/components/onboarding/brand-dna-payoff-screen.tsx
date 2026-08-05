@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { approveWorkflowDraft } from "@/app/(operator)/app/brand/[id]/actions";
@@ -17,6 +18,27 @@ export type BrandDnaPayoffScreenProps = {
 };
 
 const SAFE_APPROVE_ERROR = "We couldn’t approve your Brand DNA. Please try again.";
+const SAFE_LOAD_ERROR = "We couldn’t load your Brand DNA. Please try again.";
+/** Fail-open bound — never leave screen 13 on Loading forever (IPI-836). */
+const DNA_LOAD_TIMEOUT_MS = 45_000;
+
+/** Dedup Strict Mode double-mount so both effects share one server-action flight. */
+const dnaEnsureInflight = new Map<
+  string,
+  ReturnType<typeof ensureOnboardingIntakeDraft>
+>();
+
+function loadOnboardingDnaDraft(brandId: string, bust = false) {
+  if (bust) dnaEnsureInflight.delete(brandId);
+  let pending = dnaEnsureInflight.get(brandId);
+  if (!pending) {
+    pending = ensureOnboardingIntakeDraft(brandId).finally(() => {
+      dnaEnsureInflight.delete(brandId);
+    });
+    dnaEnsureInflight.set(brandId, pending);
+  }
+  return pending;
+}
 
 /**
  * IPI-835 · D — screen 13: load generated Brand DNA, approve via existing
@@ -52,6 +74,8 @@ function BrandDnaPayoffLive({
 }) {
   const onReadyChangeRef = useRef(onReadyChange);
   onReadyChangeRef.current = onReadyChange;
+  const brandIdRef = useRef(brandId);
+  brandIdRef.current = brandId;
 
   const [pillars, setPillars] = useState<OnboardingDnaPillar[] | null>(null);
   const [brandName, setBrandName] = useState<string | null>(null);
@@ -61,6 +85,7 @@ function BrandDnaPayoffLive({
   const [approving, setApproving] = useState(false);
   const [durableReady, setDurableReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const { intakeStatus } = useBrandAnalysisProgress({
     brandId,
@@ -69,31 +94,51 @@ function BrandDnaPayoffLive({
   });
 
   useEffect(() => {
-    let cancelled = false;
+    const requestedId = brandId;
     setLoading(true);
     setLoadError(null);
 
-    void ensureOnboardingIntakeDraft(brandId).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        setLoadError(result.error);
-        setLoading(false);
-        return;
-      }
-      setPillars(result.pillars);
-      setBrandName(result.brandName);
-      setRunId(result.runId);
-      if (isDurableIntakeReady(result.intakeStatus)) {
-        setDurableReady(true);
-        onReadyChangeRef.current?.(true);
-      }
+    // No `cancelled` flag — Strict Mode cleanup used to drop the only settled
+    // server-action result and leave Loading forever. Share one in-flight call.
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled || brandIdRef.current !== requestedId) return;
+      settled = true;
+      setLoadError(SAFE_LOAD_ERROR);
       setLoading(false);
-    });
+    }, DNA_LOAD_TIMEOUT_MS);
+
+    void loadOnboardingDnaDraft(requestedId, loadAttempt > 0)
+      .then((result) => {
+        if (brandIdRef.current !== requestedId) return;
+        settled = true;
+        clearTimeout(timer);
+        if (!result.ok) {
+          setLoadError(result.error);
+          setLoading(false);
+          return;
+        }
+        setPillars(result.pillars);
+        setBrandName(result.brandName);
+        setRunId(result.runId);
+        if (isDurableIntakeReady(result.intakeStatus)) {
+          setDurableReady(true);
+          onReadyChangeRef.current?.(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (brandIdRef.current !== requestedId) return;
+        settled = true;
+        clearTimeout(timer);
+        setLoadError(SAFE_LOAD_ERROR);
+        setLoading(false);
+      });
 
     return () => {
-      cancelled = true;
+      clearTimeout(timer);
     };
-  }, [brandId]);
+  }, [brandId, loadAttempt]);
 
   // Realtime (or poll) truth — never treat client success alone as ready.
   useEffect(() => {
@@ -101,6 +146,12 @@ function BrandDnaPayoffLive({
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
   }, [intakeStatus]);
+
+  // Keep footer Open iPix in lockstep with the card (approve/realtime races).
+  useEffect(() => {
+    if (!durableReady) return;
+    onReadyChangeRef.current?.(true);
+  }, [durableReady]);
 
   const handleApprove = async () => {
     if (!runId || approving || durableReady) return;
@@ -125,12 +176,16 @@ function BrandDnaPayoffLive({
         );
         return;
       }
-      // Promote ran server-side — wait for Realtime/re-read before enabling Open iPix.
-      const confirm = await ensureOnboardingIntakeDraft(brandId);
-      if (confirm.ok && isDurableIntakeReady(confirm.intakeStatus)) {
-        setDurableReady(true);
-        onReadyChangeRef.current?.(true);
-      }
+      // Server only returns ok after promote committed ready (or already ready).
+      // Do not gate the card on a second ensure/realtime hop — that left Approve
+      // stuck with no dna-ready when re-read lagged.
+      setDurableReady(true);
+      onReadyChangeRef.current?.(true);
+      void ensureOnboardingIntakeDraft(brandId).then((confirm) => {
+        if (!confirm.ok || brandIdRef.current !== brandId) return;
+        setPillars(confirm.pillars);
+        setBrandName(confirm.brandName);
+      });
     } catch {
       setApproveError(SAFE_APPROVE_ERROR);
     } finally {
@@ -168,6 +223,25 @@ function BrandDnaPayoffLive({
         >
           {loadError}
         </p>
+        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+          <button
+            type="button"
+            data-testid="dna-load-retry"
+            onClick={() => {
+              setLoadAttempt((n) => n + 1);
+            }}
+            className="rounded-full bg-[var(--onboarding-cta)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)]"
+          >
+            Retry
+          </button>
+          <Link
+            href="/app/brand"
+            data-testid="dna-return-brand-hub"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--onboarding-hair)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)] no-underline"
+          >
+            Return to Brand Hub
+          </Link>
+        </div>
       </OnboardingCard>
     );
   }

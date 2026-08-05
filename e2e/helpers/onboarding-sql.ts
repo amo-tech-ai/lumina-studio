@@ -21,6 +21,33 @@ export type OnboardingUniqueness = {
   intakeStatus: string | null;
 };
 
+/** Existing QA materialized session ready for Brand DNA (screen 13) — no new crawl. */
+export type DraftReadySession = {
+  sessionId: string;
+  userId: string;
+  idempotencyKey: string;
+  organizationId: string;
+  brandId: string;
+  intakeStatus: string;
+  currentScreen: number | null;
+  crawls: number;
+  brandName: string | null;
+};
+
+export type OnboardingProgressSnapshot = {
+  browser: "healthy" | "unknown";
+  session: "created" | "resumed" | "missing";
+  crawl: "pending" | "running" | "completed" | "unknown";
+  brandIntelligence:
+    | "pending"
+    | "running"
+    | "draft_ready"
+    | "ready"
+    | "failed"
+    | "unknown";
+  intakeStatus: string | null;
+};
+
 /** Match scripts/ipi-894-materialize-race.mjs — strip only SSL URL params node-pg rejects. */
 function sanitizePgConnectionString(raw: string): string {
   try {
@@ -162,6 +189,124 @@ export function assertUniqueMaterialized(u: OnboardingUniqueness): void {
   if (!u.organizationId || !u.brandId) {
     throw new Error("session missing organization_id or brand_id after materialize");
   }
+}
+
+/**
+ * Prefer a reusable draft_ready/scores_complete session for the QA operator.
+ * Never creates rows — resume-only path for DNA / approve / Hub checks.
+ */
+export async function findDraftReadyOnboardingSession(opts?: {
+  userId?: string;
+  email?: string;
+}): Promise<DraftReadySession | null> {
+  return withQaPg(async (client) => {
+    let userId = opts?.userId?.trim() || "";
+    if (!userId) {
+      const email =
+        opts?.email?.trim() || process.env.QA_EMAIL?.trim() || "qa@ipix.test";
+      const u = await client.query<{ id: string }>(
+        `select id::text as id from auth.users where email = $1 limit 1`,
+        [email],
+      );
+      userId = u.rows[0]?.id ?? "";
+    }
+    if (!userId) return null;
+
+    const r = await client.query<{
+      session_id: string;
+      user_id: string;
+      idempotency_key: string;
+      organization_id: string;
+      brand_id: string;
+      intake_status: string;
+      current_screen: number | null;
+      crawls: number;
+      brand_name: string | null;
+    }>(
+      `select s.id::text as session_id,
+              s.user_id::text as user_id,
+              s.idempotency_key,
+              s.organization_id::text as organization_id,
+              s.brand_id::text as brand_id,
+              b.intake_status,
+              s.current_screen::int as current_screen,
+              (select count(*)::int from public.brand_crawls c where c.brand_id = b.id) as crawls,
+              b.name as brand_name
+         from public.onboarding_sessions s
+         join public.brands b on b.id = s.brand_id
+        where s.user_id = $1::uuid
+          and s.status = 'materialized'
+          and b.intake_status in ('draft_ready', 'scores_complete')
+          and s.organization_id is not null
+          and s.brand_id is not null
+        order by s.updated_at desc nulls last
+        limit 1`,
+      [userId],
+    );
+    const row = r.rows[0];
+    if (!row) return null;
+    return {
+      sessionId: row.session_id,
+      userId: row.user_id,
+      idempotencyKey: row.idempotency_key,
+      organizationId: row.organization_id,
+      brandId: row.brand_id,
+      intakeStatus: row.intake_status,
+      currentScreen: row.current_screen,
+      crawls: row.crawls,
+      brandName: row.brand_name,
+    };
+  });
+}
+
+export async function snapshotOnboardingProgress(opts: {
+  brandId: string;
+  session?: "created" | "resumed" | "missing";
+  browser?: "healthy" | "unknown";
+}): Promise<OnboardingProgressSnapshot> {
+  return withQaPg(async (client) => {
+    const brand = await client.query<{ intake_status: string | null }>(
+      `select intake_status from public.brands where id = $1::uuid`,
+      [opts.brandId],
+    );
+    const intake = brand.rows[0]?.intake_status ?? null;
+    const crawl = await client.query<{ job_status: string | null; n: number }>(
+      `select max(job_status) as job_status, count(*)::int as n
+         from public.brand_crawls where brand_id = $1::uuid`,
+      [opts.brandId],
+    );
+    const crawlStatus = (crawl.rows[0]?.job_status ?? "").toLowerCase();
+    const crawlN = crawl.rows[0]?.n ?? 0;
+
+    let crawlPhase: OnboardingProgressSnapshot["crawl"] = "unknown";
+    if (crawlN === 0) crawlPhase = "pending";
+    else if (/run|pend|start/i.test(crawlStatus)) crawlPhase = "running";
+    else crawlPhase = "completed";
+
+    let bi: OnboardingProgressSnapshot["brandIntelligence"] = "unknown";
+    if (!intake) bi = "pending";
+    else if (intake === "draft_ready" || intake === "scores_complete") bi = "draft_ready";
+    else if (intake === "ready") bi = "ready";
+    else if (intake === "failed") bi = "failed";
+    else if (/crawl|analysis|brand_created/i.test(intake)) bi = "running";
+
+    return {
+      browser: opts.browser ?? "healthy",
+      session: opts.session ?? "resumed",
+      crawl: crawlPhase,
+      brandIntelligence: bi,
+      intakeStatus: intake,
+    };
+  });
+}
+
+export function formatOnboardingProgress(p: OnboardingProgressSnapshot): string {
+  return [
+    `Browser: ${p.browser}`,
+    `Onboarding session: ${p.session}`,
+    `Crawl: ${p.crawl}`,
+    `Brand Intelligence: ${p.brandIntelligence}`,
+  ].join("\n");
 }
 
 /**

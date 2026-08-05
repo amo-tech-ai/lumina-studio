@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 import { getQaCredentials, loadEnvLocal } from "./qa-credentials";
+import type { DraftReadySession } from "./onboarding-sql";
 
 /** Login QA operator and land on /onboarding with a fresh idempotency attempt. */
 export async function loginAndOpenFreshOnboarding(page: Page): Promise<boolean> {
@@ -18,6 +20,53 @@ export async function loginAndOpenFreshOnboarding(page: Page): Promise<boolean> 
   await page.goto("/onboarding?new=1");
   await page.waitForURL(/\/onboarding/, { timeout: 20_000 });
   await page.getByRole("button", { name: "Get started" }).waitFor({ timeout: 30_000 });
+  return true;
+}
+
+/**
+ * Login as QA and resume an existing draft_ready session at Brand DNA (screen 13).
+ * Sets the per-user idempotency key before bootstrap so getOrCreate loads that session.
+ */
+export async function loginAndResumeDraftReady(
+  page: Page,
+  session: DraftReadySession,
+): Promise<boolean> {
+  loadEnvLocal(resolveAppEnv());
+  const { email, password } = getQaCredentials();
+  if (!password) return false;
+
+  await page.goto("/login");
+  await page.getByRole("heading", { name: "Welcome" }).waitFor({ timeout: 30_000 });
+  await page.fill('input[name="email"]', email);
+  await page.fill('input[name="password"]', password);
+  await page.locator('form button[type="submit"]').click();
+  await page.waitForURL(/\/(app|onboarding)/, { timeout: 45_000 });
+
+  // Land on /onboarding then seed storage + reload so bootstrap reads the key.
+  await page.goto("/onboarding");
+  await page.evaluate(
+    ({ userId, idem }) => {
+      const prefix = "ipix:onboarding:idempotency:v1:";
+      localStorage.setItem(`${prefix}${userId}`, idem);
+      localStorage.removeItem("ipix:onboarding:idempotency:v1");
+    },
+    { userId: session.userId, idem: session.idempotencyKey },
+  );
+  await page.reload();
+  await page.waitForURL(/\/onboarding/, { timeout: 20_000 });
+
+  // Prefer a single unique locator — heading proves screen 13; then wait out DNA load.
+  await expect(page.getByRole("heading", { name: /brand dna/i })).toBeVisible({
+    timeout: 60_000,
+  });
+  // "Open iPix" can be visible-but-disabled while DNA is still loading — do not treat as ready.
+  await expect(page.getByText(/Loading your Brand DNA/i)).toBeHidden({
+    timeout: 90_000,
+  });
+  await expect(page.getByTestId("approve-brand-dna")).toBeVisible({
+    timeout: 30_000,
+  });
+
   return true;
 }
 
@@ -74,8 +123,13 @@ export async function fillQuestionnaireThroughGrowth(
   // 7 growth
   await selectGrowthOption(page, "social");
   await clickPrimaryCta(page, "Continue");
-  // Autosave is debounced 400ms — wait so mid-flow refresh resumes answers.
-  await page.waitForTimeout(800);
+  // Autosave is debounced 400ms — wait until resume storage has settled.
+  await expect
+    .poll(async () => (await readIdempotencyKey(page)) != null, {
+      timeout: 5_000,
+      intervals: [200, 400, 800],
+    })
+    .toBe(true);
 }
 
 /**
@@ -94,12 +148,17 @@ export async function ensureAnswersForMaterialize(
     const back = page.getByRole("button", { name: /Go back|Back/i });
     if (!(await back.isVisible().catch(() => false))) break;
     await back.click();
-    await page.waitForTimeout(200);
+    await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 5_000 });
   }
 
   await page.getByLabel(/brand name/i).fill(opts.brandName);
   await page.getByLabel(/website/i).fill(opts.websiteUrl);
-  await page.waitForTimeout(800);
+  await expect
+    .poll(async () => page.getByRole("button", { name: "Continue" }).isEnabled(), {
+      timeout: 5_000,
+      intervals: [200, 400, 800],
+    })
+    .toBe(true);
 
   // Re-walk forward through marketing/questions until Continue would materialize
   // (screen 11) or analysis has already started.

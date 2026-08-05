@@ -76,7 +76,8 @@ export function resolvePromoteScoreRows(
     score_type,
     score: byType.get(score_type),
     score_version: 1,
-    source: "promote",
+    // brand_scores_source_check: edge_fn | mastra_agent | manual | benchmarked | firecrawl
+    source: "manual",
     details: { source: "promoteBrandDraft" },
   }));
 }

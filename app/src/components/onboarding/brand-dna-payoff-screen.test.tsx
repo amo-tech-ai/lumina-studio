@@ -58,6 +58,34 @@ describe("BrandDnaPayoffScreen (IPI-835 · D)", () => {
     expect(mockEnsure).toHaveBeenCalledWith("brand-1");
   });
 
+  it("leaves Loading when ensure rejects (IPI-836 resume hang)", async () => {
+    mockEnsure.mockRejectedValueOnce(new Error("network"));
+    render(<BrandDnaPayoffScreen brandId="brand-1" />);
+    await waitFor(() =>
+      expect(screen.getByTestId("dna-status").textContent).not.toMatch(/Loading your Brand DNA/i),
+    );
+    expect(screen.getByTestId("dna-status").textContent).toMatch(/couldn’t load|could not load/i);
+    expect(screen.getByTestId("dna-load-retry")).toBeTruthy();
+    expect(screen.getByTestId("dna-return-brand-hub")).toBeTruthy();
+  });
+
+  it("Retry reloads DNA after a failed ensure", async () => {
+    mockEnsure
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce({
+        ok: true,
+        intakeStatus: "draft_ready",
+        runId: "run-1",
+        brandName: "Maison",
+        pillars: PILLARS,
+      });
+    render(<BrandDnaPayoffScreen brandId="brand-1" />);
+    await waitFor(() => expect(screen.getByTestId("dna-load-retry")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("dna-load-retry"));
+    await waitFor(() => expect(screen.getByTestId("approve-brand-dna")).toBeTruthy());
+    expect(mockEnsure).toHaveBeenCalledTimes(2);
+  });
+
   it("approves via existing approveWorkflowDraft and waits for durable ready", async () => {
     const onReadyChange = vi.fn();
     mockEnsure

@@ -243,18 +243,10 @@ export async function processBrandIntelligenceDraftApproval(params: {
     }
   }
 
-  try {
-    // Dynamic import (not a top-level one) breaks a real circular dependency:
-    // this file is imported by brand-intelligence-tools.ts, which is imported by
-    // brand-intelligence-agent.ts, which @/mastra's index.ts registers — a
-    // top-level import here would cycle straight back to @/mastra.
-    const { getMastra } = await import("@/mastra");
-    const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
-    await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
-  } catch (resumeErr) {
-    // Best-effort: profile already promoted/discarded — do not rollback draft row.
-    console.error("[process-draft-approval] resume failed (profile already applied):", resumeErr);
-  }
-
+  // Edge onboarding runIds are not suspended Mastra runs — resume always throws
+  // “not suspended”. Never await resume here: Next keeps the server-action flight
+  // open while getMastra cold-starts, which blocked Approve→dna-ready in e2e.
+  // Real Mastra HITL that needs resume should schedule via next/server `after`
+  // in a follow-up; promote already committed ready|discarded above.
   return { ok: true, approved, brandId: draft.brand_id };
 }

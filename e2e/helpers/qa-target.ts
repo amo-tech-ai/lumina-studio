@@ -7,6 +7,7 @@ export {
   loadEnvLocalFiles,
   refuseQaTarget,
   assertQaOnly,
+  jwtProjectRef,
   preflightOnboardingQaTarget,
   qaWebServerEnv,
 } from "./qa-target.mjs";

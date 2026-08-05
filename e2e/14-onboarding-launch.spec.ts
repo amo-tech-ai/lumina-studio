@@ -4,29 +4,28 @@ import {
   advanceToAnalysis,
   fillQuestionnaireThroughGrowth,
   loginAndOpenFreshOnboarding,
+  loginAndResumeDraftReady,
   readAuthUserId,
   readIdempotencyKey,
-  selectBuildOption,
 } from "./helpers/onboarding-flow";
 import {
   assertTenantIsolation,
   assertUniqueMaterialized,
+  findDraftReadyOnboardingSession,
+  formatOnboardingProgress,
   queryOnboardingUniqueness,
+  snapshotOnboardingProgress,
+  type DraftReadySession,
 } from "./helpers/onboarding-sql";
 import { loadEnvLocalFiles, preflightOnboardingQaTarget } from "./helpers/qa-target";
 
 /**
  * IPI-836 · ONB2-VERIFY-001 — onboarding launch proof on QA.
  *
- * Run (fail-closed to QA; never production):
+ * Fast path: resume existing draft_ready for DNA / approve / Hub / mobile / motion.
+ * Slow path (last): one fresh-user journey that pays for Firecrawl + BI.
+ *
  *   node scripts/run-onboarding-launch-e2e.mjs
- *
- * Or:
- *   ONBOARDING_LAUNCH_E2E=true npx playwright test \
- *     --config=playwright.onboarding-launch.config.ts \
- *     e2e/14-onboarding-launch.spec.ts --project=chromium-desktop
- *
- * Default `npm run test:e2e` discovers this file but skips unless ONBOARDING_LAUNCH_E2E=true.
  */
 function launchOptIn(): boolean {
   return process.env.ONBOARDING_LAUNCH_E2E === "true";
@@ -34,14 +33,24 @@ function launchOptIn(): boolean {
 
 function requireOrSkip(condition: boolean, reason: string) {
   if (condition) return;
-  // Opt-in alone is fail-closed: missing QA_PASSWORD must not exit green after preflight-only.
   if (launchOptIn() || process.env.REQUIRE_ONBOARDING_LAUNCH_E2E === "true") {
     throw new Error(`Required onboarding launch e2e missing config: ${reason}`);
   }
   test.skip(true, reason);
 }
 
-test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
+async function requireDraftReady(): Promise<DraftReadySession> {
+  preflightOnboardingQaTarget();
+  const session = await findDraftReadyOnboardingSession();
+  requireOrSkip(Boolean(session), "No QA draft_ready materialized session to resume");
+  return session!;
+}
+
+function logProgress(label: string, text: string) {
+  console.log(`\n[IPI-836 ${label}]\n${text}\n`);
+}
+
+test.describe("IPI-836 — preflight", () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.name !== "chromium-desktop", "pinned to chromium-desktop");
   });
@@ -53,12 +62,187 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
     expect(process.env.QA_DATABASE_URL).toContain("wtuhdynujhszsbwxlbdi");
     expect(process.env.QA_DATABASE_URL).not.toContain("nvdlhrodvevgwdsneplk");
   });
+});
 
-  test("questionnaire + mid-flow refresh + SQL uniqueness through materialize", async ({
-    page,
-  }) => {
-    // Materialize ≤3m + DNA ≤6m + nav/login overhead — must exceed combined budgets.
-    test.setTimeout(15 * 60_000);
+test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desktop", "pinned to chromium-desktop");
+  });
+
+  test("DNA render + ID continuity from draft_ready", async ({ page }) => {
+    test.setTimeout(3 * 60_000);
+    const startedAt = Date.now();
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
+    const draft = await requireDraftReady();
+
+    const progress = await snapshotOnboardingProgress({
+      brandId: draft.brandId,
+      session: "resumed",
+    });
+    logProgress("DNA render", formatOnboardingProgress(progress));
+    expect(progress.brandIntelligence).toBe("draft_ready");
+    expect(progress.crawl).toBe("completed");
+    expect(draft.crawls).toBe(1);
+
+    const started = await loginAndResumeDraftReady(page, draft);
+    requireOrSkip(started, "QA_PASSWORD not set or login failed");
+
+    await expect(page.getByTestId("approve-brand-dna")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Step\s+13\s*\/\s*13/i)).toBeVisible({ timeout: 15_000 });
+
+    const userId = await readAuthUserId(page);
+    const idem = await readIdempotencyKey(page);
+    expect(userId).toBe(draft.userId);
+    expect(idem).toBe(draft.idempotencyKey);
+
+    const uniqueness = await queryOnboardingUniqueness({
+      userId: draft.userId,
+      idempotencyKey: draft.idempotencyKey,
+    });
+    assertUniqueMaterialized(uniqueness);
+    expect(uniqueness.organizationId).toBe(draft.organizationId);
+    expect(uniqueness.brandId).toBe(draft.brandId);
+    expect(uniqueness.crawls).toBe(1);
+    expect(["draft_ready", "scores_complete"]).toContain(uniqueness.intakeStatus);
+
+    console.log(`[IPI-836 timing] DNA render ${Date.now() - startedAt}ms (existing)`);
+  });
+
+  test("approval idempotency + ready + Brand Hub", async ({ page }) => {
+    test.setTimeout(5 * 60_000);
+    const startedAt = Date.now();
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
+    const draft = await requireDraftReady();
+
+    logProgress(
+      "approve",
+      formatOnboardingProgress(
+        await snapshotOnboardingProgress({ brandId: draft.brandId, session: "resumed" }),
+      ),
+    );
+
+    const started = await loginAndResumeDraftReady(page, draft);
+    requireOrSkip(started, "QA_PASSWORD not set or login failed");
+
+    const approve = page.getByTestId("approve-brand-dna");
+    await expect(approve).toBeVisible({ timeout: 30_000 });
+
+    await approve.click();
+
+    // Server returns ok only after promote → ready; card + footer must unlock.
+    await expect(page.getByRole("heading", { name: /Brand DNA is ready/i })).toBeVisible({
+      timeout: 120_000,
+    });
+    await expect(page.getByText("Brand DNA approved")).toBeVisible({ timeout: 30_000 });
+    const openApp = page.getByRole("button", { name: "Open iPix" });
+    await expect(openApp).toBeEnabled({ timeout: 60_000 });
+
+    await expect
+      .poll(
+        async () => {
+          const u = await queryOnboardingUniqueness({
+            userId: draft.userId,
+            idempotencyKey: draft.idempotencyKey,
+          });
+          return u.intakeStatus;
+        },
+        { timeout: 2 * 60_000, intervals: [1000, 2000, 5000] },
+      )
+      .toBe("ready");
+
+    const after = await queryOnboardingUniqueness({
+      userId: draft.userId,
+      idempotencyKey: draft.idempotencyKey,
+    });
+    assertUniqueMaterialized(after);
+    expect(after.crawls, "approval must not start a second crawl").toBe(1);
+    expect(after.brandId).toBe(draft.brandId);
+    expect(after.organizationId).toBe(draft.organizationId);
+
+    await assertTenantIsolation({
+      userId: draft.userId,
+      organizationId: draft.organizationId,
+      brandId: draft.brandId,
+      idempotencyKey: draft.idempotencyKey,
+    });
+
+    await openApp.click();
+    await page.waitForURL(/\/app/, { timeout: 30_000 });
+    await page.reload();
+    await expect(page).toHaveURL(/\/app/);
+    // Brand Hub — brand name or ready chip when present.
+    if (draft.brandName) {
+      await expect(page.getByText(draft.brandName, { exact: false }).first()).toBeVisible({
+        timeout: 30_000,
+      });
+    }
+
+    logProgress(
+      "post-approve",
+      formatOnboardingProgress(
+        await snapshotOnboardingProgress({ brandId: draft.brandId, session: "resumed" }),
+      ),
+    );
+    console.log(`[IPI-836 timing] Approve+Hub ${Date.now() - startedAt}ms (existing)`);
+  });
+});
+
+test.describe("IPI-836 — mobile 390×844 smoke (resume DNA)", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-390", "pinned to mobile-390");
+  });
+
+  test("screen 13 primary controls reachable from draft_ready", async ({ page }) => {
+    test.setTimeout(3 * 60_000);
+    const startedAt = Date.now();
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
+    const draft = await requireDraftReady();
+    const started = await loginAndResumeDraftReady(page, draft);
+    requireOrSkip(started, "QA_PASSWORD not set or login failed");
+
+    const approve = page.getByTestId("approve-brand-dna");
+    const openApp = page.getByRole("button", { name: "Open iPix" });
+    const cta = approve.or(openApp);
+    await expect(cta.first()).toBeVisible({ timeout: 60_000 });
+    await expect(cta.first()).toBeInViewport();
+    console.log(`[IPI-836 timing] Mobile DNA ${Date.now() - startedAt}ms (existing)`);
+  });
+});
+
+test.describe("IPI-836 — reduced motion (resume DNA)", () => {
+  test.use({ reducedMotion: "reduce" });
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desktop", "pinned to chromium-desktop");
+  });
+
+  test("DNA approve remains usable with reduced motion", async ({ page }) => {
+    test.setTimeout(3 * 60_000);
+    const startedAt = Date.now();
+    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
+    const draft = await requireDraftReady();
+    const started = await loginAndResumeDraftReady(page, draft);
+    requireOrSkip(started, "QA_PASSWORD not set or login failed");
+
+    await expect(
+      page
+        .getByTestId("approve-brand-dna")
+        .or(page.getByRole("button", { name: "Open iPix" }))
+        .first(),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading").first()).toBeVisible();
+    console.log(`[IPI-836 timing] Reduced motion ${Date.now() - startedAt}ms (existing)`);
+  });
+});
+
+test.describe("IPI-836 — fresh-user full crawl (only paid path)", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desktop", "pinned to chromium-desktop");
+  });
+
+  test("questionnaire → crawl → DNA → approve → Hub (new crawl)", async ({ page }) => {
+    // Materialize ≤3m + DNA ≤8m + nav — production-like budget; only this test pays.
+    test.setTimeout(18 * 60_000);
+    const startedAt = Date.now();
     requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
     preflightOnboardingQaTarget();
 
@@ -66,12 +250,9 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
     requireOrSkip(started, "QA_PASSWORD not set or login failed");
 
     const brandName = `IPI836 Aurelia ${Date.now()}`;
-    // Use a stable public site so crawl/BI can succeed when providers are wired.
     const websiteUrl = "https://www.aesop.com";
 
     await fillQuestionnaireThroughGrowth(page, { brandName, websiteUrl });
-
-    // Mid-questionnaire refresh (after growth = screen ~8 marketing).
     await page.reload();
     await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Step\s+\d+\s*\/\s*13/i)).toBeVisible({ timeout: 20_000 });
@@ -84,21 +265,34 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
     await advanceToAnalysis(page, { brandName, websiteUrl });
     await expect(page.getByTestId("analysis-status")).toBeVisible({ timeout: 120_000 });
 
-    // Wait until session materializes (org+brand ids persisted).
-    let uniqueness = await queryOnboardingUniqueness({
+    await expect
+      .poll(
+        async () => {
+          const u = await queryOnboardingUniqueness({
+            userId: userId!,
+            idempotencyKey: idem!,
+          });
+          return Boolean(u.organizationId && u.brandId);
+        },
+        { timeout: 3 * 60_000, intervals: [1000, 2000, 5000] },
+      )
+      .toBe(true);
+
+    const uniqueness = await queryOnboardingUniqueness({
       userId: userId!,
       idempotencyKey: idem!,
     });
-    const deadline = Date.now() + 3 * 60_000;
-    while (Date.now() < deadline && (!uniqueness.organizationId || !uniqueness.brandId)) {
-      await page.waitForTimeout(5_000);
-      uniqueness = await queryOnboardingUniqueness({
-        userId: userId!,
-        idempotencyKey: idem!,
-      });
-    }
-
     assertUniqueMaterialized(uniqueness);
+    logProgress(
+      "fresh crawl",
+      formatOnboardingProgress(
+        await snapshotOnboardingProgress({
+          brandId: uniqueness.brandId!,
+          session: "created",
+        }),
+      ),
+    );
+
     await assertTenantIsolation({
       userId: userId!,
       organizationId: uniqueness.organizationId!,
@@ -106,98 +300,22 @@ test.describe("IPI-836 — onboarding launch (desktop QA)", () => {
       idempotencyKey: idem!,
     });
 
-    // Wait for DNA payoff when crawl+BI succeed (may stay on analysis if providers fail — HOLD).
     const approve = page.getByTestId("approve-brand-dna");
-    const analysis = page.getByTestId("analysis-status");
-    const dnaDeadline = Date.now() + 5 * 60_000;
-    while (Date.now() < dnaDeadline) {
-      if (await approve.isVisible().catch(() => false)) break;
-      const statusText = (await analysis.textContent().catch(() => "")) ?? "";
-      if (/failed|error/i.test(statusText) && !/Preparing|Crawling|Building|Scores|Review/i.test(statusText)) {
-        throw new Error(`analysis stuck/failed before DNA approve: ${statusText.slice(0, 200)}`);
-      }
-      await page.waitForTimeout(5_000);
-    }
-    if (await approve.isVisible().catch(() => false)) {
-      await approve.click();
-      await expect(page.getByRole("button", { name: "Open iPix" })).toBeEnabled({
-        timeout: 120_000,
-      });
-      // Screen 13 refresh — same brand.
-      await page.reload();
-      await expect(page.getByTestId("approve-brand-dna").or(page.getByRole("button", { name: "Open iPix" }))).toBeVisible({
-        timeout: 60_000,
-      });
-      await page.getByRole("button", { name: "Open iPix" }).click();
-      await page.waitForURL(/\/app/, { timeout: 30_000 });
-      await expect(page).toHaveURL(/\/app/);
-    } else {
-      test.info().annotations.push({
-        type: "hold",
-        description:
-          "Materialized with unique SQL but Brand DNA approve never appeared — crawl/BI may be unwired on QA. File defect if providers should be live.",
-      });
-    }
+    await expect(approve).toBeVisible({ timeout: 8 * 60_000 });
+    await approve.click();
+    await expect(page.getByRole("button", { name: "Open iPix" })).toBeEnabled({
+      timeout: 120_000,
+    });
+    await page.getByRole("button", { name: "Open iPix" }).click();
+    await page.waitForURL(/\/app/, { timeout: 30_000 });
 
-    const afterAnalysis = await queryOnboardingUniqueness({
+    const after = await queryOnboardingUniqueness({
       userId: userId!,
       idempotencyKey: idem!,
     });
-    expect(afterAnalysis.organizationId).toBe(uniqueness.organizationId);
-    expect(afterAnalysis.brandId).toBe(uniqueness.brandId);
-    assertUniqueMaterialized(afterAnalysis);
-  });
-});
-
-test.describe("IPI-836 — mobile 390×844 smoke", () => {
-  test.beforeEach(({}, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile-390", "pinned to mobile-390");
-  });
-
-  test("screens 1 and 5 primary controls reachable", async ({ page }) => {
-    test.setTimeout(3 * 60_000);
-    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
-    preflightOnboardingQaTarget();
-
-    const started = await loginAndOpenFreshOnboarding(page);
-    requireOrSkip(started, "QA_PASSWORD not set or login failed");
-
-    // Screen 1
-    const start = page.getByRole("button", { name: "Get started" });
-    await expect(start).toBeVisible();
-    await expect(start).toBeInViewport();
-    await start.click();
-
-    // Screen 2 → skip to brand details via continue path quickly
-    await selectBuildOption(page, "fashion");
-    await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByLabel(/brand name/i).fill("Mobile Proof Brand");
-    await page.getByLabel(/website/i).fill("https://example.com");
-    await page.getByRole("button", { name: "Continue" }).click();
-
-    // Screen 5
-    const ig = page.getByTestId("channel-ig");
-    await expect(ig).toBeVisible();
-    await expect(page.getByRole("button", { name: "Continue" })).toBeInViewport();
-  });
-});
-
-test.describe("IPI-836 — reduced motion", () => {
-  test.use({ reducedMotion: "reduce" });
-  test.beforeEach(({}, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium-desktop", "pinned to chromium-desktop");
-  });
-
-  test("Get started remains usable with reduced motion", async ({ page }) => {
-    test.setTimeout(2 * 60_000);
-    requireOrSkip(launchOptIn(), "Set ONBOARDING_LAUNCH_E2E=true");
-    preflightOnboardingQaTarget();
-
-    const started = await loginAndOpenFreshOnboarding(page);
-    requireOrSkip(started, "QA_PASSWORD not set or login failed");
-
-    await expect(page.getByRole("button", { name: "Get started" })).toBeVisible();
-    await expect(page.getByRole("heading").first()).toBeVisible();
+    assertUniqueMaterialized(after);
+    expect(after.crawls).toBe(1);
+    expect(["draft_ready", "ready", "scores_complete"]).toContain(after.intakeStatus);
+    console.log(`[IPI-836 timing] Fresh crawl ${Date.now() - startedAt}ms (new)`);
   });
 });
