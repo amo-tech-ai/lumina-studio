@@ -135,14 +135,14 @@ export async function signCloudinaryUpload(
   supabase: SupabaseClient,
   operatorId: string,
 ): Promise<SignResult | SignError> {
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const apiSecret = process.env["CLOUDINARY_API_SECRET"];
   if (!apiSecret) {
     console.error("[unified-sign] CLOUDINARY_API_SECRET missing");
     return { error: "Internal error", status: 500 };
   }
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const cloudName = process.env["CLOUDINARY_CLOUD_NAME"];
+  const apiKey = process.env["CLOUDINARY_API_KEY"];
 
   if (!apiKey) {
     console.error("[unified-sign] CLOUDINARY_API_KEY missing");
