@@ -59,7 +59,7 @@ export const AnalysisProgressBanner = ({
           {errorMessage ??
             (canRestart
               ? "Restart analysis to pick up where it stopped — you don't need to redo onboarding."
-              : "Use Re-analyze to retry. If this persists, contact support.")}
+              : "Analysis failed. If this persists, contact support.")}
         </p>
         {canRestart ? <RestartAnalysisButton brandId={brandId} /> : null}
       </div>

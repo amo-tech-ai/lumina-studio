@@ -43,11 +43,6 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), message: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
-  applyDraft: vi.fn(),
-  reanalyzeBrand: vi.fn(),
-}));
-
 vi.mock("@/lib/intelligence/use-intelligence-panel", () => ({
   useIntelligencePanel: vi.fn(),
 }));
@@ -205,7 +200,7 @@ describe("IntelligencePanel", () => {
     expect(screen.getByText(/Loading intelligence/i)).toBeTruthy();
   });
 
-  it("shows brand detail no-DNA block when scores are missing", () => {
+  it("shows no legacy recovery block when scores are missing", () => {
     vi.mocked(usePathname).mockReturnValue(`/app/brand/${BRAND_ID}`);
     vi.mocked(useIntelligencePanel).mockReturnValue({
       data: {
@@ -220,8 +215,10 @@ describe("IntelligencePanel", () => {
 
     renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme Co" />);
 
-    expect(screen.getByRole("button", { name: "Analyse brand" })).toBeTruthy();
-    expect(screen.getByText(/Run Brand Intelligence to build Acme Co/i)).toBeTruthy();
+    // IPI-919 — the legacy "Analyse brand" recovery block (reanalyzeBrand) is
+    // retired; failed-analysis recovery is Brand Hub's Restart analysis only.
+    expect(screen.queryByRole("button", { name: "Analyse brand" })).toBeNull();
+    expect(screen.queryByText(/Run Brand Intelligence to build Acme Co/i)).toBeNull();
     expect(screen.queryByLabelText("Brand health scores")).toBeNull();
   });
 

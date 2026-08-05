@@ -61,9 +61,10 @@ export async function discardBrandDraft(
 
   const { data: updated, error } = await supabase
     .from("brands")
-    // IPI-744 — clear any lingering reanalyzeBrand lock token here too; see
-    // promote-draft.ts for why this matters (a delayed Run A restore could
-    // otherwise still match on a stale token after rejection).
+    // IPI-744 — clear any lingering analysis lock token here too; see
+    // promote-draft.ts for why this matters (a delayed restore from an
+    // in-flight restart-failed-analysis run could otherwise still match on
+    // a stale token after rejection).
     .update({
       ai_profile_draft: null,
       intake_status: restoreStatus,
