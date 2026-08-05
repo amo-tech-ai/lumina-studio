@@ -110,12 +110,13 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(data.folder).toBe(
       `ipix/dev/${VALID_ORG_ID}/${VALID_BRAND_ID}/products`,
     );
+    expect(JSON.stringify(data)).not.toContain("test-api-secret");
   });
 
   it("returns 400 for expired timestamp", async () => {
     const { POST } = await importRoute();
     const now = Math.floor(Date.now() / 1000);
-    const expiredTimestamp = now - 3601; // WIDGET_SIGNATURE_TTL_SECONDS is 3600
+    const expiredTimestamp = now - 3601; // WIDGET_MAX_AGE_SECONDS is 3600
     const paramsToSign = {
       timestamp: expiredTimestamp,
       context: `brand_id=${VALID_BRAND_ID}`,
@@ -132,10 +133,10 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(data.error).toBe("Invalid timestamp");
   });
 
-  it("returns 400 for future timestamp outside window", async () => {
+  it("returns 400 for future timestamp outside skew window", async () => {
     const { POST } = await importRoute();
     const now = Math.floor(Date.now() / 1000);
-    const futureTimestamp = now + 3601; // WIDGET_SIGNATURE_TTL_SECONDS is 3600
+    const futureTimestamp = now + 301; // WIDGET_FUTURE_SKEW_SECONDS is 300
     const paramsToSign = {
       timestamp: futureTimestamp,
       context: `brand_id=${VALID_BRAND_ID}`,

@@ -23,7 +23,8 @@ import {
 } from "@/lib/cloudinary/taxonomy";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WIDGET_SIGNATURE_TTL_SECONDS = 3600; // Cloudinary documented validity: 1 hour
+const WIDGET_MAX_AGE_SECONDS = 60 * 60; // Cloudinary documented validity: 1 hour (past limit)
+const WIDGET_FUTURE_SKEW_SECONDS = 5 * 60; // Clock skew tolerance: 5 minutes (future limit)
 const SERVER_SIGNATURE_TTL_SECONDS = 300; // Internal server expiry: 5 minutes
 
 export type SignMode = "widget" | "server";
@@ -193,11 +194,16 @@ async function signWidgetRequest(
     return { error: pairError, status: 400 };
   }
 
-  // Validate timestamp early to prevent replay attacks (widget: 1-hour Cloudinary validity)
+  // Validate timestamp early to prevent replay attacks (widget: asymmetric limits)
   const timestamp =
     typeof paramsToSign.timestamp === "number" ? paramsToSign.timestamp : Number(paramsToSign.timestamp);
   const now = Math.floor(Date.now() / 1000);
-  if (!Number.isFinite(timestamp) || timestamp <= 0 || Math.abs(timestamp - now) > WIDGET_SIGNATURE_TTL_SECONDS) {
+  if (
+    !Number.isFinite(timestamp) ||
+    timestamp <= 0 ||
+    timestamp < now - WIDGET_MAX_AGE_SECONDS ||
+    timestamp > now + WIDGET_FUTURE_SKEW_SECONDS
+  ) {
     return { error: "Invalid timestamp", status: 400 };
   }
 
