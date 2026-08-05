@@ -1,4 +1,4 @@
-import { gatewayErrorResponse } from "./gateway-errors";
+import { gatewayErrorResponse, newRequestId } from "./gateway-errors";
 import { handleRequest, type Env } from "./router";
 
 export default {
@@ -13,12 +13,19 @@ export default {
 
       return response;
     } catch (err) {
+      // Generate the request id before logging so the server log, the response
+      // body, and the x-request-id header all share one correlation id.
+      const requestId = newRequestId();
       // Log the cause server-side; the client gets the sanitized envelope with a
       // requestId to correlate. Raw messages here can carry upstream bodies and
       // request URLs (which embed provider API keys).
-      console.error("[gateway] unhandled error", err instanceof Error ? err.stack ?? err.message : String(err));
+      console.error("[gateway] unhandled error", {
+        requestId,
+        error: err instanceof Error ? err.stack ?? err.message : String(err),
+      });
       return gatewayErrorResponse(500, "internal_error", "AI gateway encountered an unexpected error", {
         retryable: false,
+        requestId,
       });
     }
   },
