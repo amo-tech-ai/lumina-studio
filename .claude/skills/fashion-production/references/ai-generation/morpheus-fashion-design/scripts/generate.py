@@ -27,7 +27,7 @@ sys.stderr.reconfigure(line_buffering=True)
 
 DEPLOYMENT_ID = "1e16994d-da67-4f30-9ade-250f964b2abc"
 API_BASE = "https://api.comfydeploy.com/api"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyALsNu1lZ6F9NFvRe1Hgb59QGZWpVRttcs")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 
 def get_api_key(provided_key: str | None) -> str | None:
@@ -177,7 +177,11 @@ def main():
     parser.add_argument("--seed", type=int, default=-1, help="Random seed (-1 for random)")
     
     args = parser.parse_args()
-    
+
+    if not GEMINI_API_KEY:
+        print("[ERROR] GEMINI_API_KEY is not set. Export it before running.", flush=True)
+        sys.exit(1)
+
     # Warn about AUTO values - they produce boring results!
     auto_packs = []
     if args.style_pack == "auto":
