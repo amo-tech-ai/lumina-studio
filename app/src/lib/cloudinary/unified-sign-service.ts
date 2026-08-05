@@ -1,4 +1,4 @@
-// IPI-XXX — Unified Cloudinary signing service
+// IPI-951 · CLD-SIGN-001 — Consolidate Cloudinary Signing Endpoints into Unified Service
 // Consolidates cloudinary-sign (widget-provided params) and upload-sign (server-generated params)
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -90,68 +90,41 @@ async function resolveOrgIdAndValidateOwnership(
   }
 
   // Validate shoot/campaign ownership
-  if (workType === "shoots" && workId) {
-    const { data: shoot, error: shootErr } = await supabase
-      .from("shoot_portfolio_view")
+  const checkOwnership = async (table: string, id: string, errorMsg: string): Promise<SignError | null> => {
+    const { data, error } = await supabase
+      .from(table)
       .select("id")
-      .eq("id", workId)
+      .eq("id", id)
       .eq("brand_id", brandId)
       .maybeSingle();
-    if (shootErr) {
-      console.error("[unified-sign] shoot ownership query failed:", shootErr.message);
-      return { orgId: "", error: { error: "Internal error", status: 500 } };
+    if (error) {
+      console.error(`[unified-sign] ${table} ownership query failed:`, error.message);
+      return { error: "Internal error", status: 500 };
     }
-    if (!shoot) {
-      return { orgId: "", error: { error: "Shoot does not belong to the requested brand", status: 403 } };
+    if (!data) {
+      return { error: errorMsg, status: 403 };
     }
+    return null;
+  };
+
+  if (workType === "shoots" && workId) {
+    const ownershipError = await checkOwnership("shoot_portfolio_view", workId, "Shoot does not belong to the requested brand");
+    if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (workType === "campaigns" && workId) {
-    const { data: campaign, error: campaignErr } = await supabase
-      .from("campaigns")
-      .select("id")
-      .eq("id", workId)
-      .eq("brand_id", brandId)
-      .maybeSingle();
-    if (campaignErr) {
-      console.error("[unified-sign] campaign ownership query failed:", campaignErr.message);
-      return { orgId: "", error: { error: "Internal error", status: 500 } };
-    }
-    if (!campaign) {
-      return { orgId: "", error: { error: "Campaign does not belong to the requested brand", status: 403 } };
-    }
+    const ownershipError = await checkOwnership("campaigns", workId, "Campaign does not belong to the requested brand");
+    if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (shootId) {
-    const { data: shoot, error: shootErr } = await supabase
-      .from("shoot_portfolio_view")
-      .select("id")
-      .eq("id", shootId)
-      .eq("brand_id", brandId)
-      .maybeSingle();
-    if (shootErr) {
-      console.error("[unified-sign] context shoot ownership query failed:", shootErr.message);
-      return { orgId: "", error: { error: "Internal error", status: 500 } };
-    }
-    if (!shoot) {
-      return { orgId: "", error: { error: "Context shoot does not belong to the requested brand", status: 403 } };
-    }
+    const ownershipError = await checkOwnership("shoot_portfolio_view", shootId, "Context shoot does not belong to the requested brand");
+    if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (campaignId) {
-    const { data: campaign, error: campaignErr } = await supabase
-      .from("campaigns")
-      .select("id")
-      .eq("id", campaignId)
-      .eq("brand_id", brandId)
-      .maybeSingle();
-    if (campaignErr) {
-      console.error("[unified-sign] context campaign ownership query failed:", campaignErr.message);
-      return { orgId: "", error: { error: "Internal error", status: 500 } };
-    }
-    if (!campaign) {
-      return { orgId: "", error: { error: "Context campaign does not belong to the requested brand", status: 403 } };
-    }
+    const ownershipError = await checkOwnership("campaigns", campaignId, "Context campaign does not belong to the requested brand");
+    if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   return { orgId: brandCheck.orgId };
@@ -279,7 +252,7 @@ async function signServerRequest(
   operatorId: string,
   apiSecret: string,
   apiKey: string,
-  cloudName: string | undefined,
+  cloudName: string,
 ): Promise<SignResult | SignError> {
   const { brandId, resourceType, filename, workType, workId, context, notificationUrl } = request;
 

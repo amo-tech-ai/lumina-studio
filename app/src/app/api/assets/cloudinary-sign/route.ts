@@ -1,4 +1,4 @@
-// IPI-XXX — Unified Cloudinary signing endpoint (widget-provided params)
+// IPI-951 · CLD-SIGN-001 — Consolidate Cloudinary Signing Endpoints into Unified Service
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
