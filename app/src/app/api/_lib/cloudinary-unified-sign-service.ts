@@ -1,5 +1,3 @@
-"use server";
-
 // IPI-951 · CLD-SIGN-001 — Consolidate Cloudinary Signing Endpoints into Unified Service
 // Consolidates cloudinary-sign (widget-provided params) and upload-sign (server-generated params)
 
@@ -25,7 +23,8 @@ import {
 } from "@/lib/cloudinary/taxonomy";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SIGNATURE_TTL_SECONDS = 300;
+const WIDGET_SIGNATURE_TTL_SECONDS = 3600; // Cloudinary documented validity: 1 hour
+const SERVER_SIGNATURE_TTL_SECONDS = 300; // Internal server expiry: 5 minutes
 
 export type SignMode = "widget" | "server";
 
@@ -145,7 +144,13 @@ export async function signCloudinaryUpload(
   }
 
   const cloudName = process.env["CLOUDINARY_CLOUD_NAME"];
-  const apiKey = process.env["CLOUDINARY_API_KEY"];
+  
+  // Resolve API key by mode: widget supports public key fallback, server requires server key
+  const apiKey =
+    request.mode === "widget"
+      ? process.env["CLOUDINARY_API_KEY"] ||
+        process.env["NEXT_PUBLIC_CLOUDINARY_API_KEY"]
+      : process.env["CLOUDINARY_API_KEY"];
 
   if (!apiKey) {
     console.error("[unified-sign] CLOUDINARY_API_KEY missing");
@@ -188,11 +193,11 @@ async function signWidgetRequest(
     return { error: pairError, status: 400 };
   }
 
-  // Validate timestamp early to prevent replay attacks
+  // Validate timestamp early to prevent replay attacks (widget: 1-hour Cloudinary validity)
   const timestamp =
     typeof paramsToSign.timestamp === "number" ? paramsToSign.timestamp : Number(paramsToSign.timestamp);
   const now = Math.floor(Date.now() / 1000);
-  if (!Number.isFinite(timestamp) || timestamp <= 0 || Math.abs(timestamp - now) > SIGNATURE_TTL_SECONDS) {
+  if (!Number.isFinite(timestamp) || timestamp <= 0 || Math.abs(timestamp - now) > WIDGET_SIGNATURE_TTL_SECONDS) {
     return { error: "Invalid timestamp", status: 400 };
   }
 
@@ -333,6 +338,6 @@ async function signServerRequest(
     uploadUrl: cloudName ? `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload` : undefined,
     filename: sanitizeUploadFilename(filename),
     params: paramsToSign,
-    expiresAt: timestamp + SIGNATURE_TTL_SECONDS,
+    expiresAt: timestamp + SERVER_SIGNATURE_TTL_SECONDS,
   };
 }

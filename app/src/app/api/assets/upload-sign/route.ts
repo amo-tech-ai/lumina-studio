@@ -5,7 +5,7 @@ import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 import {
   signCloudinaryUpload,
   type ServerSignRequest,
-} from "@/lib/cloudinary/unified-sign-service";
+} from "@/app/api/_lib/cloudinary-unified-sign-service";
 import { type WorkType } from "@/lib/cloudinary/taxonomy";
 
 export const dynamic = "force-dynamic";

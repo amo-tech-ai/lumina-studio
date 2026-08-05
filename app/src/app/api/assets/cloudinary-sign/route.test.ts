@@ -115,7 +115,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
   it("returns 400 for expired timestamp", async () => {
     const { POST } = await importRoute();
     const now = Math.floor(Date.now() / 1000);
-    const expiredTimestamp = now - 301; // SIGNATURE_TTL_SECONDS is 300
+    const expiredTimestamp = now - 3601; // WIDGET_SIGNATURE_TTL_SECONDS is 3600
     const paramsToSign = {
       timestamp: expiredTimestamp,
       context: `brand_id=${VALID_BRAND_ID}`,
@@ -135,7 +135,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
   it("returns 400 for future timestamp outside window", async () => {
     const { POST } = await importRoute();
     const now = Math.floor(Date.now() / 1000);
-    const futureTimestamp = now + 301; // SIGNATURE_TTL_SECONDS is 300
+    const futureTimestamp = now + 3601; // WIDGET_SIGNATURE_TTL_SECONDS is 3600
     const paramsToSign = {
       timestamp: futureTimestamp,
       context: `brand_id=${VALID_BRAND_ID}`,
