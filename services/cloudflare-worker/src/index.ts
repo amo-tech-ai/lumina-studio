@@ -1,3 +1,4 @@
+import { gatewayErrorResponse } from "./gateway-errors";
 import { handleRequest, type Env } from "./router";
 
 export default {
@@ -12,11 +13,13 @@ export default {
 
       return response;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return Response.json(
-        { error: "gateway_error", message },
-        { status: 500 },
-      );
+      // Log the cause server-side; the client gets the sanitized envelope with a
+      // requestId to correlate. Raw messages here can carry upstream bodies and
+      // request URLs (which embed provider API keys).
+      console.error("[gateway] unhandled error", err instanceof Error ? err.stack ?? err.message : String(err));
+      return gatewayErrorResponse(500, "internal_error", "AI gateway encountered an unexpected error", {
+        retryable: false,
+      });
     }
   },
 };

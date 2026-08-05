@@ -140,6 +140,89 @@ describe("geminiProvider.chatStream", () => {
     expect(url).toContain(":streamGenerateContent?");
     expect(url).toContain("alt=sse");
   });
+
+  const sseFrame = (text: string) =>
+    `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`;
+
+  const streamOf = (chunks: string[], failWith?: Error): ReadableStream<Uint8Array> => {
+    const encoder = new TextEncoder();
+    let i = 0;
+    return new ReadableStream({
+      // pull, not start: an error enqueued alongside the chunks in start() would
+      // discard them before the consumer ever reads one.
+      pull(controller) {
+        if (i < chunks.length) {
+          controller.enqueue(encoder.encode(chunks[i++]));
+          return;
+        }
+        if (failWith) controller.error(failWith);
+        else controller.close();
+      },
+    });
+  };
+
+  const readAll = async (response: Response): Promise<string> => {
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let out = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      out += decoder.decode(value, { stream: true });
+    }
+    return out;
+  };
+
+  const startStream = async (body: ReadableStream<Uint8Array>) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, body }));
+    return geminiProvider.chatStream(
+      { model: "gemini-3.1-flash-lite", messages: [{ role: "user", content: "hi" }], stream: true },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+  };
+
+  it("keeps content when an SSE frame is split across chunks", async () => {
+    const frame = sseFrame("HELLO");
+    const split = Math.floor(frame.length / 2);
+    const response = await startStream(streamOf([frame.slice(0, split), frame.slice(split)]));
+
+    const out = await readAll(response);
+    expect(out).toContain('"content":"HELLO"');
+    expect(out).toContain("data: [DONE]");
+  });
+
+  it("emits an error frame and terminates when the upstream stream errors", async () => {
+    const response = await startStream(
+      streamOf([sseFrame("partial")], new Error("upstream reset")),
+    );
+
+    const out = await readAll(response);
+    expect(out).toContain('"content":"partial"');
+    expect(out).toContain("upstream_stream_error");
+    expect(out).toContain("upstream reset");
+    expect(out.trimEnd().endsWith("data: [DONE]")).toBe(true);
+  });
+
+  it("surfaces malformed SSE JSON instead of silently dropping it", async () => {
+    const response = await startStream(streamOf(["data: {not json}\n\n"]));
+
+    const out = await readAll(response);
+    expect(out).toContain("upstream_stream_error");
+    expect(out).toContain("data: [DONE]");
+  });
+
+  it("reports a missing upstream body instead of hanging the stream", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, body: null }));
+
+    const response = await geminiProvider.chatStream(
+      { model: "gemini-3.1-flash-lite", messages: [{ role: "user", content: "hi" }], stream: true },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    const out = await readAll(response);
+    expect(out).toContain("Gemini stream response had no body");
+    expect(out).toContain("data: [DONE]");
+  });
 });
 
 describe("geminiProvider.embed", () => {
