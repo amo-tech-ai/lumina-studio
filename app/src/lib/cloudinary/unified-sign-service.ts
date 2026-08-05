@@ -142,7 +142,7 @@ export async function signCloudinaryUpload(
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
 
   if (!apiKey) {
     console.error("[unified-sign] CLOUDINARY_API_KEY missing");

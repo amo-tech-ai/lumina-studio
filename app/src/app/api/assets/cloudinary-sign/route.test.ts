@@ -34,7 +34,7 @@ function supabaseClientStub() {
 beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
-  vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_API_KEY", "test-api-key");
+  vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1", name: "QA" });
   mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null });
   mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
@@ -62,6 +62,23 @@ describe("POST /api/assets/cloudinary-sign", () => {
       }),
     );
     expect(res.status).toBe(401);
+  });
+
+  it("returns 500 when CLOUDINARY_API_KEY is missing", async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+    vi.stubEnv("CLOUDINARY_API_KEY", "");
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign: { timestamp: 1_784_000_000, context: `brand_id=${VALID_BRAND_ID}` } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Internal error");
   });
 
   it("returns full params for prepareUploadParams", async () => {
