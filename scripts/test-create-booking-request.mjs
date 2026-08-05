@@ -8,36 +8,20 @@
  * Requires SUPABASE_DB_URL or DATABASE_URL (direct Postgres) + service role for seed.
  */
 import { randomBytes } from "node:crypto";
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
+import { createReporter } from "./lib/check-reporter.mjs";
+import { loadRepoEnv, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
+loadRepoEnv();
 
-const dbUrl = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
-const url =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.NEXT_SUPABASE_URL ??
-  process.env.VITE_SUPABASE_URL;
-const anonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const {
+  url,
+  anonKey,
+  serviceRoleKey: serviceKey,
+  dbUrl,
+} = resolveSupabaseEnv();
 
 if (!dbUrl || !url || !anonKey || !serviceKey) {
   console.error("Missing SUPABASE_DB_URL, Supabase URL, anon key, and/or service role key");
@@ -51,21 +35,8 @@ const password =
   `Ipi340-${randomBytes(16).toString("hex")}!`;
 const email = `ipi340-booking-${stamp}@example.com`;
 
-let failures = 0;
-
-function fail(msg) {
-  console.error(`FAIL: ${msg}`);
-  failures += 1;
-}
-
-function pass(msg) {
-  console.log(`ok: ${msg}`);
-}
-
-function assert(cond, msg) {
-  if (cond) pass(msg);
-  else fail(msg);
-}
+const reporter = createReporter();
+const { fail, pass, assert } = reporter;
 
 function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
@@ -347,8 +318,12 @@ async function main() {
     await cleanupResources(ctx);
   }
 
-  console.log(failures === 0 ? "\n✓ create_booking_request tests passed" : `\n✗ ${failures} failure(s)`);
-  process.exit(failures === 0 ? 0 : 1);
+  console.log(
+    reporter.failures === 0
+      ? "\n✓ create_booking_request tests passed"
+      : `\n✗ ${reporter.failures} failure(s)`,
+  );
+  process.exit(reporter.failures === 0 ? 0 : 1);
 }
 
 main().catch((err) => {

@@ -6,49 +6,23 @@
  * Run (from repo root, with .env.local):
  *   node --experimental-strip-types scripts/verify-planner-scenario.mjs
  */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { PlannerEngine } from "../app/src/lib/planner/engine.ts";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
+import { createReporter } from "./lib/check-reporter.mjs";
+import { loadRepoEnv, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-const url =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-const anonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+loadRepoEnv();
+
+const { url, anonKey, serviceRoleKey: serviceKey } = resolveSupabaseEnv();
 
 if (!url || !anonKey || !serviceKey) {
   console.error("Missing NEXT_PUBLIC_SUPABASE_URL / anon key / SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
 }
 
-let failures = 0;
-function fail(m) {
-  console.error(`FAIL: ${m}`);
-  failures += 1;
-}
-function pass(m) {
-  console.log(`ok: ${m}`);
-}
-function assert(c, m) {
-  if (c) pass(m);
-  else fail(m);
-}
+const reporter = createReporter();
+const { fail, pass, assert } = reporter;
 
 const stamp = Date.now();
 const password = "PlannerScenarioPass123!";
@@ -418,6 +392,6 @@ try {
 }
 
 console.log(
-  `\n${failures === 0 ? "Planner scenario verification passed" : `Planner scenario verification failed (${failures})`}`,
+  `\n${reporter.failures === 0 ? "Planner scenario verification passed" : `Planner scenario verification failed (${reporter.failures})`}`,
 );
-process.exit(failures === 0 ? 0 : 1);
+process.exit(reporter.failures === 0 ? 0 : 1);

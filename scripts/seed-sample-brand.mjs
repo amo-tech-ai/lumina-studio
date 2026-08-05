@@ -9,30 +9,13 @@
  *
  * Requires SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_SUPABASE_URL (or VITE_* equivalents).
  */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
+import { loadRepoEnv, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
+loadRepoEnv();
 
-const url =
-  process.env.VITE_SUPABASE_URL ??
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.NEXT_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { url, serviceRoleKey: serviceKey } = resolveSupabaseEnv();
 
 if (!url || !serviceKey) {
   console.error(

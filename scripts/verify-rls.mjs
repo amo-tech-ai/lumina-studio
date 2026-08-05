@@ -5,44 +5,22 @@
  *
  * Run: npm run supabase:verify-rls
  */
-import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const requireFromApp = createRequire(resolve(import.meta.dirname, "../app/package.json"));
+import { createReporter } from "./lib/check-reporter.mjs";
+import { resolvePgSsl, sanitizePgConnectionString } from "./lib/pg-ssl.mjs";
+import { loadRepoEnv, repoRoot as root, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-const root = resolve(import.meta.dirname, "..");
+const requireFromApp = createRequire(resolve(root, "app/package.json"));
 
-/** Load KEY=VALUE lines from a dotenv-style file into process.env (first writer wins). */
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
-
-loadEnvFile(resolve(root, ".env.local"));
 // IPI-245 — HYPERDRIVE_DATABASE_URL (the hyperdrive_mastra_runtime credential) lives
-// in app/.env.local, not the root file. Merge it in so the runtime-role probe below
-// can find it locally without duplicating the secret into a second file.
-loadEnvFile(resolve(root, "app", ".env.local"));
+// in app/.env.local, not the root file. `includeApp` merges it in so the runtime-role
+// probe below can find it locally without duplicating the secret into a second file.
+loadRepoEnv({ includeApp: true });
 
-const url =
-  process.env.VITE_SUPABASE_URL ??
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.NEXT_SUPABASE_URL;
-const anonKey =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { url, anonKey, serviceRoleKey: serviceKey } = resolveSupabaseEnv();
 const requireServiceRole =
   process.env.REQUIRE_SERVICE_ROLE === "1" ||
   process.env.REQUIRE_SERVICE_ROLE === "true";
@@ -75,54 +53,6 @@ function resolveMastraRuntimeProbeUrl() {
   );
 }
 
-/**
- * TLS for privileged pg probes against the Supabase pooler.
- *
- * Default: rejectUnauthorized:true + Supabase Root 2021 CA
- * (scripts/certs/supabase-prod-ca-2021.crt — same trust anchor as Dashboard
- * "SSL Configuration" / prod-ca-2021.crt). Override path via PGSSLROOTCERT or
- * VERIFY_RLS_PG_SSLROOTCERT. Local-only escape hatch:
- * VERIFY_RLS_PG_INSECURE_SSL=1 (never set in CI).
- *
- * Pair with {@link sanitizePgConnectionString}: node-postgres replaces a
- * supplied `ssl` object when the connection string still carries sslmode /
- * sslrootcert / sslcert / sslkey (see https://node-postgres.com/features/ssl).
- *
- * @see https://supabase.com/docs/guides/platform/ssl-enforcement
- */
-function resolvePgSsl() {
-  if (
-    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
-  ) {
-    return { rejectUnauthorized: false };
-  }
-  const caPath =
-    process.env.PGSSLROOTCERT ||
-    process.env.VERIFY_RLS_PG_SSLROOTCERT ||
-    resolve(root, "scripts/certs/supabase-prod-ca-2021.crt");
-  if (existsSync(caPath)) {
-    return {
-      rejectUnauthorized: true,
-      ca: readFileSync(caPath, "utf8"),
-    };
-  }
-  return { rejectUnauthorized: true };
-}
-
-/** Strip SSL query params so a Client `ssl` option is not overwritten. */
-function sanitizePgConnectionString(connectionString) {
-  try {
-    const u = new URL(connectionString);
-    for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey"]) {
-      u.searchParams.delete(key);
-    }
-    return u.toString();
-  } catch {
-    return connectionString;
-  }
-}
-
 // Same pattern as REQUIRE_SERVICE_ROLE: without this flag, a CI job that never
 // wires a usable Postgres URL gets a silent console.warn skip on the one probe
 // that actually exercises hyperdrive_mastra_runtime's grants/RLS.
@@ -142,22 +72,9 @@ const password = "RlsTestPass123!";
 const emailA = `plt002-rls-a-${stamp}@example.com`;
 const emailB = `plt002-rls-b-${stamp}@example.com`;
 
-let failures = 0;
+const reporter = createReporter();
+const { fail, pass, assert } = reporter;
 let cleanupFailures = 0;
-
-function fail(message) {
-  console.error(`FAIL: ${message}`);
-  failures += 1;
-}
-
-function pass(message) {
-  console.log(`ok: ${message}`);
-}
-
-function assert(condition, message) {
-  if (condition) pass(message);
-  else fail(message);
-}
 
 /** Count cleanup errors so CI cannot stay green with leftover fixtures. */
 function trackCleanupError(message) {
@@ -5290,6 +5207,7 @@ try {
   }
 }
 
+let failures = reporter.failures;
 if (cleanupFailures > 0) {
   console.error(
     `FAIL: cleanup left ${cleanupFailures} error(s) — fixtures may remain`,
