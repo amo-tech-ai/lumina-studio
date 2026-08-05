@@ -38,10 +38,10 @@ describe("AI Gateway Worker — unhandled error correlation", () => {
     expect(logCall).toBeDefined();
     const logPayload = logCall![1] as { requestId: string; error: string };
     expect(logPayload.requestId).toBe(body.error.requestId);
-    expect(logPayload.error).toContain("upstream secret detail");
+    expect(logPayload.error).toBe("Error");
 
     expect(body.error.message).toBe("AI gateway encountered an unexpected error");
-    expect(body.error.message).not.toContain("boom");
-    expect(JSON.stringify(body)).not.toContain("secret detail");
+    expect(JSON.stringify(body)).not.toContain("upstream secret detail");
+    expect(JSON.stringify(logPayload)).not.toContain("upstream secret detail");
   });
 });
