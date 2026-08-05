@@ -1,5 +1,8 @@
+"use server";
+
 // IPI-951 · CLD-SIGN-001 — Consolidate Cloudinary Signing Endpoints into Unified Service
 // Consolidates cloudinary-sign (widget-provided params) and upload-sign (server-generated params)
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type BrandAccessResult,
