@@ -86,6 +86,7 @@ function BrandDnaPayoffLive({
   const [durableReady, setDurableReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const loadGenerationRef = useRef(0);
 
   const { intakeStatus } = useBrandAnalysisProgress({
     brandId,
@@ -95,6 +96,7 @@ function BrandDnaPayoffLive({
 
   useEffect(() => {
     const requestedId = brandId;
+    const thisGeneration = ++loadGenerationRef.current;
     setLoading(true);
     setLoadError(null);
 
@@ -102,7 +104,7 @@ function BrandDnaPayoffLive({
     // server-action result and leave Loading forever. Share one in-flight call.
     let settled = false;
     const timer = setTimeout(() => {
-      if (settled || brandIdRef.current !== requestedId) return;
+      if (settled || brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
       settled = true;
       setLoadError(SAFE_LOAD_ERROR);
       setLoading(false);
@@ -110,7 +112,7 @@ function BrandDnaPayoffLive({
 
     void loadOnboardingDnaDraft(requestedId, loadAttempt > 0)
       .then((result) => {
-        if (brandIdRef.current !== requestedId) return;
+        if (brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
         settled = true;
         clearTimeout(timer);
         if (!result.ok) {
@@ -128,7 +130,7 @@ function BrandDnaPayoffLive({
         setLoading(false);
       })
       .catch(() => {
-        if (brandIdRef.current !== requestedId) return;
+        if (brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
         settled = true;
         clearTimeout(timer);
         setLoadError(SAFE_LOAD_ERROR);
@@ -176,16 +178,18 @@ function BrandDnaPayoffLive({
         );
         return;
       }
-      // Server only returns ok after promote committed ready (or already ready).
-      // Do not gate the card on a second ensure/realtime hop — that left Approve
-      // stuck with no dna-ready when re-read lagged.
-      setDurableReady(true);
-      onReadyChangeRef.current?.(true);
-      void ensureOnboardingIntakeDraft(brandId).then((confirm) => {
-        if (!confirm.ok || brandIdRef.current !== brandId) return;
+      // Server returned ok, but promotion may have been idempotent (brand not actually ready).
+      // Wait for the follow-up ensure to confirm durable ready before flipping UI.
+      const confirm = await ensureOnboardingIntakeDraft(brandId);
+      if (confirm.ok && isDurableIntakeReady(confirm.intakeStatus)) {
+        setDurableReady(true);
+        onReadyChangeRef.current?.(true);
         setPillars(confirm.pillars);
         setBrandName(confirm.brandName);
-      });
+      } else {
+        // Promotion didn't land ready — surface error, don't claim success.
+        setApproveError(SAFE_APPROVE_ERROR);
+      }
     } catch {
       setApproveError(SAFE_APPROVE_ERROR);
     } finally {

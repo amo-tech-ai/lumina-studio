@@ -75,8 +75,11 @@ function resolvePgSsl():
   const caPath =
     explicitCa || resolve(process.cwd(), "scripts/certs/supabase-prod-ca-2021.crt");
   if (!existsSync(caPath)) {
-    // ponytail: QA pooler often needs TLS without a local CA in CI — opt-in insecure only.
-    return { rejectUnauthorized: false };
+    // Fail closed: explicit CA path configured but file missing, or default CA missing.
+    // Only allow insecure when VERIFY_RLS_PG_INSECURE_SSL=1 is explicitly set.
+    throw new Error(
+      `QA database TLS verification failed: CA certificate not found at ${caPath}. Set VERIFY_RLS_PG_INSECURE_SSL=1 to explicitly opt out of certificate validation.`,
+    );
   }
   return { rejectUnauthorized: true, ca: readFileSync(caPath, "utf8") };
 }

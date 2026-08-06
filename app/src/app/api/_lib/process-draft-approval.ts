@@ -232,6 +232,24 @@ export async function processBrandIntelligenceDraftApproval(params: {
         error: sanitizeDraftActionError("promote", draft.brand_id, promoteResult.error),
       };
     }
+    // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
+    // Edge onboarding runIds are not suspended Mastra runs — resume throws
+    // "not suspended". Fire-and-forget so we don't block the server-action flight
+    // on getMastra() cold start, but still complete the workflow for real runs.
+    if (promoteResult.ok || promoteResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
+      void (async () => {
+        try {
+          const { getMastra } = await import("@/mastra");
+          const mastra = getMastra();
+          const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
+          if (run) {
+            await run.resume({ step: "save-draft-and-wait", resumeData: { approved: true } });
+          }
+        } catch {
+          // Ignore: not a suspended Mastra run (edge onboarding) or cold-start failed.
+        }
+      })();
+    }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
     if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
@@ -241,12 +259,22 @@ export async function processBrandIntelligenceDraftApproval(params: {
         error: sanitizeDraftActionError("discard", draft.brand_id, discardResult.error),
       };
     }
-  }
+    // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
+    if (discardResult.ok || discardResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
+      void (async () => {
+        try {
+          const { getMastra } = await import("@/mastra");
+          const mastra = getMastra();
+          const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
+          if (run) {
+            await run.resume({ step: "save-draft-and-wait", resumeData: { approved: false } });
+          }
+        } catch {
+          // Ignore: not a suspended Mastra run (edge onboarding) or cold-start failed.
+        }
+      })();
+    }
+}
 
-  // Edge onboarding runIds are not suspended Mastra runs — resume always throws
-  // “not suspended”. Never await resume here: Next keeps the server-action flight
-  // open while getMastra cold-starts, which blocked Approve→dna-ready in e2e.
-  // Real Mastra HITL that needs resume should schedule via next/server `after`
-  // in a follow-up; promote already committed ready|discarded above.
   return { ok: true, approved, brandId: draft.brand_id };
 }
