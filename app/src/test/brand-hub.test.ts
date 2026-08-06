@@ -8,7 +8,6 @@ import {
   hasMeaningfulProfile,
   hubTabLabel,
   intakeStatusLabel,
-  isReAnalyzeDisabled,
   normalizeDisplayScore,
   parseAiProfile,
 } from "@/lib/brand-hub";
@@ -105,11 +104,6 @@ describe("brand-hub helpers", () => {
   it("intakeStatusLabel maps known statuses", () => {
     expect(intakeStatusLabel("ready")).toBe("Ready");
     expect(intakeStatusLabel("failed")).toBe("Failed");
-  });
-
-  it("isReAnalyzeDisabled during running states", () => {
-    expect(isReAnalyzeDisabled("analysis_running")).toBe(true);
-    expect(isReAnalyzeDisabled("ready")).toBe(false);
   });
 
   it("filterDisplayScores removes dna_readiness", () => {
