@@ -171,11 +171,57 @@ function shortId(id: string): string {
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 
-function buildWhereUsed(args: {
-  shootId: string | null;
-  links: Array<{ entity_type: string; entity_id: string }> | null;
-  products: Array<{ medusa_product_id: string }> | null;
-}): WhereUsedItem[] {
+/**
+ * Resolve which shoot IDs actually exist in the canonical `shoot.shoots`
+ * table (org-scoped via RLS — the same predicate `get_shoot_detail` enforces)
+ * so Where Used never links to a shoot that 404s on open.
+ *
+ * Only shoot IDs are checked. `assets.shoot_id` and legacy `asset_links`
+ * rows routinely point at `public.shoots` rows with no `shoot.shoots`
+ * counterpart; those stay visible with `href: null` (non-clickable) instead
+ * of a dead deep link.
+ *
+ * PostgREST does not expose the `shoot` schema (PGRST106 on the remote
+ * project), so existence is checked through the public
+ * `get_openable_shoots(uuid[])` RPC instead of `client.schema("shoot")`.
+ * Only well-formed UUIDs are sent: a legacy non-UUID ref would fail the
+ * `uuid[]` cast for the whole batch, erroring the RPC and taking every
+ * link non-clickable with it. Non-UUID refs stay in Where Used as labels.
+ * A failed RPC is returned as `ok: false` so callers can treat "query
+ * failed" distinctly from "shoot not found" instead of silently deciding.
+ */
+const SHOOT_ID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type OpenableShootIdsResult = { ok: true; ids: Set<string> } | { ok: false };
+
+async function resolveOpenableShootIds(
+  client: Db,
+  shootIds: string[],
+): Promise<OpenableShootIdsResult> {
+  const unique = Array.from(new Set(shootIds));
+  const validUuids = unique.filter((id) => SHOOT_ID_UUID_RE.test(id));
+  if (validUuids.length === 0) return { ok: true, ids: new Set() };
+
+  const { data, error } = await client.rpc("get_openable_shoots", {
+    p_shoot_ids: validUuids,
+  });
+
+  if (error) {
+    console.error("[assets] shoot existence check failed:", error.message);
+    return { ok: false };
+  }
+
+  return { ok: true, ids: new Set((data ?? []).map((row) => row.id)) };
+}
+
+async function buildWhereUsed(
+  client: Db,
+  args: {
+    shootId: string | null;
+    links: Array<{ entity_type: string; entity_id: string }> | null;
+    products: Array<{ medusa_product_id: string }> | null;
+  },
+): Promise<WhereUsedItem[]> {
   const items: WhereUsedItem[] = [];
   const seen = new Set<string>();
 
@@ -186,23 +232,27 @@ function buildWhereUsed(args: {
     items.push(item);
   };
 
-  if (args.shootId) {
+  const candidateShootIds: string[] = [];
+  if (args.shootId) candidateShootIds.push(args.shootId);
+  for (const link of args.links ?? []) {
+    if (link.entity_type === "shoot") candidateShootIds.push(link.entity_id);
+  }
+  const openableShoots = await resolveOpenableShootIds(client, candidateShootIds);
+
+  const pushShoot = (id: string) => {
     push({
       kind: "shoot",
-      id: args.shootId,
-      label: `Shoot · ${shortId(args.shootId)}`,
-      href: `/app/shoots/${args.shootId}`,
+      id,
+      label: `Shoot · ${shortId(id)}`,
+      href: openableShoots.ok && openableShoots.ids.has(id) ? `/app/shoots/${id}` : null,
     });
-  }
+  };
+
+  if (args.shootId) pushShoot(args.shootId);
 
   for (const link of args.links ?? []) {
     if (link.entity_type === "shoot") {
-      push({
-        kind: "shoot",
-        id: link.entity_id,
-        label: `Shoot · ${shortId(link.entity_id)}`,
-        href: `/app/shoots/${link.entity_id}`,
-      });
+      pushShoot(link.entity_id);
       continue;
     }
     if (link.entity_type === "event") {
@@ -419,7 +469,7 @@ export async function getAssetDetail(
       // Child embeds (`asset_links`, `commerce_product_links`) need matching
       // org-aware SELECT policies — sibling IPI-770 · CLD-WHERE-USED-RLS-001 —
       // or org members silently get empty Where Used for those relations.
-      whereUsed: buildWhereUsed({
+      whereUsed: await buildWhereUsed(client, {
         shootId: row.shoot_id,
         links: asset_links,
         products: commerce_product_links,
