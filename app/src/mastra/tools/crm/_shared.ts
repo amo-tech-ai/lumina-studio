@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { getCurrentOrgId } from "@/lib/crm/queries";
 import { requestToken } from "@/lib/request-token";
 

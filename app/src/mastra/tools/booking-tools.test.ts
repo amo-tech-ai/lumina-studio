@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockRpc = vi.fn();
 const mockGetStore = vi.fn(() => "tok");
 
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+vi.mock("@/lib/supabase/user-client", () => ({
   createUserScopedClient: vi.fn(() => ({ rpc: mockRpc })),
 }));
 vi.mock("@/lib/request-token", () => ({

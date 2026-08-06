@@ -1,9 +1,9 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import {
   commitShootDraft,
-  createUserScopedClient,
   SHOOT_CHANNEL_VALUES,
   type CommitShootDraftInput,
 } from "@/lib/shoot/commit-shoot-draft";

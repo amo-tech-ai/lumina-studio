@@ -25,7 +25,7 @@ vi.mock("@/lib/auth", () => ({
   extractAccessToken: (...args: unknown[]) => mockExtractAccessToken(...args),
 }));
 
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+vi.mock("@/lib/supabase/user-client", () => ({
   createUserScopedClient: (...args: unknown[]) => mockCreateUserScopedClient(...args),
 }));
 

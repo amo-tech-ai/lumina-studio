@@ -7,7 +7,7 @@
 // useInterrupt convention (not built here — backend-tools-only PR).
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { requestToken } from "@/lib/request-token";
 
 const ACTIONS = ["approve", "reject", "request_retake"] as const;

@@ -9,7 +9,7 @@ import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/a
 import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
 import { getCurrentOrgId } from "@/lib/crm/queries";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { callEdgeFunction } from "./edge";
 
 function adminClient() {
@@ -19,26 +19,18 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-async function resolveOperatorId(accessToken: string): Promise<string> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) throw new Error("Supabase client env vars not set");
-  const sb = createClient(url, anon, { auth: { persistSession: false } });
-  const { data: { user }, error } = await sb.auth.getUser(accessToken);
-  if (error || !user) throw new Error("Access token not available in request context");
-  return user.id;
-}
-
-/** Resolve the operator's org id from the per-request access token (ALS). */
-async function resolveOperatorOrgId(): Promise<string> {
+/** Resolve operator identity (user + org) from the per-request access token (ALS).
+ *  Single-org assumption (MVP): getCurrentOrgId returns the first org_members row
+ *  by joined_at — see @/lib/crm/queries. Upgrade path: org switcher / explicit
+ *  org context when multi-org support lands. */
+async function resolveOperatorIdentity(): Promise<{ userId: string; orgId: string | null }> {
   const accessToken = requestToken.getStore();
   if (!accessToken) throw new Error("Access token not available in request context");
   const client = createUserScopedClient(accessToken);
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) throw new Error("Could not resolve operator identity");
   const orgId = await getCurrentOrgId(user.id, client);
-  if (!orgId) throw new Error("No organization membership for this operator");
-  return orgId;
+  return { userId: user.id, orgId };
 }
 
 const PILLAR_ALIASES: Record<string, string> = {
@@ -245,10 +237,7 @@ export const approveDraftTool = createTool({
     message: z.string(),
   }),
   execute: async ({ brandId, approved }) => {
-    const accessToken = requestToken.getStore();
-    if (!accessToken) throw new Error("Access token not available in request context");
-
-    const operatorId = await resolveOperatorId(accessToken);
+    const { userId: operatorId } = await resolveOperatorIdentity();
 
     const sb = adminClient();
     const { data: draft, error: lookupErr } = await sb
@@ -310,7 +299,8 @@ export const searchSimilarBrands = createTool({
     message: z.string().optional(),
   }),
   execute: async ({ brandId, limit }) => {
-    const orgId = await resolveOperatorOrgId();
+    const { orgId } = await resolveOperatorIdentity();
+    if (!orgId) throw new Error("No organization membership for this operator");
     const sb = adminClient();
     const { data: brand, error: brandErr } = await sb
       .from("brands")

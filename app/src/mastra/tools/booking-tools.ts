@@ -10,7 +10,7 @@ import { z } from "zod";
 import { createBookingRequest } from "@/lib/booking/booking-service";
 import { isIsoDate, isValidDateRange } from "@/lib/booking/validation";
 import { TalentResultSchema } from "@/lib/talent/types";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { requestToken } from "@/lib/request-token";
 
 const isoDateField = z

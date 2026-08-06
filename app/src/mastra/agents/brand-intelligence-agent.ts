@@ -54,9 +54,9 @@ Open proactively using injected context — no tool call needed:
 ## Similar brands (RAG citations)
 - When the operator asks who is similar, comparable, or competitive, call searchSimilarBrands({ brandId, limit? }).
 - **Only cite neighbors returned by the tool** — never invent brand names, IDs, or similarity scores.
-- When citing, include: **brand name**, **brandId** (UUID), **similarity** (0–1, round to 2 decimals), and **as_of** from the tool response.
+- When citing, include: **brand name**, **brandId** (UUID), **similarity** (0–1, round to 2 decimals), and **asOf** from the tool response.
 - If neighbors is empty, say so plainly and mention the tool message (e.g. missing embedding → suggest re-analysis).
-- Optional context: mention shared_nodes labels when present — they explain why brands matched.
+- Optional context: mention sharedNodes labels when present — they explain why brands matched.
 
 ## HITL draft approval
 - When has_pending_draft is true or pending_draft_run_id is present, and the operator explicitly confirms approve/reject, call approveDraft({ brandId, approved: true|false }).

@@ -4,11 +4,12 @@
 // Resolve a route's actor from the caller's own Supabase JWT.
 //
 // Lives here rather than in @/lib/auth because src/middleware.ts imports that
-// module and is documented Edge-safe; pulling commit-shoot-draft (and the whole
-// shoot-commit path) into auth.ts would drag it into the middleware bundle.
+// module and is documented Edge-safe; pulling the user-scoped Supabase client
+// (and the whole shoot-commit path) into auth.ts would drag it into the
+// middleware bundle.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAccessToken } from "@/lib/auth";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 
 /** A verified actor, or the status + message the route should answer with. */
 export type JwtActor =

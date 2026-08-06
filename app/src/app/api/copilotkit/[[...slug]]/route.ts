@@ -21,7 +21,7 @@ import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/l
 import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
 import { requestToken } from "@/lib/request-token";
 import { withStreamIdleTimeout } from "@/lib/copilotkit/stream-idle-timeout";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { getCurrentOrgId } from "@/lib/crm/queries";
 import { rejectTenantKeyRewrite, TenantContextError } from "@/lib/db/mastra-tenant-scope";
 

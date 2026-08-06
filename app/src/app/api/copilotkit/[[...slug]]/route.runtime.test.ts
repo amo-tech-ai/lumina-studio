@@ -26,7 +26,7 @@ function mockOrgScopeDeps(opts?: { orgId?: string | null; threadResourceId?: str
     threadResourceId === null ? null : { resourceId: threadResourceId },
   );
 
-  vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+  vi.doMock("@/lib/supabase/user-client", () => ({
     createUserScopedClient: vi.fn(() => ({})),
   }));
   vi.doMock("@/lib/crm/queries", () => ({

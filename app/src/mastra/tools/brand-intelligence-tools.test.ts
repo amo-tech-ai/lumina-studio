@@ -13,7 +13,7 @@ vi.mock("@/lib/request-token", () => ({
 vi.mock("@/lib/crm/queries", () => ({
   getCurrentOrgId: vi.fn().mockResolvedValue("org-1"),
 }));
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+vi.mock("@/lib/supabase/user-client", () => ({
   createUserScopedClient: vi.fn(() => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({
@@ -104,12 +104,13 @@ const MOCK_SIMILAR = [
 ];
 
 function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = {}) {
+  const brandsEq = vi.fn().mockReturnThis();
   const client = {
     from: vi.fn((table: string) => {
       if (table === "brands") {
         return {
           select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
+          eq: brandsEq,
           single: vi.fn().mockResolvedValue({
             data: { ...MOCK_BRAND, embedding: "[0.1,0.2,0.3]" },
             error: null,
@@ -138,6 +139,7 @@ function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = 
       return {};
     }),
     rpc: vi.fn().mockResolvedValue({ data: MOCK_SIMILAR, error: null }),
+    brandsEq,
     ...overrides,
   };
   return client;
@@ -253,7 +255,9 @@ describe("searchSimilarBrands", () => {
 
     const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
       rpc: ReturnType<typeof vi.fn>;
+      brandsEq: ReturnType<typeof vi.fn>;
     };
+    expect(client.brandsEq).toHaveBeenCalledWith("org_id", "org-1");
     expect(client.rpc).toHaveBeenCalledWith("search_brands", {
       p_embedding: "[0.1,0.2,0.3]",
       p_limit: 5,
@@ -293,15 +297,31 @@ describe("searchSimilarBrands", () => {
   });
 
   it("fails closed when operator has no organization membership", async () => {
-    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
-      rpc: ReturnType<typeof vi.fn>;
-    };
-    const rpcCallsBefore = client.rpc.mock.calls.length;
+    const createClientCallsBefore = vi.mocked(createClient).mock.calls.length;
     vi.mocked(getCurrentOrgId).mockResolvedValueOnce(null);
     await expect(
       searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
     ).rejects.toThrow(/No organization membership/);
-    expect(client.rpc.mock.calls.length).toBe(rpcCallsBefore);
+    expect(vi.mocked(createClient).mock.calls.length).toBe(createClientCallsBefore);
+  });
+
+  it("denies a brand from another organization without calling rpc", async () => {
+    vi.mocked(createClient).mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+      rpc: vi.fn(),
+    } as never);
+
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/Brand not found/);
+    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
+      rpc: ReturnType<typeof vi.fn>;
+    };
+    expect(client.rpc).not.toHaveBeenCalled();
   });
 });
 

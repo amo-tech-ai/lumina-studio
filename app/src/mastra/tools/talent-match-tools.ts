@@ -15,7 +15,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { TalentResultSchema } from "@/lib/talent/types";
 import { computeMatchScore } from "@/lib/talent/match-score";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { requestToken } from "@/lib/request-token";
 
 function getUserScopedClient() {
@@ -41,12 +41,12 @@ export const searchTalentByFilters = createTool({
   execute: async ({ shootType, budgetTier, dateStart, dateEnd, representation, onlyShortlistId }) => {
     const supabase = getUserScopedClient();
     const { data, error } = await supabase.rpc("search_talent", {
-      p_shoot_type: shootType ?? null,
-      p_budget_tier: budgetTier ?? null,
-      p_date_start: dateStart ?? null,
-      p_date_end: dateEnd ?? null,
-      p_representation: representation ?? null,
-      p_only_shortlist_id: onlyShortlistId ?? null,
+      p_shoot_type: shootType,
+      p_budget_tier: budgetTier,
+      p_date_start: dateStart,
+      p_date_end: dateEnd,
+      p_representation: representation,
+      p_only_shortlist_id: onlyShortlistId,
     });
     if (error) throw new Error(`searchTalentByFilters failed: ${error.message}`);
     return { results: (data ?? []) as z.infer<typeof TalentResultSchema>[] };

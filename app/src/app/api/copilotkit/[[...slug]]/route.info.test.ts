@@ -21,7 +21,7 @@ afterEach(() => {
  *  overrides it. Thread ownership isn't exercised here (no `threadId` in any
  *  request body below). */
 function mockOrgScopeDeps() {
-  vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+  vi.doMock("@/lib/supabase/user-client", () => ({
     createUserScopedClient: vi.fn(() => ({})),
   }));
   vi.doMock("@/lib/crm/queries", () => ({

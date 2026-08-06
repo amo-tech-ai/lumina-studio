@@ -15,7 +15,7 @@ const mockFrom = vi.fn(() => ({
   delete: mockDelete,
 }));
 
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+vi.mock("@/lib/supabase/user-client", () => ({
   createUserScopedClient: vi.fn(() => ({ from: mockFrom })),
 }));
 vi.mock("@/lib/request-token", () => ({

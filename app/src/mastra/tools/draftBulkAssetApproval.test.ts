@@ -16,7 +16,7 @@ const mockFrom = vi.fn(() => ({
 }));
 const mockGetStore = vi.fn(() => "tok");
 
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+vi.mock("@/lib/supabase/user-client", () => ({
   createUserScopedClient: vi.fn(() => ({ from: mockFrom })),
 }));
 vi.mock("@/lib/request-token", () => ({

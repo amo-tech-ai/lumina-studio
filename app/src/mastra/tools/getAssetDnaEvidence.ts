@@ -20,7 +20,7 @@
 // (assets_select_via_brand) enforces brand ownership — not application code.
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { createUserScopedClient } from "@/lib/supabase/user-client";
 import { requestToken } from "@/lib/request-token";
 import {
   AssetDnaEvidenceSchema,
