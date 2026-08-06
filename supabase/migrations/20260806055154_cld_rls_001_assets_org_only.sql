@@ -1,8 +1,9 @@
--- CLD-RLS-001 / IPI-956: assets RLS brand/org-only, close legacy shoot-designer backdoor
+-- CLD-RLS-001 / IPI-956: assets RLS org-only, close legacy shoot-designer backdoor
 -- Live verification (Phase 1): brands.org_id NOT NULL, brands.user_id NOT NULL,
--- 0/5817 brand owners missing from org_members, 16 NULL-brand assets lawful (IPI-767).
--- Minimal predicate: (b.user_id = auth.uid() OR is_org_member(b.org_id))
--- Dead branch removed: b.org_id IS NULL (schema confirms NOT NULL).
+-- 16 NULL-brand assets lawful (IPI-767).
+-- Minimal predicate: is_org_member(b.org_id) only
+-- Dead branches removed: b.org_id IS NULL (schema confirms NOT NULL), b.user_id (org-only model).
+-- Legacy shoots.designer_id backdoor removed entirely.
 -- No DELETE policy added (default deny via RLS).
 
 begin;
@@ -20,7 +21,7 @@ create policy "assets_select" on public.assets
       select 1
       from public.brands b
       where b.id = assets.brand_id
-        and (b.user_id = (select auth.uid()) or public.is_org_member(b.org_id))
+        and public.is_org_member(b.org_id)
     )
   );
 
@@ -33,7 +34,7 @@ create policy "assets_insert" on public.assets
       select 1
       from public.brands b
       where b.id = assets.brand_id
-        and (b.user_id = (select auth.uid()) or public.is_org_member(b.org_id))
+        and public.is_org_member(b.org_id)
     )
   );
 
@@ -46,7 +47,7 @@ create policy "assets_update" on public.assets
       select 1
       from public.brands b
       where b.id = assets.brand_id
-        and (b.user_id = (select auth.uid()) or public.is_org_member(b.org_id))
+        and public.is_org_member(b.org_id)
     )
   )
   with check (
@@ -54,7 +55,7 @@ create policy "assets_update" on public.assets
       select 1
       from public.brands b
       where b.id = assets.brand_id
-        and (b.user_id = (select auth.uid()) or public.is_org_member(b.org_id))
+        and public.is_org_member(b.org_id)
     )
   );
 
