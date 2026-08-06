@@ -441,6 +441,11 @@ function requestNeedsDurableStorage(request: Request): boolean {
   return pathname.includes("/agent/") || pathname.includes("/threads/");
 }
 
+/** True for /api/copilotkit/info — agent discovery only; no turn, no DB writes. */
+function isInfoRequest(request: Request): boolean {
+  return new URL(request.url).pathname.endsWith("/info");
+}
+
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
   const exposeDetail = shouldExposeRuntimeErrorDetail();
   return Response.json(
@@ -511,7 +516,16 @@ const handler = async (request: Request): Promise<Response> => {
       // that thread belongs to it — both BEFORE endpoint(request) runs, so a
       // failure here never reaches CopilotKit's internals as an opaque thrown
       // error.
-      const resourceId = await resolveOrgScopedResourceId(user, token);
+      //
+      // /info requests only enumerate agents — no agent turn runs, no memory
+      // reads or writes. Skip the DB round-trip to org_members so a cold-start
+      // Supabase timeout cannot turn a healthy info probe into a 503
+      // (runtime_info_fetch_failed). user.id is safe as a placeholder here
+      // because getLocalAgents() stores resourceId on the MastraAgent instance
+      // but does not query the DB during discovery.
+      const resourceId = isInfoRequest(request)
+        ? user.id
+        : await resolveOrgScopedResourceId(user, token);
 
       const urlThreadId = extractThreadIdFromUrl(request);
       if (urlThreadId) {

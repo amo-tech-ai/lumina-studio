@@ -349,4 +349,70 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.code).toBe("storage_unavailable");
     expect(body.degraded).toBe(true);
   });
+
+  it("returns 200 on /info even when getCurrentOrgId throws (cold-start DB resilience)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "qa-user",
+          email: "qa@ipix.test",
+          name: "QA",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("info-resilience-token"),
+      };
+    });
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: {
+        getLocalAgents: vi.fn().mockResolvedValue(mockAgents),
+      },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({ agents: mockAgents })),
+    }));
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    // Simulate a cold-start Supabase timeout / DB error on org_members query.
+    // /info must not propagate this as 503 — agent discovery never needs a real resourceId.
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockRejectedValue(new Error("org_members query timeout")),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { agents?: Record<string, unknown> };
+    expect(body.agents?.default).toBeDefined();
+  }, 15_000);
 });
