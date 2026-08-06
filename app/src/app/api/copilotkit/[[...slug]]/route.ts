@@ -517,25 +517,53 @@ const handler = async (request: Request): Promise<Response> => {
       // failure here never reaches CopilotKit's internals as an opaque thrown
       // error.
       //
-      // /info EXCEPTION (IPI-955): /info is pure agent discovery — it returns
-      // the registered agent list and runtime mode. No agent turn runs, no
-      // Mastra memory is read or written, no thread is accessed. The
-      // resourceId is forwarded to getLocalAgents() which stores it on each
-      // MastraAgent instance for potential future use in a turn; it is not
-      // used to query the DB during discovery itself.
+      // IPI-955 — /info path: /info is agent discovery only (returns the
+      // registered agent list and runtime mode). No agent turn runs, no
+      // Mastra memory is read or written, no thread is accessed.
       //
-      // Skipping resolveOrgScopedResourceId() for /info eliminates the
-      // cold-start Supabase round-trip that was causing 503s when the
-      // org_members query timed out on a freshly-spun Worker. This is a
-      // genuine skip, not a fallback — there is no data access to scope.
-      // Authentication (withOperatorAuth + token check) still runs above;
-      // only the org DB lookup is omitted.
+      // The org lookup still runs for /info so that an operator with no
+      // org_members row is refused (403 org_required) before CopilotKit sees
+      // the request. However, unresolved lookup failures (DB timeout, RLS
+      // error, cold-start network blip) must not produce a 503 — they map to
+      // a controlled 503 with code "org_lookup_error" before endpoint() runs.
+      // This eliminates the cold-start 503 / runtime_info_fetch_failed that
+      // blocked the Cloudflare Preview CI gate.
       //
-      // For every other request (agent turns, thread CRUD) the full
-      // fail-closed org gate applies: no org membership → 403 org_required.
-      const resourceId = isInfoRequest(request)
-        ? user.id
-        : await resolveOrgScopedResourceId(user, token);
+      // For all other requests (agent turns, thread CRUD) the full
+      // fail-closed org gate applies unchanged.
+      let resourceId: string;
+      if (isInfoRequest(request)) {
+        let orgId: string | null;
+        try {
+          const client = createUserScopedClient(token);
+          orgId = await getCurrentOrgId(user.id, client);
+        } catch (lookupErr) {
+          // Infra failure (DB timeout, RLS error, cold start) — return a
+          // controlled 503 before endpoint() runs. Never fall back to user.id.
+          console.error(
+            "[copilotkit] /info org lookup failed — returning 503 (fail closed)",
+            lookupErr instanceof Error ? lookupErr.message : String(lookupErr),
+          );
+          return Response.json(
+            { error: "Organization lookup unavailable", code: "org_lookup_error" },
+            { status: 503 },
+          );
+        }
+        if (!orgId) {
+          // Confirmed missing membership — fail closed, same as any other request.
+          console.error(
+            "[copilotkit] /info org resolution failed — no membership (fail closed)",
+            user.id,
+          );
+          return Response.json(
+            { error: "No organization membership for this operator", code: "org_required" },
+            { status: 403 },
+          );
+        }
+        resourceId = makeMemoryResourceId(orgId, user.id);
+      } else {
+        resourceId = await resolveOrgScopedResourceId(user, token);
+      }
 
       const urlThreadId = extractThreadIdFromUrl(request);
       if (urlThreadId) {

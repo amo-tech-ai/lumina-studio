@@ -351,8 +351,10 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
   });
 
   it("returns 200 on /info even when getCurrentOrgId would throw — DB is never called (IPI-955)", async () => {
-    // Clean skip: /info does not call resolveOrgScopedResourceId at all.
-    // getCurrentOrgId throwing must not affect the result because it is never invoked.
+    // This test verifies the fix: before IPI-955, getCurrentOrgId throwing on
+    // cold start caused 503. After the fix the org lookup still runs but infra
+    // failures return a controlled 503/org_lookup_error, not runtime_info_fetch_failed.
+    // This test specifically proves the happy path with a valid org.
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
@@ -376,9 +378,33 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
       return {
         ...actual,
-        extractAccessToken: vi.fn().mockReturnValue("info-skip-token"),
+        extractAccessToken: vi.fn().mockReturnValue("info-valid-token"),
       };
     });
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    // Valid org membership — should return 200.
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue("org-test-123"),
+    }));
+
+    // Wire CopilotRuntime to capture and invoke the agents factory — this
+    // ensures MastraAgent.getLocalAgents is actually called with the org-scoped
+    // resourceId, making the test a real regression test for the fix.
+    let capturedAgentsFactory: (() => Promise<unknown>) | undefined;
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(function (this: unknown, config: { agents: () => Promise<unknown> }) {
+        capturedAgentsFactory = config.agents;
+      }),
+      createCopilotRuntimeHandler: vi.fn(() => async () => {
+        if (capturedAgentsFactory) await capturedAgentsFactory();
+        return Response.json({ agents: mockAgents }, { status: 200 });
+      }),
+      InMemoryAgentRunner: vi.fn(),
+    }));
 
     vi.doMock("@ag-ui/mastra", () => ({
       MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
@@ -388,21 +414,7 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       getMastra: vi.fn(() => ({ agents: mockAgents })),
     }));
 
-    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
-      createUserScopedClient: vi.fn(() => ({})),
-    }));
-
-    const getOrgSpy = vi.fn().mockRejectedValue(new Error("should not be called"));
-    vi.doMock("@/lib/crm/queries", () => ({ getCurrentOrgId: getOrgSpy }));
-
-    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
-      CopilotRuntime: vi.fn(() => ({})),
-      createCopilotRuntimeHandler: vi.fn(
-        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
-      ),
-      InMemoryAgentRunner: vi.fn(),
-    }));
-
+    const { MastraAgent } = await import("@ag-ui/mastra");
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const response = await route.GET(
       new Request("http://localhost/api/copilotkit/info"),
@@ -411,17 +423,17 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { agents?: Record<string, unknown> };
     expect(body.agents?.default).toBeDefined();
-    // Confirm the org DB was never touched — /info skips it entirely.
-    expect(getOrgSpy).not.toHaveBeenCalled();
+    // getLocalAgents called with the org-scoped resourceId (not bare user.id).
+    expect(MastraAgent.getLocalAgents).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceId: expect.stringContaining("org-test-123") }),
+    );
   }, 15_000);
 
-  it("agent run still calls resolveOrgScopedResourceId and fails closed when org is missing", async () => {
-    // /info skips the org lookup; agent turns must not.
-    // An operator with no org must get 403 on a real agent turn.
+  it("returns 403 org_required on /info when operator has no org membership", async () => {
+    // Confirmed missing org → fail closed, same as any other endpoint.
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
-    vi.stubEnv("MASTRA_STORAGE_MODE", "noop"); // storage passes; org check is what fails
 
     vi.doMock("@/lib/operator-gate", async () => {
       const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
@@ -446,6 +458,138 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       };
     });
 
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn() },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({})),
+    }));
+
+    // null → no membership → 403
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_required");
+  }, 15_000);
+
+  it("returns 503 org_lookup_error on /info when getCurrentOrgId throws (cold-start / RLS / timeout)", async () => {
+    // Any infra error (DB timeout, RLS denial, cold start) → controlled 503
+    // with code org_lookup_error. Never falls back to user.id.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "qa-user",
+          email: "qa@ipix.test",
+          name: "QA",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("lookup-error-token"),
+      };
+    });
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn() },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({})),
+    }));
+
+    // Simulate cold-start timeout, RLS error, PostgREST error — all same path.
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockRejectedValue(new Error("connection timeout")),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    // Controlled 503 — not runtime_info_fetch_failed, and not a silent 200.
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_lookup_error");
+  }, 15_000);
+
+  it("agent run still calls resolveOrgScopedResourceId and fails closed when org is missing", async () => {
+    // /info has its own lookup path; agent turns use the original
+    // resolveOrgScopedResourceId unchanged — no org → 403 org_required.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "no-org-user",
+          email: "noorg@ipix.test",
+          name: "No Org",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("no-org-agent-token"),
+      };
+    });
+
     vi.doMock("@ag-ui/mastra", () => ({
       MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
     }));
@@ -458,7 +602,6 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       createUserScopedClient: vi.fn(() => ({})),
     }));
 
-    // No org membership → resolveOrgScopedResourceId throws MastraOrgScopeError → 403.
     vi.doMock("@/lib/crm/queries", () => ({
       getCurrentOrgId: vi.fn().mockResolvedValue(null),
     }));
