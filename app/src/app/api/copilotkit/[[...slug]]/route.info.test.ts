@@ -611,10 +611,24 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
   }, 15_000);
 
   it("returns 503 org_lookup_error on /info when org lookup times out (bounded query, IPI-955)", async () => {
+    // AbortSignal.timeout() uses the native scheduler which vi.useFakeTimers()
+    // does not intercept (vitest-dev/vitest#3088 — @sinonjs/fake-timers does
+    // not patch the AbortSignal scheduler). We mock AbortSignal.timeout() to
+    // return a controller-backed signal driven by a fake-timer setTimeout so
+    // vi.advanceTimersByTimeAsync() fires it deterministically.
     vi.useFakeTimers();
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const timeoutController = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
+      setTimeout(
+        () => timeoutController.abort(new DOMException("TimeoutError", "TimeoutError")),
+        ms,
+      );
+      return timeoutController.signal;
+    });
 
     vi.doMock("@/lib/operator-gate", async () => {
       const actual = await vi.importActual<typeof import("@/lib/operator-gate")>("@/lib/operator-gate");
@@ -652,6 +666,8 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     try {
       const route = await import("@/app/api/copilotkit/[[...slug]]/route");
       const responsePromise = route.GET(new Request("http://localhost/api/copilotkit/info"));
+      // Advance past INFO_ORG_LOOKUP_TIMEOUT_MS (10_000) — fires the mocked
+      // AbortSignal.timeout() via setTimeout, aborting the hung query
       await vi.advanceTimersByTimeAsync(11_000);
       const response = await responsePromise;
 
@@ -660,6 +676,7 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       expect(body.code).toBe("org_lookup_error");
       expect(body.degraded).toBe(true);
     } finally {
+      vi.restoreAllMocks();
       vi.useRealTimers();
     }
   }, 15_000);
