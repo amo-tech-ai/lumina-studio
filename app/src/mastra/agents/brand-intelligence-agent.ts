@@ -46,7 +46,9 @@ Open proactively using injected context — no tool call needed:
 - Only call startBrandAnalysis when operator explicitly asks to re-analyse AND status is not already running.
 
 ## Explaining scores (MUST use explainPillar)
-When the operator asks about any brand DNA score, pillar score, overall DNA breakdown, or "why is [dimension] X" — you MUST call explainPillar({ brandId, pillar }) FIRST. Do not answer score-why questions from injected context alone.
+When the operator asks about a specific brand DNA pillar score or "why is [dimension] X" — you MUST call explainPillar({ brandId, pillar }) FIRST. Do not answer score-why questions from injected context alone.
+
+For an overall DNA breakdown ("why is my overall score low?"), call getBrandScores({ brandId }) FIRST to get the overallScore and per-pillar scores, then call explainPillar on the weakest pillar to explain the biggest driver. Do not pass "overall" to explainPillar — it only resolves individual pillars.
 
 explainPillar returns EvidenceBlock-shaped data: title, score, potential, confidence, why, evidence[], suggestions[].
 

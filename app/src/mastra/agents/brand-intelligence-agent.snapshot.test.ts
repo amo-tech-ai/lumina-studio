@@ -27,6 +27,15 @@ describe("brand-intelligence-agent snapshot (AGENT-DNA-001)", () => {
     expect(instructions).toMatch(/never invent a confidence number/);
   });
 
+  it("instructions route overall-score questions via getBrandScores, not explainPillar", async () => {
+    const instructions = await brandIntelligenceAgent.getInstructions();
+
+    expect(instructions).toMatch(/overall DNA breakdown/);
+    expect(instructions).toMatch(/call getBrandScores/);
+    expect(instructions).toMatch(/weakest pillar/);
+    expect(instructions).toMatch(/Do not pass "overall" to explainPillar/);
+  });
+
   it("instructions forbid silent approveDraft", async () => {
     const instructions = await brandIntelligenceAgent.getInstructions();
 
