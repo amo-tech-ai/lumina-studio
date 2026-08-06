@@ -109,6 +109,42 @@ describe("POST /api/assets/upload-sign — validation", () => {
     const res = await post(uploadBody({ resourceType: "audio" }));
     expect(res.status).toBe(400);
   });
+
+  it("returns 401 for dev-unauthenticated in production environment", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DAM_DEV_ORG_ID", VALID_ORG_ID);
+    mockWithOperatorAuth.mockResolvedValue({ id: "dev-unauthenticated", name: "Dev" });
+    vi.resetModules();
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/upload-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(uploadBody()),
+      }),
+    );
+    expect(res.status).toBe(401);
+    const data = await res.json();
+    expect(data.error).toBe("Unauthorized");
+  });
+
+  it("accepts dev-unauthenticated in development environment with DAM_DEV_ORG_ID", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DAM_DEV_ORG_ID", VALID_ORG_ID);
+    mockWithOperatorAuth.mockResolvedValue({ id: "dev-unauthenticated", name: "Dev" });
+    vi.resetModules();
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/upload-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(uploadBody()),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(typeof data.signature).toBe("string");
+  });
 });
 
 describe("POST /api/assets/upload-sign — workType validation", () => {

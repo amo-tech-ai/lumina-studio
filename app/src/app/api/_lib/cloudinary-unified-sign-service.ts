@@ -307,6 +307,11 @@ async function signServerRequest(
   const shootId = context?.shootId && UUID_RE.test(context.shootId) ? context.shootId : undefined;
   const campaignId = context?.campaignId && UUID_RE.test(context.campaignId) ? context.campaignId : undefined;
 
+  // dev-unauthenticated only allowed in development environment
+  if (operatorId === "dev-unauthenticated" && process.env.NODE_ENV !== "development") {
+    return { error: "Unauthorized", status: 401 };
+  }
+
   let resolvedOrgId: string;
   if (operatorId !== "dev-unauthenticated") {
     const result = await resolveOrgIdAndValidateOwnership(supabase, brandId, workType, workId, shootId, campaignId);
