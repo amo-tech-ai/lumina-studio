@@ -350,7 +350,9 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.degraded).toBe(true);
   });
 
-  it("returns 200 on /info even when getCurrentOrgId throws (cold-start DB resilience)", async () => {
+  it("returns 200 on /info even when getCurrentOrgId would throw — DB is never called (IPI-955)", async () => {
+    // Clean skip: /info does not call resolveOrgScopedResourceId at all.
+    // getCurrentOrgId throwing must not affect the result because it is never invoked.
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
@@ -374,14 +376,12 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
       return {
         ...actual,
-        extractAccessToken: vi.fn().mockReturnValue("info-resilience-token"),
+        extractAccessToken: vi.fn().mockReturnValue("info-skip-token"),
       };
     });
 
     vi.doMock("@ag-ui/mastra", () => ({
-      MastraAgent: {
-        getLocalAgents: vi.fn().mockResolvedValue(mockAgents),
-      },
+      MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
     }));
 
     vi.doMock("@/mastra", () => ({
@@ -392,11 +392,8 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       createUserScopedClient: vi.fn(() => ({})),
     }));
 
-    // Simulate a cold-start Supabase timeout / DB error on org_members query.
-    // /info must not propagate this as 503 — agent discovery never needs a real resourceId.
-    vi.doMock("@/lib/crm/queries", () => ({
-      getCurrentOrgId: vi.fn().mockRejectedValue(new Error("org_members query timeout")),
-    }));
+    const getOrgSpy = vi.fn().mockRejectedValue(new Error("should not be called"));
+    vi.doMock("@/lib/crm/queries", () => ({ getCurrentOrgId: getOrgSpy }));
 
     vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
       CopilotRuntime: vi.fn(() => ({})),
@@ -414,15 +411,17 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { agents?: Record<string, unknown> };
     expect(body.agents?.default).toBeDefined();
+    // Confirm the org DB was never touched — /info skips it entirely.
+    expect(getOrgSpy).not.toHaveBeenCalled();
   }, 15_000);
 
-  it("returns 403 org_required on /info when operator has no org membership (fail closed)", async () => {
-    // An infra error (DB timeout) falls back to user.id. A genuine missing-org
-    // membership (getCurrentOrgId returns null → MastraOrgScopeError) must
-    // still fail closed with 403, not silently succeed.
+  it("agent run still calls resolveOrgScopedResourceId and fails closed when org is missing", async () => {
+    // /info skips the org lookup; agent turns must not.
+    // An operator with no org must get 403 on a real agent turn.
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop"); // storage passes; org check is what fails
 
     vi.doMock("@/lib/operator-gate", async () => {
       const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
@@ -459,8 +458,7 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       createUserScopedClient: vi.fn(() => ({})),
     }));
 
-    // getCurrentOrgId returns null → resolveOrgScopedResourceId throws
-    // MastraOrgScopeError → must 403, not fall back.
+    // No org membership → resolveOrgScopedResourceId throws MastraOrgScopeError → 403.
     vi.doMock("@/lib/crm/queries", () => ({
       getCurrentOrgId: vi.fn().mockResolvedValue(null),
     }));
@@ -474,8 +472,12 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     }));
 
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
-    const response = await route.GET(
-      new Request("http://localhost/api/copilotkit/info"),
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/default/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: [] }),
+      }),
     );
 
     expect(response.status).toBe(403);

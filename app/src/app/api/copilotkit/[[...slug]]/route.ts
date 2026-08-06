@@ -517,40 +517,25 @@ const handler = async (request: Request): Promise<Response> => {
       // failure here never reaches CopilotKit's internals as an opaque thrown
       // error.
       //
-      // /info requests only enumerate agents — no agent turn runs, no memory
-      // reads or writes. For /info we still require org membership (fail
-      // closed per IPI-146 / linear-governance anti-pattern: "Weaken
-      // fail-closed auth for green /info"), but we distinguish between two
-      // failure modes:
-      //   • MastraOrgScopeError (null orgId) → operator has no org → 403
-      //     org_required, same as any other request. Do NOT fall back.
-      //   • Any other error (DB timeout, network blip on cold start) → infra
-      //     failure, not a business rule → fall back to user.id so CopilotKit
-      //     can still enumerate agents. This is safe because /info never
-      //     writes to memory and the resourceId is never used to authorize
-      //     data access on this path.
-      let resourceId: string;
-      if (isInfoRequest(request)) {
-        try {
-          resourceId = await resolveOrgScopedResourceId(user, token);
-        } catch (err) {
-          if (err instanceof MastraOrgScopeError) {
-            // Operator is authenticated but has no org — fail closed.
-            throw err;
-          }
-          // Infra error (cold-start timeout, DB hiccup) — fall back to bare
-          // user.id so /info returns agent list instead of 503. This does not
-          // weaken the org gate: a genuinely org-less operator was rejected
-          // above; this path is only reached when the lookup itself failed.
-          console.warn(
-            "[copilotkit] /info org lookup failed (infra) — using user.id fallback for discovery",
-            err instanceof Error ? err.message : String(err),
-          );
-          resourceId = user.id;
-        }
-      } else {
-        resourceId = await resolveOrgScopedResourceId(user, token);
-      }
+      // /info EXCEPTION (IPI-955): /info is pure agent discovery — it returns
+      // the registered agent list and runtime mode. No agent turn runs, no
+      // Mastra memory is read or written, no thread is accessed. The
+      // resourceId is forwarded to getLocalAgents() which stores it on each
+      // MastraAgent instance for potential future use in a turn; it is not
+      // used to query the DB during discovery itself.
+      //
+      // Skipping resolveOrgScopedResourceId() for /info eliminates the
+      // cold-start Supabase round-trip that was causing 503s when the
+      // org_members query timed out on a freshly-spun Worker. This is a
+      // genuine skip, not a fallback — there is no data access to scope.
+      // Authentication (withOperatorAuth + token check) still runs above;
+      // only the org DB lookup is omitted.
+      //
+      // For every other request (agent turns, thread CRUD) the full
+      // fail-closed org gate applies: no org membership → 403 org_required.
+      const resourceId = isInfoRequest(request)
+        ? user.id
+        : await resolveOrgScopedResourceId(user, token);
 
       const urlThreadId = extractThreadIdFromUrl(request);
       if (urlThreadId) {
