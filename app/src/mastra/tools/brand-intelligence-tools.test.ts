@@ -34,7 +34,6 @@ import {
   getBrandProfile,
   getBrandScores,
   normalizePillar,
-  searchSimilarBrands,
   startBrandAnalysis,
 } from "./brand-intelligence-tools";
 
@@ -284,75 +283,6 @@ describe("startBrandAnalysis", () => {
   });
 });
 
-describe("searchSimilarBrands", () => {
-  it("returns neighbors from the search_brands RPC with shared nodes", async () => {
-    vi.mocked(createClient).mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { embedding: "[0.1,0.2,0.3]" },
-          error: null,
-        }),
-      })),
-      rpc: vi.fn().mockResolvedValue({
-        data: [
-          {
-            brand_id: "22222222-2222-2222-2222-222222222222",
-            brand_name: "Patagonia",
-            similarity: 0.87,
-            shared_nodes: [{ node_type: "value", label: "sustainability" }],
-          },
-        ],
-        error: null,
-      }),
-    } as never);
-    const result = await searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never);
-    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
-    expect(r!.neighbors).toHaveLength(1);
-    expect(r!.neighbors[0]).toMatchObject({
-      brandId: "22222222-2222-2222-2222-222222222222",
-      brandName: "Patagonia",
-      similarity: 0.87,
-      sharedNodes: [{ nodeType: "value", label: "sustainability" }],
-    });
-  });
-
-  it("returns an empty list with a re-analysis hint when the brand has no embedding", async () => {
-    const rpcMock = vi.fn();
-    vi.mocked(createClient).mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: { embedding: null }, error: null }),
-      })),
-      rpc: rpcMock,
-    } as never);
-    const result = await searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never);
-    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
-    expect(r!.neighbors).toEqual([]);
-    expect(r!.message).toContain("no embedding");
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("throws when the search_brands RPC fails", async () => {
-    vi.mocked(createClient).mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: { embedding: "[0.1,0.2,0.3]" },
-          error: null,
-        }),
-      })),
-      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } }),
-    } as never);
-    await expect(searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never)).rejects.toThrow(
-      "Similar-brand search failed: boom",
-    );
-  });
-});
-
 describe("brandIntelligenceTools registry", () => {
   it("exports explainPillar and approveDraft for brand-intelligence agent", async () => {
     const { brandIntelligenceTools } = await import("./brand-intelligence-tools");
@@ -362,7 +292,6 @@ describe("brandIntelligenceTools registry", () => {
       "getBrandProfile",
       "getBrandScores",
       "explainPillar",
-      "searchSimilarBrands",
       "approveDraft",
       "startBrandAnalysis",
     ]);
