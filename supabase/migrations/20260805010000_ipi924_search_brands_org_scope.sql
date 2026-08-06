@@ -22,6 +22,17 @@ language plpgsql stable security definer
 set search_path = public
 as $$
 begin
+  set local hnsw.ef_search = 400;
+
+  -- Fail closed: the excluded brand must belong to the caller org, otherwise
+  -- shared_nodes would leak which labels of the caller's brands also exist on
+  -- a foreign brand's graph (cross-tenant inference).
+  if p_exclude_brand_id is not null and not exists (
+    select 1 from public.brands eb where eb.id = p_exclude_brand_id and eb.org_id = p_org_id
+  ) then
+    raise exception 'excluded brand is not in the caller organization';
+  end if;
+
   return query
   select
     b.id,
