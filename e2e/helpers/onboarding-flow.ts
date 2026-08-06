@@ -4,8 +4,13 @@ import { expect } from "@playwright/test";
 import { getQaCredentials, loadEnvLocal } from "./qa-credentials";
 import type { DraftReadySession } from "./onboarding-sql";
 
-/** Login QA operator and land on /onboarding with a fresh idempotency attempt. */
-export async function loginAndOpenFreshOnboarding(page: Page): Promise<boolean> {
+function resolveAppEnv(): string {
+  // Prefer app/.env.local (where QA_* live).
+  return `${process.cwd()}/app/.env.local`;
+}
+
+/** Shared QA login flow: navigate, enter credentials, submit, wait for app/onboarding. */
+async function performQaLogin(page: Page): Promise<boolean> {
   loadEnvLocal(resolveAppEnv());
   const { email, password } = getQaCredentials();
   if (!password) return false;
@@ -15,8 +20,16 @@ export async function loginAndOpenFreshOnboarding(page: Page): Promise<boolean> 
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', password);
   await page.locator('form button[type="submit"]').click();
-  // Zero-brand → /onboarding; existing brands → /app — always force fresh onboarding.
   await page.waitForURL(/\/(app|onboarding)/, { timeout: 45_000 });
+  return true;
+}
+
+/** Login QA operator and land on /onboarding with a fresh idempotency attempt. */
+export async function loginAndOpenFreshOnboarding(page: Page): Promise<boolean> {
+  const ok = await performQaLogin(page);
+  if (!ok) return false;
+
+  // Zero-brand → /onboarding; existing brands → /app — always force fresh onboarding.
   await page.goto("/onboarding?new=1");
   await page.waitForURL(/\/onboarding/, { timeout: 20_000 });
   await page.getByRole("button", { name: "Get started" }).waitFor({ timeout: 30_000 });
@@ -31,16 +44,8 @@ export async function loginAndResumeDraftReady(
   page: Page,
   session: DraftReadySession,
 ): Promise<boolean> {
-  loadEnvLocal(resolveAppEnv());
-  const { email, password } = getQaCredentials();
-  if (!password) return false;
-
-  await page.goto("/login");
-  await page.getByRole("heading", { name: "Welcome" }).waitFor({ timeout: 30_000 });
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
-  await page.locator('form button[type="submit"]').click();
-  await page.waitForURL(/\/(app|onboarding)/, { timeout: 45_000 });
+  const ok = await performQaLogin(page);
+  if (!ok) return false;
 
   // Land on /onboarding then seed storage + reload so bootstrap reads the key.
   await page.goto("/onboarding");
@@ -68,11 +73,6 @@ export async function loginAndResumeDraftReady(
   });
 
   return true;
-}
-
-function resolveAppEnv(): string {
-  // Prefer app/.env.local (where QA_* live).
-  return `${process.cwd()}/app/.env.local`;
 }
 
 export async function clickPrimaryCta(page: Page, name: string | RegExp) {

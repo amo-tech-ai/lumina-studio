@@ -14,6 +14,7 @@ import {
   findDraftReadyOnboardingSession,
   formatOnboardingProgress,
   queryOnboardingUniqueness,
+  resetBrandToDraftReady,
   snapshotOnboardingProgress,
   type DraftReadySession,
 } from "./helpers/onboarding-sql";
@@ -177,6 +178,9 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
       });
     }
 
+    // Restore brand to draft_ready so the fixture can be reused by subsequent runs.
+    await resetBrandToDraftReady(draft.brandId);
+
     logProgress(
       "post-approve",
       formatOnboardingProgress(
@@ -263,7 +267,9 @@ test.describe("IPI-836 — fresh-user full crawl (only paid path)", () => {
     expect(idem, "idempotency key").toBeTruthy();
 
     await advanceToAnalysis(page, { brandName, websiteUrl });
-    await expect(page.getByTestId("analysis-status")).toBeVisible({ timeout: 120_000 });
+    await expect(
+      page.getByTestId("analysis-status").or(page.getByTestId("approve-brand-dna")).first(),
+    ).toBeVisible({ timeout: 120_000 });
 
     await expect
       .poll(

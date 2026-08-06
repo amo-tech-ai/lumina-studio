@@ -25,19 +25,24 @@ const DNA_LOAD_TIMEOUT_MS = 45_000;
 /** Dedup Strict Mode double-mount so both effects share one server-action flight. */
 const dnaEnsureInflight = new Map<
   string,
-  ReturnType<typeof ensureOnboardingIntakeDraft>
+  { promise: ReturnType<typeof ensureOnboardingIntakeDraft>; generation: number }
 >();
 
 function loadOnboardingDnaDraft(brandId: string, bust = false) {
   if (bust) dnaEnsureInflight.delete(brandId);
-  let pending = dnaEnsureInflight.get(brandId);
-  if (!pending) {
-    pending = ensureOnboardingIntakeDraft(brandId).finally(() => {
-      dnaEnsureInflight.delete(brandId);
-    });
-    dnaEnsureInflight.set(brandId, pending);
+  const entry = dnaEnsureInflight.get(brandId);
+  if (entry) {
+    return entry.promise;
   }
-  return pending;
+  const generation = Date.now();
+  const promise = ensureOnboardingIntakeDraft(brandId).finally(() => {
+    const current = dnaEnsureInflight.get(brandId);
+    if (current && current.generation === generation) {
+      dnaEnsureInflight.delete(brandId);
+    }
+  });
+  dnaEnsureInflight.set(brandId, { promise, generation });
+  return promise;
 }
 
 /**
@@ -94,6 +99,24 @@ function BrandDnaPayoffLive({
     quietGapMs: 0,
   });
 
+  // Reset readiness when brandId changes — prevents stale ready state from previous brand.
+  useEffect(() => {
+    if (brandIdRef.current !== brandId) {
+      setDurableReady(false);
+      onReadyChangeRef.current?.(false);
+      setPillars(null);
+      setBrandName(null);
+      setRunId(null);
+      setLoadError(null);
+      setApproveError(null);
+      setApproving(false);
+      setLoading(true);
+      setLoadAttempt(0);
+      loadGenerationRef.current = 0;
+      brandIdRef.current = brandId;
+    }
+  }, [brandId]);
+
   useEffect(() => {
     const requestedId = brandId;
     const thisGeneration = ++loadGenerationRef.current;
@@ -120,6 +143,7 @@ function BrandDnaPayoffLive({
           setLoading(false);
           return;
         }
+        setLoadError(null);
         setPillars(result.pillars);
         setBrandName(result.brandName);
         setRunId(result.runId);
@@ -145,29 +169,35 @@ function BrandDnaPayoffLive({
   // Realtime (or poll) truth — never treat client success alone as ready.
   useEffect(() => {
     if (!isDurableIntakeReady(intakeStatus)) return;
+    if (brandIdRef.current !== brandId) return;
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
-  }, [intakeStatus]);
+  }, [intakeStatus, brandId]);
 
   // Keep footer Open iPix in lockstep with the card (approve/realtime races).
   useEffect(() => {
     if (!durableReady) return;
+    if (brandIdRef.current !== brandId) return;
     onReadyChangeRef.current?.(true);
-  }, [durableReady]);
+  }, [durableReady, brandId]);
 
   const handleApprove = async () => {
     if (!runId || approving || durableReady) return;
+    const currentBrandId = brandId;
+    const currentGeneration = loadGenerationRef.current;
     setApproving(true);
     setApproveError(null);
     try {
-      const result = await approveWorkflowDraft(brandId, runId);
+      const result = await approveWorkflowDraft(currentBrandId, runId);
       if (!result.ok) {
         if (result.error === "already_processed") {
           // Refresh draft/status — idempotent path may already be ready.
-          const again = await ensureOnboardingIntakeDraft(brandId);
+          const again = await ensureOnboardingIntakeDraft(currentBrandId);
           if (again.ok && isDurableIntakeReady(again.intakeStatus)) {
-            setDurableReady(true);
-            onReadyChangeRef.current?.(true);
+            if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+              setDurableReady(true);
+              onReadyChangeRef.current?.(true);
+            }
             return;
           }
         }
@@ -180,20 +210,28 @@ function BrandDnaPayoffLive({
       }
       // Server returned ok, but promotion may have been idempotent (brand not actually ready).
       // Wait for the follow-up ensure to confirm durable ready before flipping UI.
-      const confirm = await ensureOnboardingIntakeDraft(brandId);
+      const confirm = await ensureOnboardingIntakeDraft(currentBrandId);
       if (confirm.ok && isDurableIntakeReady(confirm.intakeStatus)) {
-        setDurableReady(true);
-        onReadyChangeRef.current?.(true);
-        setPillars(confirm.pillars);
-        setBrandName(confirm.brandName);
+        if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+          setDurableReady(true);
+          onReadyChangeRef.current?.(true);
+          setPillars(confirm.pillars);
+          setBrandName(confirm.brandName);
+        }
       } else {
         // Promotion didn't land ready — surface error, don't claim success.
-        setApproveError(SAFE_APPROVE_ERROR);
+        if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+          setApproveError(SAFE_APPROVE_ERROR);
+        }
       }
     } catch {
-      setApproveError(SAFE_APPROVE_ERROR);
+      if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+        setApproveError(SAFE_APPROVE_ERROR);
+      }
     } finally {
-      setApproving(false);
+      if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+        setApproving(false);
+      }
     }
   };
 

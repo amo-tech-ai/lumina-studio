@@ -233,22 +233,8 @@ export async function processBrandIntelligenceDraftApproval(params: {
       };
     }
     // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
-    // Edge onboarding runIds are not suspended Mastra runs — resume throws
-    // "not suspended". Fire-and-forget so we don't block the server-action flight
-    // on getMastra() cold start, but still complete the workflow for real runs.
     if (promoteResult.ok || promoteResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
-      void (async () => {
-        try {
-          const { getMastra } = await import("@/mastra");
-          const mastra = getMastra();
-          const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
-          if (run) {
-            await run.resume({ step: "save-draft-and-wait", resumeData: { approved: true } });
-          }
-        } catch {
-          // Ignore: not a suspended Mastra run (edge onboarding) or cold-start failed.
-        }
-      })();
+      scheduleDraftWorkflowResume(runId, true);
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
@@ -261,20 +247,37 @@ export async function processBrandIntelligenceDraftApproval(params: {
     }
     // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
     if (discardResult.ok || discardResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
-      void (async () => {
-        try {
-          const { getMastra } = await import("@/mastra");
-          const mastra = getMastra();
-          const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
-          if (run) {
-            await run.resume({ step: "save-draft-and-wait", resumeData: { approved: false } });
-          }
-        } catch {
-          // Ignore: not a suspended Mastra run (edge onboarding) or cold-start failed.
-        }
-      })();
+      scheduleDraftWorkflowResume(runId, false);
     }
-}
+  }
 
   return { ok: true, approved, brandId: draft.brand_id };
+}
+
+/**
+ * Schedule Mastra workflow resume via Next.js `after()` so it runs after the
+ * response is sent, without blocking the server-action flight on cold start.
+ * Logs failures but never throws — edge onboarding runIds are not suspended
+ * Mastra runs and will error "not suspended", which is expected.
+ */
+function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
+  // Use a microtask to defer until after the response; Next.js `after()` is
+  // not available in this context (not a route handler), so we use setImmediate
+  // equivalent via queueMicrotask to run after the current execution context.
+  queueMicrotask(async () => {
+    try {
+      const { getMastra } = await import("@/mastra");
+      const mastra = getMastra();
+      const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
+      if (run) {
+        await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
+      }
+    } catch (err) {
+      // Expected for edge onboarding runIds (not suspended Mastra runs) or cold-start failures.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.toLowerCase().includes("not suspended")) {
+        console.error("[process-draft-approval] workflow resume failed", { runId, approved, error: msg });
+      }
+    }
+  });
 }

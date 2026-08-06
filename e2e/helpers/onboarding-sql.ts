@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 import { assertQaOnly, loadEnvLocalFiles, QA_PROJECT_REF } from "./qa-target";
+import { getQaCredentials } from "./qa-credentials";
 
 const requireFromApp = createRequire(resolve(process.cwd(), "app/package.json"));
 const { Client } = requireFromApp("pg") as typeof import("pg");
@@ -206,7 +207,7 @@ export async function findDraftReadyOnboardingSession(opts?: {
     let userId = opts?.userId?.trim() || "";
     if (!userId) {
       const email =
-        opts?.email?.trim() || process.env.QA_EMAIL?.trim() || "qa@ipix.test";
+        opts?.email?.trim() || getQaCredentials().email?.trim() || "qa@ipix.test";
       const u = await client.query<{ id: string }>(
         `select id::text as id from auth.users where email = $1 limit 1`,
         [email],
@@ -273,17 +274,21 @@ export async function snapshotOnboardingProgress(opts: {
       [opts.brandId],
     );
     const intake = brand.rows[0]?.intake_status ?? null;
-    const crawl = await client.query<{ job_status: string | null; n: number }>(
-      `select max(job_status) as job_status, count(*)::int as n
-         from public.brand_crawls where brand_id = $1::uuid`,
+    const crawl = await client.query<{ job_status: string | null; created_at: string | null }>(
+      `select job_status, created_at
+         from public.brand_crawls
+        where brand_id = $1::uuid
+        order by created_at desc nulls last
+        limit 1`,
       [opts.brandId],
     );
     const crawlStatus = (crawl.rows[0]?.job_status ?? "").toLowerCase();
-    const crawlN = crawl.rows[0]?.n ?? 0;
+    const crawlN = crawl.rows.length;
 
     let crawlPhase: OnboardingProgressSnapshot["crawl"] = "unknown";
     if (crawlN === 0) crawlPhase = "pending";
     else if (/run|pend|start/i.test(crawlStatus)) crawlPhase = "running";
+    else if (/fail|cancel|abort/i.test(crawlStatus)) crawlPhase = "failed";
     else crawlPhase = "completed";
 
     let bi: OnboardingProgressSnapshot["brandIntelligence"] = "unknown";
@@ -378,5 +383,18 @@ export async function assertTenantIsolation(opts: {
     } finally {
       await client.query("rollback").catch(() => undefined);
     }
+  });
+}
+
+/**
+ * Reset a brand's intake status to draft_ready for test fixture reuse.
+ * Uses the QA database connection directly.
+ */
+export async function resetBrandToDraftReady(brandId: string): Promise<void> {
+  return withQaPg(async (client) => {
+    await client.query(
+      `update public.brands set intake_status = 'draft_ready', updated_at = now() where id = $1::uuid`,
+      [brandId],
+    );
   });
 }
