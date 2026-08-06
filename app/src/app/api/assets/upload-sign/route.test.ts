@@ -217,6 +217,16 @@ describe("POST /api/assets/upload-sign — workId validation", () => {
     const res = await post(uploadBody({ workType: "shoots", workId: "not-a-uuid" }));
     expect(res.status).toBe(400);
   });
+
+  it("rejects non-string workId", async () => {
+    const res = await post(uploadBody({ workType: "shoots", workId: 42 as unknown as string }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects null workId", async () => {
+    const res = await post(uploadBody({ workType: "shoots", workId: null as unknown as string }));
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("POST /api/assets/upload-sign — context validation", () => {

@@ -292,6 +292,13 @@ async function signServerRequest(
     return { error: "Invalid workType", status: 400 };
   }
 
+  // Validate workId format to prevent injection into folder paths and context
+  if (workId !== undefined && workId !== null) {
+    if (typeof workId !== "string" || !UUID_RE.test(workId)) {
+      return { error: "Invalid workId", status: 400 };
+    }
+  }
+
   const pairError = workTypeWorkIdPairError(workType, workId);
   if (pairError) {
     return { error: pairError, status: 400 };
