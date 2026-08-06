@@ -184,9 +184,14 @@ function shortId(id: string): string {
  * PostgREST does not expose the `shoot` schema (PGRST106 on the remote
  * project), so existence is checked through the public
  * `get_openable_shoots(uuid[])` RPC instead of `client.schema("shoot")`.
+ * Only well-formed UUIDs are sent: a legacy non-UUID ref would fail the
+ * `uuid[]` cast for the whole batch, erroring the RPC and taking every
+ * link non-clickable with it. Non-UUID refs stay in Where Used as labels.
  * A failed RPC is returned as `ok: false` so callers can treat "query
  * failed" distinctly from "shoot not found" instead of silently deciding.
  */
+const SHOOT_ID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type OpenableShootIdsResult = { ok: true; ids: Set<string> } | { ok: false };
 
 async function resolveOpenableShootIds(
@@ -194,10 +199,11 @@ async function resolveOpenableShootIds(
   shootIds: string[],
 ): Promise<OpenableShootIdsResult> {
   const unique = Array.from(new Set(shootIds));
-  if (unique.length === 0) return { ok: true, ids: new Set() };
+  const validUuids = unique.filter((id) => SHOOT_ID_UUID_RE.test(id));
+  if (validUuids.length === 0) return { ok: true, ids: new Set() };
 
   const { data, error } = await client.rpc("get_openable_shoots", {
-    p_shoot_ids: unique,
+    p_shoot_ids: validUuids,
   });
 
   if (error) {

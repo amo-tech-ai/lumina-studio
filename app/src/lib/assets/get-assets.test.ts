@@ -293,7 +293,7 @@ describe("getAssetDetail", () => {
           cloudinary_public_id: "brand/look-01",
           url: "https://example.com/unused.jpg",
           thumbnail_url: null,
-          shoot_id: "shoot-1",
+          shoot_id: "071f9316-c08c-4d12-9b41-b523218891b2",
           tags: null,
           width: 10,
           height: 10,
@@ -318,14 +318,14 @@ describe("getAssetDetail", () => {
             folder: "brand",
           },
           asset_links: [
-            { entity_type: "shoot", entity_id: "shoot-1" },
+            { entity_type: "shoot", entity_id: "071f9316-c08c-4d12-9b41-b523218891b2" },
             { entity_type: "event", entity_id: "event-9" },
           ],
           commerce_product_links: [{ medusa_product_id: "prod-42" }],
         },
         error: null,
       },
-      { data: [{ id: "shoot-1" }], error: null },
+      { data: [{ id: "071f9316-c08c-4d12-9b41-b523218891b2" }], error: null },
     );
 
     const result = await getAssetDetail(client, "a1");
@@ -342,7 +342,7 @@ describe("getAssetDetail", () => {
     expect(result.data.consoleUrl).toContain("media_library/search");
     expect(result.data.consoleUrl).toContain(encodeURIComponent("public_id=brand/look-01"));
     expect(result.data.whereUsed).toEqual([
-      { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: "/app/shoots/shoot-1" },
+      { kind: "shoot", id: "071f9316-c08c-4d12-9b41-b523218891b2", label: "Shoot · 071f9316…", href: "/app/shoots/071f9316-c08c-4d12-9b41-b523218891b2" },
       { kind: "event", id: "event-9", label: "Event · event-9", href: null },
       { kind: "product", id: "prod-42", label: "Product · prod-42", href: null },
     ]);
@@ -479,15 +479,15 @@ describe("getAssetDetail", () => {
 
     it("keeps the shoot link clickable only when the ID exists in shoot.shoots", async () => {
       const client = mockDetailClient(
-        { data: { ...base, id: "a1", shoot_id: "shoot-1" }, error: null },
-        { data: [{ id: "shoot-1" }], error: null },
+        { data: { ...base, id: "a1", shoot_id: "071f9316-c08c-4d12-9b41-b523218891b2" }, error: null },
+        { data: [{ id: "071f9316-c08c-4d12-9b41-b523218891b2" }], error: null },
       );
 
       const result = await getAssetDetail(client, "a1");
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.data.whereUsed).toEqual([
-        { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: "/app/shoots/shoot-1" },
+        { kind: "shoot", id: "071f9316-c08c-4d12-9b41-b523218891b2", label: "Shoot · 071f9316…", href: "/app/shoots/071f9316-c08c-4d12-9b41-b523218891b2" },
       ]);
     });
 
@@ -534,12 +534,12 @@ describe("getAssetDetail", () => {
           data: {
             ...base,
             id: "a1",
-            shoot_id: "shoot-1",
-            asset_links: [shootLink("shoot-1")],
+            shoot_id: "071f9316-c08c-4d12-9b41-b523218891b2",
+            asset_links: [shootLink("071f9316-c08c-4d12-9b41-b523218891b2")],
           },
           error: null,
         },
-        { data: [{ id: "shoot-1" }], error: null },
+        { data: [{ id: "071f9316-c08c-4d12-9b41-b523218891b2" }], error: null },
       );
 
       const result = await getAssetDetail(client, "a1");
@@ -549,10 +549,10 @@ describe("getAssetDetail", () => {
         _rpc: ReturnType<typeof vi.fn>;
       };
       expect(rpc).toHaveBeenCalledTimes(1);
-      expect(rpc).toHaveBeenCalledWith("get_openable_shoots", { p_shoot_ids: ["shoot-1"] });
+      expect(rpc).toHaveBeenCalledWith("get_openable_shoots", { p_shoot_ids: ["071f9316-c08c-4d12-9b41-b523218891b2"] });
       if (!result.ok) return;
       expect(result.data.whereUsed).toHaveLength(1);
-      expect(result.data.whereUsed[0].href).toBe("/app/shoots/shoot-1");
+      expect(result.data.whereUsed[0].href).toBe("/app/shoots/071f9316-c08c-4d12-9b41-b523218891b2");
     });
 
     it("skips the get_openable_shoots RPC entirely when there are no shoot candidates", async () => {
@@ -572,11 +572,38 @@ describe("getAssetDetail", () => {
       expect(rpc).not.toHaveBeenCalled();
     });
 
+    it("filters legacy non-UUID refs out of the RPC batch so they cannot fail the uuid[] cast", async () => {
+      const valid = "071f9316-c08c-4d12-9b41-b523218891b2";
+      const client = mockDetailClient(
+        {
+          data: {
+            ...base,
+            id: "a1",
+            shoot_id: "legacy-shoot",
+            asset_links: [shootLink(valid)],
+          },
+          error: null,
+        },
+        { data: [{ id: valid }], error: null },
+      );
+
+      const result = await getAssetDetail(client, "a1");
+      expect(result.ok).toBe(true);
+      const { rpc } = client as unknown as { rpc: ReturnType<typeof vi.fn> };
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledWith("get_openable_shoots", { p_shoot_ids: [valid] });
+      if (!result.ok) return;
+      expect(result.data.whereUsed).toEqual([
+        { kind: "shoot", id: "legacy-shoot", label: "Shoot · legacy-s…", href: null },
+        { kind: "shoot", id: valid, label: `Shoot · 071f9316…`, href: `/app/shoots/${valid}` },
+      ]);
+    });
+
     it("fails closed and observably: an RPC error leaves shoot links non-clickable, not a 500", async () => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
         const client = mockDetailClient(
-          { data: { ...base, id: "a1", shoot_id: "shoot-1" }, error: null },
+          { data: { ...base, id: "a1", shoot_id: "071f9316-c08c-4d12-9b41-b523218891b2" }, error: null },
           { data: null, error: { message: "boom" } },
         );
 
@@ -584,7 +611,12 @@ describe("getAssetDetail", () => {
         expect(result.ok).toBe(true);
         if (!result.ok) return;
         expect(result.data.whereUsed).toEqual([
-          { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: null },
+          {
+            kind: "shoot",
+            id: "071f9316-c08c-4d12-9b41-b523218891b2",
+            label: "Shoot · 071f9316…",
+            href: null,
+          },
         ]);
         expect(errorSpy).toHaveBeenCalledWith("[assets] shoot existence check failed:", "boom");
       } finally {
@@ -598,9 +630,9 @@ describe("getAssetDetail", () => {
           data: {
             ...base,
             id: "a1",
-            shoot_id: "shoot-1",
+            shoot_id: "071f9316-c08c-4d12-9b41-b523218891b2",
             asset_links: [
-              shootLink("shoot-1"),
+              shootLink("071f9316-c08c-4d12-9b41-b523218891b2"),
               { entity_type: "event", entity_id: "event-9" },
               { entity_type: "campaign", entity_id: "camp-1" },
             ],
@@ -608,14 +640,14 @@ describe("getAssetDetail", () => {
           },
           error: null,
         },
-        { data: [{ id: "shoot-1" }], error: null },
+        { data: [{ id: "071f9316-c08c-4d12-9b41-b523218891b2" }], error: null },
       );
 
       const result = await getAssetDetail(client, "a1");
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.data.whereUsed).toEqual([
-        { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: "/app/shoots/shoot-1" },
+        { kind: "shoot", id: "071f9316-c08c-4d12-9b41-b523218891b2", label: "Shoot · 071f9316…", href: "/app/shoots/071f9316-c08c-4d12-9b41-b523218891b2" },
         { kind: "event", id: "event-9", label: "Event · event-9", href: null },
         { kind: "other", id: "camp-1", label: "campaign · camp-1", href: null },
         { kind: "product", id: "prod-42", label: "Product · prod-42", href: null },
