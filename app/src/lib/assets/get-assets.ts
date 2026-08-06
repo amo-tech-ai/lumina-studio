@@ -179,42 +179,33 @@ function shortId(id: string): string {
  * Only shoot IDs are checked. `assets.shoot_id` and legacy `asset_links`
  * rows routinely point at `public.shoots` rows with no `shoot.shoots`
  * counterpart; those stay visible with `href: null` (non-clickable) instead
- * of a dead deep link. The `shoot` schema is not in the generated Database
- * type, so the schema-switched client is narrowed to the single `id` column.
+ * of a dead deep link.
+ *
+ * PostgREST does not expose the `shoot` schema (PGRST106 on the remote
+ * project), so existence is checked through the public
+ * `get_openable_shoots(uuid[])` RPC instead of `client.schema("shoot")`.
+ * A failed RPC is returned as `ok: false` so callers can treat "query
+ * failed" distinctly from "shoot not found" instead of silently deciding.
  */
-type ShootShootsRow = { id: string };
-type ShootShootsQuery = {
-  from: (relation: "shoots") => {
-    select: (columns: "id") => {
-      in: (
-        column: "id",
-        values: string[],
-      ) => Promise<{
-        data: ShootShootsRow[] | null;
-        error: { message: string } | null;
-      }>;
-    };
-  };
-};
+type OpenableShootIdsResult = { ok: true; ids: Set<string> } | { ok: false };
 
 async function resolveOpenableShootIds(
   client: Db,
   shootIds: string[],
-): Promise<Set<string>> {
+): Promise<OpenableShootIdsResult> {
   const unique = Array.from(new Set(shootIds));
-  if (unique.length === 0) return new Set();
+  if (unique.length === 0) return { ok: true, ids: new Set() };
 
-  const shootSb = (client as unknown as { schema: (name: "shoot") => ShootShootsQuery }).schema(
-    "shoot",
-  );
-  const { data, error } = await shootSb.from("shoots").select("id").in("id", unique);
+  const { data, error } = await client.rpc("get_openable_shoots", {
+    p_shoot_ids: unique,
+  });
 
   if (error) {
     console.error("[assets] shoot existence check failed:", error.message);
-    return new Set();
+    return { ok: false };
   }
 
-  return new Set((data ?? []).map((row) => row.id));
+  return { ok: true, ids: new Set((data ?? []).map((row) => row.id)) };
 }
 
 async function buildWhereUsed(
@@ -247,7 +238,7 @@ async function buildWhereUsed(
       kind: "shoot",
       id,
       label: `Shoot · ${shortId(id)}`,
-      href: openableShoots.has(id) ? `/app/shoots/${id}` : null,
+      href: openableShoots.ok && openableShoots.ids.has(id) ? `/app/shoots/${id}` : null,
     });
   };
 

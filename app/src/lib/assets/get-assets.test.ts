@@ -26,11 +26,7 @@ function mockDetailClient(
   response: { data: unknown; error: { message: string } | null },
   shootResponse: { data: unknown; error: { message: string } | null } = { data: [], error: null },
 ) {
-  const shootBuilder = {
-    select: vi.fn().mockReturnThis(),
-    in: vi.fn(async () => shootResponse),
-  };
-  const shootFrom = vi.fn(() => shootBuilder);
+  const rpc = vi.fn(async () => shootResponse);
   const builder = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -38,10 +34,9 @@ function mockDetailClient(
   };
   return {
     from: vi.fn(() => builder),
-    schema: vi.fn(() => ({ from: shootFrom })),
+    rpc,
     _builder: builder,
-    _shootFrom: shootFrom,
-    _shootBuilder: shootBuilder,
+    _rpc: rpc,
   } as never;
 }
 
@@ -497,17 +492,23 @@ describe("getAssetDetail", () => {
     });
 
     it("renders a legacy shoot_id as a non-clickable label (href null, Event pattern)", async () => {
-      const client = mockDetailClient(
-        { data: { ...base, id: "a1", shoot_id: "legacy-shoot" }, error: null },
-        { data: [], error: null },
-      );
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        const client = mockDetailClient(
+          { data: { ...base, id: "a1", shoot_id: "legacy-shoot" }, error: null },
+          { data: [], error: null },
+        );
 
-      const result = await getAssetDetail(client, "a1");
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.data.whereUsed).toEqual([
-        { kind: "shoot", id: "legacy-shoot", label: "Shoot · legacy-s…", href: null },
-      ]);
+        const result = await getAssetDetail(client, "a1");
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.whereUsed).toEqual([
+          { kind: "shoot", id: "legacy-shoot", label: "Shoot · legacy-s…", href: null },
+        ]);
+        expect(errorSpy).not.toHaveBeenCalled();
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it("keeps legacy shoot asset_links visible but non-clickable", async () => {
@@ -527,7 +528,7 @@ describe("getAssetDetail", () => {
       ]);
     });
 
-    it("queries shoot.shoots exactly once when the same shoot appears as parent and link", async () => {
+    it("queries get_openable_shoots exactly once when the same shoot appears as parent and link", async () => {
       const client = mockDetailClient(
         {
           data: {
@@ -543,23 +544,18 @@ describe("getAssetDetail", () => {
 
       const result = await getAssetDetail(client, "a1");
       expect(result.ok).toBe(true);
-      const { schema, _shootFrom, _shootBuilder } = client as unknown as {
-        schema: ReturnType<typeof vi.fn>;
-        _shootFrom: ReturnType<typeof vi.fn>;
-        _shootBuilder: { in: ReturnType<typeof vi.fn> };
+      const { rpc, _rpc } = client as unknown as {
+        rpc: ReturnType<typeof vi.fn>;
+        _rpc: ReturnType<typeof vi.fn>;
       };
-      expect(schema).toHaveBeenCalledTimes(1);
-      expect(schema).toHaveBeenCalledWith("shoot");
-      expect(_shootFrom).toHaveBeenCalledTimes(1);
-      expect(_shootFrom).toHaveBeenCalledWith("shoots");
-      expect(_shootBuilder.in).toHaveBeenCalledTimes(1);
-      expect(_shootBuilder.in).toHaveBeenCalledWith("id", ["shoot-1"]);
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledWith("get_openable_shoots", { p_shoot_ids: ["shoot-1"] });
       if (!result.ok) return;
       expect(result.data.whereUsed).toHaveLength(1);
       expect(result.data.whereUsed[0].href).toBe("/app/shoots/shoot-1");
     });
 
-    it("skips the shoot.shoots query entirely when there are no shoot candidates", async () => {
+    it("skips the get_openable_shoots RPC entirely when there are no shoot candidates", async () => {
       const client = mockDetailClient({
         data: {
           ...base,
@@ -572,22 +568,28 @@ describe("getAssetDetail", () => {
 
       const result = await getAssetDetail(client, "a1");
       expect(result.ok).toBe(true);
-      const { schema } = client as unknown as { schema: ReturnType<typeof vi.fn> };
-      expect(schema).not.toHaveBeenCalled();
+      const { rpc } = client as unknown as { rpc: ReturnType<typeof vi.fn> };
+      expect(rpc).not.toHaveBeenCalled();
     });
 
-    it("fails closed: a shoot.shoots query error leaves shoot links non-clickable, not a 500", async () => {
-      const client = mockDetailClient(
-        { data: { ...base, id: "a1", shoot_id: "shoot-1" }, error: null },
-        { data: null, error: { message: "boom" } },
-      );
+    it("fails closed and observably: an RPC error leaves shoot links non-clickable, not a 500", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        const client = mockDetailClient(
+          { data: { ...base, id: "a1", shoot_id: "shoot-1" }, error: null },
+          { data: null, error: { message: "boom" } },
+        );
 
-      const result = await getAssetDetail(client, "a1");
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.data.whereUsed).toEqual([
-        { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: null },
-      ]);
+        const result = await getAssetDetail(client, "a1");
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.whereUsed).toEqual([
+          { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: null },
+        ]);
+        expect(errorSpy).toHaveBeenCalledWith("[assets] shoot existence check failed:", "boom");
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it("keeps event and product links non-clickable and unchanged next to resolved shoots", async () => {
