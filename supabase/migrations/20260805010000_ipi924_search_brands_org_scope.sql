@@ -8,9 +8,9 @@ drop function if exists public.search_brands(vector, int, uuid);
 
 create or replace function public.search_brands(
   p_embedding        vector(768),
+  p_org_id           uuid,
   p_limit            int     default 20,
-  p_exclude_brand_id uuid    default null,
-  p_org_id           uuid
+  p_exclude_brand_id uuid    default null
 )
 returns table (
   brand_id     uuid,
@@ -26,7 +26,7 @@ begin
   select
     b.id,
     b.name,
-    1 - (b.embedding <=> p_embedding) as similarity,
+    (1 - (b.embedding <=> p_embedding))::real as similarity,
     (
       select jsonb_agg(jsonb_build_object(
         'node_type', n.node_type,
@@ -53,8 +53,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.search_brands(vector(768), int, uuid, uuid) from public;
-grant  execute on function public.search_brands(vector(768), int, uuid, uuid) to service_role;
+revoke execute on function public.search_brands(vector(768), uuid, int, uuid) from public, anon, authenticated;
+grant  execute on function public.search_brands(vector(768), uuid, int, uuid) to service_role;
 
 comment on function public.search_brands is
   'Semantic brand search via pgvector cosine similarity (GRAPH-004), org-scoped (IPI-924)';
