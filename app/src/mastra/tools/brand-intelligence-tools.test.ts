@@ -10,6 +10,19 @@ const mockGetStore = vi.fn(() => "tok");
 vi.mock("@/lib/request-token", () => ({
   requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
 }));
+vi.mock("@/lib/crm/queries", () => ({
+  getCurrentOrgId: vi.fn().mockResolvedValue("org-1"),
+}));
+vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
+  createUserScopedClient: vi.fn(() => ({
+    auth: {
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: "user-1" } },
+        error: null,
+      }),
+    },
+  })),
+}));
 vi.mock("@/app/api/_lib/process-draft-approval", () => ({
   PENDING_DRAFT_STATUS: "pending_approval",
   processBrandIntelligenceDraftApproval: vi.fn().mockResolvedValue({
@@ -28,6 +41,7 @@ vi.mock("@ai-sdk/google", () => ({
 import { createClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./edge";
 import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
+import { getCurrentOrgId } from "@/lib/crm/queries";
 import {
   approveDraftTool,
   explainPillarTool,
@@ -244,6 +258,7 @@ describe("searchSimilarBrands", () => {
       p_embedding: "[0.1,0.2,0.3]",
       p_limit: 5,
       p_exclude_brand_id: BRAND_ID,
+      p_org_id: "org-1",
     });
   });
 
@@ -275,6 +290,18 @@ describe("searchSimilarBrands", () => {
     await expect(
       searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
     ).rejects.toThrow(/search_brands failed/);
+  });
+
+  it("fails closed when operator has no organization membership", async () => {
+    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
+      rpc: ReturnType<typeof vi.fn>;
+    };
+    const rpcCallsBefore = client.rpc.mock.calls.length;
+    vi.mocked(getCurrentOrgId).mockResolvedValueOnce(null);
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/No organization membership/);
+    expect(client.rpc.mock.calls.length).toBe(rpcCallsBefore);
   });
 });
 
