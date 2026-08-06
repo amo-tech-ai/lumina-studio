@@ -47,7 +47,7 @@ evidence as (
   select
     u.*,
     (
-      select bi.id
+      select max(bi.id)
       from brand_ids bi
       where exists (
         select 1
