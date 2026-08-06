@@ -255,9 +255,13 @@ describe("Router Fallback Integration", () => {
       ENV,
     );
 
-    expect(response.status).toBe(502);
-    const body = await response.json();
-    expect(body.error).toContain("Bedrock unavailable");
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(body.error.code).toBe("provider_unavailable");
+    expect(body.error.message).toBe("AI provider is temporarily unavailable");
+    expect(JSON.stringify(body)).not.toContain("Bedrock unavailable");
   });
 
   it("streams response from primary provider with request ID", async () => {
@@ -365,7 +369,7 @@ describe("Router Fallback Integration", () => {
       envNoFallback,
     );
 
-    expect(response.status).toBe(502);
+    expect(response.status).toBe(503);
   });
 
   it("preserves default-fallback from defaults when MODEL_REGISTRY_OVERRIDE omits it", async () => {

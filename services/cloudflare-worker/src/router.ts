@@ -194,7 +194,10 @@ export async function handleChat(
         latencyMs: latency,
         errorMessage,
       });
-      return Response.json({ error: errorMessage }, { status: 502 });
+      return gatewayErrorResponse(502, "provider_error", "AI provider returned an error", {
+        retryable: false,
+        requestId,
+      });
     }
 
     // Retryable error (429, 5xx, timeout) — try Bedrock fallback
@@ -217,7 +220,11 @@ export async function handleChat(
           primaryProvider: entry.provider,
           fallbackEntry: fallbackEntry ? fallbackEntry.provider : "none",
         });
-        return Response.json({ error: errorMessage }, { status: 502 });
+        const noFallback = mapProviderFailure(err, "AI provider");
+        return gatewayErrorResponse(noFallback.status, noFallback.code, noFallback.message, {
+          retryable: noFallback.retryable,
+          requestId,
+        });
       }
 
       // Skip fallback if Bedrock provider is not configured (no API key)
@@ -225,7 +232,16 @@ export async function handleChat(
         console.log(`[gateway] Bedrock fallback not configured (missing AWS_BEDROCK_API_KEY)`, {
           requestId,
         });
-        return Response.json({ error: errorMessage }, { status: 502 });
+        const bedrockMissing = mapProviderFailure(err, "AI provider");
+        return gatewayErrorResponse(
+          bedrockMissing.status,
+          bedrockMissing.code,
+          bedrockMissing.message,
+          {
+            retryable: bedrockMissing.retryable,
+            requestId,
+          },
+        );
       }
 
       const fallbackProvider = getProvider(fallbackEntry.provider);
@@ -301,7 +317,16 @@ export async function handleChat(
         totalLatencyMs: fallbackLatency,
       });
 
-      return Response.json({ error: fallbackErrorMessage }, { status: 502 });
+      const fallbackMapped = mapProviderFailure(fallbackErr, "AI provider");
+      return gatewayErrorResponse(
+        fallbackMapped.status,
+        fallbackMapped.code,
+        fallbackMapped.message,
+        {
+          retryable: fallbackMapped.retryable,
+          requestId,
+        },
+      );
     }
   }
 }
