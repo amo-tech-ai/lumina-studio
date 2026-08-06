@@ -30,6 +30,7 @@ function mockDetailClient(
     select: vi.fn().mockReturnThis(),
     in: vi.fn(async () => shootResponse),
   };
+  const shootFrom = vi.fn(() => shootBuilder);
   const builder = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -37,8 +38,9 @@ function mockDetailClient(
   };
   return {
     from: vi.fn(() => builder),
-    schema: vi.fn(() => ({ from: vi.fn(() => shootBuilder) })),
+    schema: vi.fn(() => ({ from: shootFrom })),
     _builder: builder,
+    _shootFrom: shootFrom,
     _shootBuilder: shootBuilder,
   } as never;
 }
@@ -541,12 +543,15 @@ describe("getAssetDetail", () => {
 
       const result = await getAssetDetail(client, "a1");
       expect(result.ok).toBe(true);
-      const { schema, _shootBuilder } = client as unknown as {
+      const { schema, _shootFrom, _shootBuilder } = client as unknown as {
         schema: ReturnType<typeof vi.fn>;
+        _shootFrom: ReturnType<typeof vi.fn>;
         _shootBuilder: { in: ReturnType<typeof vi.fn> };
       };
       expect(schema).toHaveBeenCalledTimes(1);
       expect(schema).toHaveBeenCalledWith("shoot");
+      expect(_shootFrom).toHaveBeenCalledTimes(1);
+      expect(_shootFrom).toHaveBeenCalledWith("shoots");
       expect(_shootBuilder.in).toHaveBeenCalledTimes(1);
       expect(_shootBuilder.in).toHaveBeenCalledWith("id", ["shoot-1"]);
       if (!result.ok) return;
