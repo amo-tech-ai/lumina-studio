@@ -256,8 +256,12 @@ describe("Router Fallback Integration", () => {
     );
 
     expect(response.status).toBe(502);
-    const body = await response.json();
-    expect(body.error).toContain("Bedrock unavailable");
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(body.error.code).toBe("provider_error");
+    expect(body.error.message).toBe("AI provider returned an error");
+    expect(JSON.stringify(body)).not.toContain("Bedrock unavailable");
   });
 
   it("streams response from primary provider with request ID", async () => {
