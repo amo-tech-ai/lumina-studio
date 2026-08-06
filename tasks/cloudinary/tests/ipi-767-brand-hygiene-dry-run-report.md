@@ -4,7 +4,7 @@
 
 Branch: `ipi/767-assets-brand-hygiene` · Project: `nvdlhrodvevgwdsneplk` (remote-only, verified via Supabase MCP)
 
-## 1. Fresh live counts (2026-08-05 · Supabase MCP)
+## 1. Pre-apply live counts (2026-08-05 · Supabase MCP)
 
 | Check | 2026-07-22 (issue) | 2026-08-05 (live) | Delta |
 | -- | -- | -- | -- |

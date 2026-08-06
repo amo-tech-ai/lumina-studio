@@ -58,7 +58,7 @@ evidence as (
         ) m
         where m[1]::uuid = bi.id
       )
-      limit 1
+      having count(*) = 1
     ) as proposed_brand,
     coalesce(u.folder, u.public_id, '') as evidence_source
   from unified u
