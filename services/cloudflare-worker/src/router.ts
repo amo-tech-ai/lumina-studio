@@ -222,7 +222,6 @@ export async function handleChat(
         });
         const noFallback = mapProviderFailure(err, "AI provider");
         return gatewayErrorResponse(noFallback.status, noFallback.code, noFallback.message, {
-          providerStatus: noFallback.providerStatus,
           retryable: noFallback.retryable,
           requestId,
         });
@@ -239,7 +238,6 @@ export async function handleChat(
           bedrockMissing.code,
           bedrockMissing.message,
           {
-            providerStatus: bedrockMissing.providerStatus,
             retryable: bedrockMissing.retryable,
             requestId,
           },
@@ -325,7 +323,6 @@ export async function handleChat(
         fallbackMapped.code,
         fallbackMapped.message,
         {
-          providerStatus: fallbackMapped.providerStatus,
           retryable: fallbackMapped.retryable,
           requestId,
         },
