@@ -350,9 +350,9 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.degraded).toBe(true);
   });
 
-  it("returns 200 with degraded discovery on /info when org lookup fails (cold-start safe, IPI-955)", async () => {
-    // Infrastructure failures (cold start, DB timeout) return degraded 200 response
-    // instead of 503 to avoid tripping E2E gates, while preserving security.
+  it("returns 503 org_lookup_error on /info when org lookup fails (proper fail-closed, IPI-955)", async () => {
+    // Infrastructure failures (cold start, DB timeout) return proper 503 error
+    // to maintain fail-closed behavior and proper API contract.
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
@@ -402,16 +402,14 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
       new Request("http://localhost/api/copilotkit/info"),
     );
 
-    // Degraded 200 response — not 503, fixes cold-start E2E gate issue
-    expect(response.status).toBe(200);
+    // Proper 503 response — maintains fail-closed behavior and API contract
+    expect(response.status).toBe(503);
     const body = (await response.json()) as { 
-      mode?: string; 
       code?: string; 
-      agents?: Record<string, unknown>;
+      degraded?: boolean;
     };
-    expect(body.mode).toBe("degraded");
-    expect(body.code).toBe("org_lookup_degraded");
-    expect(body.agents).toEqual({}); // Empty agents in degraded mode
+    expect(body.code).toBe("org_lookup_error");
+    expect(body.degraded).toBe(true);
   }, 15_000);
 
   it("returns 403 org_required on /info when operator has no org membership (security preserved)", async () => {

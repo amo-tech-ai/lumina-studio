@@ -521,10 +521,11 @@ const handler = async (request: Request): Promise<Response> => {
       // registered agent list and runtime mode). No agent turn runs, no
       // Mastra memory is read or written, no thread is accessed.
       //
-      // For /info: preserve org membership validation (fail closed) but handle
-      // infrastructure failures (cold start, DB timeout) with a degraded 
-      // discovery response instead of 503. This fixes the E2E gate issue
-      // without compromising security.
+      // For /info: preserve org membership validation (fail closed) and return
+      // proper error codes for all failure modes. Infrastructure failures
+      // (cold start, DB timeout) return 503 to signal retry-able conditions.
+      // The E2E gate should be configured to handle legitimate 503s properly
+      // rather than compromising the API contract with empty 200 responses.
       //
       // For all other requests (agent turns, thread CRUD) the full
       // fail-closed org gate applies unchanged.
@@ -541,19 +542,18 @@ const handler = async (request: Request): Promise<Response> => {
               { status: 403 },
             );
           }
-          // Infrastructure failure (cold start, DB timeout, RLS error) → degraded discovery
+          // Infrastructure failure (cold start, DB timeout, RLS error) → controlled 503
           console.error(
-            "[copilotkit] /info org lookup failed — returning degraded discovery (avoid 503)",
+            "[copilotkit] /info org lookup failed — refusing (503, fail closed)",
             err instanceof Error ? err.message : String(err),
           );
           return Response.json(
-            { 
-              agents: {},
-              mode: "degraded", 
-              error: "Discovery temporarily degraded", 
-              code: "org_lookup_degraded" 
+            {
+              error: "Organization membership could not be verified",
+              code: "org_lookup_error",
+              degraded: true,
             },
-            { status: 200 }
+            { status: 503 },
           );
         }
       } else {
