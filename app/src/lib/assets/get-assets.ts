@@ -171,11 +171,60 @@ function shortId(id: string): string {
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 
-function buildWhereUsed(args: {
-  shootId: string | null;
-  links: Array<{ entity_type: string; entity_id: string }> | null;
-  products: Array<{ medusa_product_id: string }> | null;
-}): WhereUsedItem[] {
+/**
+ * Resolve which shoot IDs actually exist in the canonical `shoot.shoots`
+ * table (org-scoped via RLS — the same predicate `get_shoot_detail` enforces)
+ * so Where Used never links to a shoot that 404s on open.
+ *
+ * Only shoot IDs are checked. `assets.shoot_id` and legacy `asset_links`
+ * rows routinely point at `public.shoots` rows with no `shoot.shoots`
+ * counterpart; those stay visible with `href: null` (non-clickable) instead
+ * of a dead deep link. The `shoot` schema is not in the generated Database
+ * type, so the schema-switched client is narrowed to the single `id` column.
+ */
+type ShootShootsRow = { id: string };
+type ShootShootsQuery = {
+  from: (relation: "shoots") => {
+    select: (columns: "id") => {
+      in: (
+        column: "id",
+        values: string[],
+      ) => Promise<{
+        data: ShootShootsRow[] | null;
+        error: { message: string } | null;
+      }>;
+    };
+  };
+};
+
+async function resolveOpenableShootIds(
+  client: Db,
+  shootIds: string[],
+): Promise<Set<string>> {
+  const unique = Array.from(new Set(shootIds));
+  if (unique.length === 0) return new Set();
+
+  const shootSb = (client as unknown as { schema: (name: "shoot") => ShootShootsQuery }).schema(
+    "shoot",
+  );
+  const { data, error } = await shootSb.from("shoots").select("id").in("id", unique);
+
+  if (error) {
+    console.error("[assets] shoot existence check failed:", error.message);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((row) => row.id));
+}
+
+async function buildWhereUsed(
+  client: Db,
+  args: {
+    shootId: string | null;
+    links: Array<{ entity_type: string; entity_id: string }> | null;
+    products: Array<{ medusa_product_id: string }> | null;
+  },
+): Promise<WhereUsedItem[]> {
   const items: WhereUsedItem[] = [];
   const seen = new Set<string>();
 
@@ -186,23 +235,27 @@ function buildWhereUsed(args: {
     items.push(item);
   };
 
-  if (args.shootId) {
+  const candidateShootIds: string[] = [];
+  if (args.shootId) candidateShootIds.push(args.shootId);
+  for (const link of args.links ?? []) {
+    if (link.entity_type === "shoot") candidateShootIds.push(link.entity_id);
+  }
+  const openableShoots = await resolveOpenableShootIds(client, candidateShootIds);
+
+  const pushShoot = (id: string) => {
     push({
       kind: "shoot",
-      id: args.shootId,
-      label: `Shoot · ${shortId(args.shootId)}`,
-      href: `/app/shoots/${args.shootId}`,
+      id,
+      label: `Shoot · ${shortId(id)}`,
+      href: openableShoots.has(id) ? `/app/shoots/${id}` : null,
     });
-  }
+  };
+
+  if (args.shootId) pushShoot(args.shootId);
 
   for (const link of args.links ?? []) {
     if (link.entity_type === "shoot") {
-      push({
-        kind: "shoot",
-        id: link.entity_id,
-        label: `Shoot · ${shortId(link.entity_id)}`,
-        href: `/app/shoots/${link.entity_id}`,
-      });
+      pushShoot(link.entity_id);
       continue;
     }
     if (link.entity_type === "event") {
@@ -419,7 +472,7 @@ export async function getAssetDetail(
       // Child embeds (`asset_links`, `commerce_product_links`) need matching
       // org-aware SELECT policies — sibling IPI-770 · CLD-WHERE-USED-RLS-001 —
       // or org members silently get empty Where Used for those relations.
-      whereUsed: buildWhereUsed({
+      whereUsed: await buildWhereUsed(client, {
         shootId: row.shoot_id,
         links: asset_links,
         products: commerce_product_links,
