@@ -415,4 +415,71 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     const body = (await response.json()) as { agents?: Record<string, unknown> };
     expect(body.agents?.default).toBeDefined();
   }, 15_000);
+
+  it("returns 403 org_required on /info when operator has no org membership (fail closed)", async () => {
+    // An infra error (DB timeout) falls back to user.id. A genuine missing-org
+    // membership (getCurrentOrgId returns null → MastraOrgScopeError) must
+    // still fail closed with 403, not silently succeed.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "no-org-user",
+          email: "noorg@ipix.test",
+          name: "No Org",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("no-org-token"),
+      };
+    });
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({ agents: mockAgents })),
+    }));
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    // getCurrentOrgId returns null → resolveOrgScopedResourceId throws
+    // MastraOrgScopeError → must 403, not fall back.
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_required");
+  }, 15_000);
 });

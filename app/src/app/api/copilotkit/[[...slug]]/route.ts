@@ -518,14 +518,39 @@ const handler = async (request: Request): Promise<Response> => {
       // error.
       //
       // /info requests only enumerate agents — no agent turn runs, no memory
-      // reads or writes. Skip the DB round-trip to org_members so a cold-start
-      // Supabase timeout cannot turn a healthy info probe into a 503
-      // (runtime_info_fetch_failed). user.id is safe as a placeholder here
-      // because getLocalAgents() stores resourceId on the MastraAgent instance
-      // but does not query the DB during discovery.
-      const resourceId = isInfoRequest(request)
-        ? user.id
-        : await resolveOrgScopedResourceId(user, token);
+      // reads or writes. For /info we still require org membership (fail
+      // closed per IPI-146 / linear-governance anti-pattern: "Weaken
+      // fail-closed auth for green /info"), but we distinguish between two
+      // failure modes:
+      //   • MastraOrgScopeError (null orgId) → operator has no org → 403
+      //     org_required, same as any other request. Do NOT fall back.
+      //   • Any other error (DB timeout, network blip on cold start) → infra
+      //     failure, not a business rule → fall back to user.id so CopilotKit
+      //     can still enumerate agents. This is safe because /info never
+      //     writes to memory and the resourceId is never used to authorize
+      //     data access on this path.
+      let resourceId: string;
+      if (isInfoRequest(request)) {
+        try {
+          resourceId = await resolveOrgScopedResourceId(user, token);
+        } catch (err) {
+          if (err instanceof MastraOrgScopeError) {
+            // Operator is authenticated but has no org — fail closed.
+            throw err;
+          }
+          // Infra error (cold-start timeout, DB hiccup) — fall back to bare
+          // user.id so /info returns agent list instead of 503. This does not
+          // weaken the org gate: a genuinely org-less operator was rejected
+          // above; this path is only reached when the lookup itself failed.
+          console.warn(
+            "[copilotkit] /info org lookup failed (infra) — using user.id fallback for discovery",
+            err instanceof Error ? err.message : String(err),
+          );
+          resourceId = user.id;
+        }
+      } else {
+        resourceId = await resolveOrgScopedResourceId(user, token);
+      }
 
       const urlThreadId = extractThreadIdFromUrl(request);
       if (urlThreadId) {
