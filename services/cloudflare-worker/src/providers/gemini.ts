@@ -130,43 +130,98 @@ export const geminiProvider: AiProvider = {
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    // SSE lines can be split across chunks; a `data:` line held here until its
+    // newline arrives is the difference between resuming it and dropping the token.
+    let pending = "";
+    // One id for the whole completion, as OpenAI-compatible clients expect.
+    const completionId = createCompletionId();
 
-    upstream.body?.pipeTo(
-      new WritableStream({
-        async write(chunk) {
-          const text = new TextDecoder().decode(chunk);
-          const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-          for (const line of lines) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === "[DONE]") continue;
-            try {
-              const geminiData = JSON.parse(jsonStr);
-              const candidate = geminiData.candidates?.[0];
-              const part = candidate?.content?.parts?.[0]?.text ?? "";
-              if (part) {
-                const openaiChunk = {
-                  id: createCompletionId(),
-                  object: "chat.completion.chunk",
-                  model: req.model,
-                  choices: [
-                    {
-                      index: 0,
-                      delta: { content: part },
-                      finish_reason: candidate?.finishReason?.toLowerCase() ?? null,
-                    },
-                  ],
-                };
-                await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-              }
-            } catch {}
-          }
-        },
-        async close() {
+    const emit = async (line: string): Promise<void> => {
+      if (!line.startsWith("data: ")) return;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr || jsonStr === "[DONE]") return;
+      const geminiData = JSON.parse(jsonStr);
+      const candidate = geminiData.candidates?.[0];
+      const part = candidate?.content?.parts?.[0]?.text ?? "";
+      if (!part) return;
+      const openaiChunk = {
+        id: completionId,
+        object: "chat.completion.chunk",
+        model: req.model,
+        choices: [
+          {
+            index: 0,
+            delta: { content: part },
+            finish_reason: candidate?.finishReason?.toLowerCase() ?? null,
+          },
+        ],
+      };
+      await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+    };
+
+    const consume = async (): Promise<void> => {
+      if (!upstream.body) {
+        throw new Error("Gemini stream response had no body");
+      }
+      await upstream.body.pipeTo(
+        new WritableStream({
+          async write(chunk) {
+            pending += decoder.decode(chunk, { stream: true });
+            const lines = pending.split("\n");
+            pending = lines.pop() ?? "";
+            for (const line of lines) await emit(line);
+          },
+          async close() {
+            pending += decoder.decode();
+            if (pending) await emit(pending);
+            pending = "";
+          },
+          abort(reason) {
+            throw reason instanceof Error
+              ? reason
+              : new Error(`Gemini stream aborted: ${String(reason)}`);
+          },
+        }),
+      );
+    };
+
+    // Errors here (upstream abort, malformed SSE JSON, downstream write failure)
+    // used to be swallowed per chunk and by an unhandled pipeTo rejection, so the
+    // client saw a stream that silently lost tokens or never terminated. Surface
+    // them as a final SSE error frame and always terminate the stream.
+    void (async () => {
+      try {
+        await consume();
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+        await writer.close();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Cause stays server-side: upstream text and request URLs can carry the
+        // provider API key. The frame mirrors the gateway error envelope.
+        console.error("[gemini] stream failed", { completionId, message });
+        try {
+          await writer.write(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                error: {
+                  code: "provider_error",
+                  message: "Gemini stream failed",
+                  retryable: true,
+                  completionId,
+                },
+              })}\n\n`,
+            ),
+          );
           await writer.write(encoder.encode("data: [DONE]\n\n"));
           await writer.close();
-        },
-      }),
-    );
+        } catch {
+          // Downstream is already gone (client disconnected or writer errored) —
+          // abort so the readable ends instead of hanging open.
+          await writer.abort(message).catch(() => undefined);
+        }
+      }
+    })();
 
     return new Response(readable, {
       headers: {
