@@ -521,17 +521,41 @@ const handler = async (request: Request): Promise<Response> => {
       // registered agent list and runtime mode). No agent turn runs, no
       // Mastra memory is read or written, no thread is accessed.
       //
-      // Skip org lookup entirely for /info to eliminate cold-start 503s.
-      // Authentication still runs (withOperatorAuth + token check). Use
-      // user.id as placeholder resourceId for getLocalAgents() since discovery
-      // performs no memory operations.
+      // For /info: preserve org membership validation (fail closed) but handle
+      // infrastructure failures (cold start, DB timeout) with a degraded 
+      // discovery response instead of 503. This fixes the E2E gate issue
+      // without compromising security.
       //
       // For all other requests (agent turns, thread CRUD) the full
       // fail-closed org gate applies unchanged.
       let resourceId: string;
       if (isInfoRequest(request)) {
-        // Clean skip — no DB query, no 503 risk on cold start.
-        resourceId = user.id;
+        try {
+          resourceId = await resolveOrgScopedResourceId(user, token);
+        } catch (err) {
+          if (err instanceof MastraOrgScopeError) {
+            // Missing org membership → fail closed (403)
+            console.error("[copilotkit] /info org resolution failed — no membership (fail closed)", user.id);
+            return Response.json(
+              { error: "No organization membership for this operator", code: "org_required" },
+              { status: 403 },
+            );
+          }
+          // Infrastructure failure (cold start, DB timeout, RLS error) → degraded discovery
+          console.error(
+            "[copilotkit] /info org lookup failed — returning degraded discovery (avoid 503)",
+            err instanceof Error ? err.message : String(err),
+          );
+          return Response.json(
+            { 
+              agents: {},
+              mode: "degraded", 
+              error: "Discovery temporarily degraded", 
+              code: "org_lookup_degraded" 
+            },
+            { status: 200 }
+          );
+        }
       } else {
         resourceId = await resolveOrgScopedResourceId(user, token);
       }
