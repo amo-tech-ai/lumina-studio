@@ -87,7 +87,7 @@ describe("handleChat provider failure sanitization", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("sanitizes a 502 when no fallback is configured", async () => {
+  it("maps a retryable primary failure to provider_unavailable when no fallback is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: false,
       status: 503,
@@ -103,18 +103,18 @@ describe("handleChat provider failure sanitization", () => {
       }),
     });
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(503);
     const body = (await res.json()) as {
       error: { code: string; message: string; requestId: string; retryable: boolean };
     };
-    expect(body.error.code).toBe("provider_error");
-    expect(body.error.message).toBe("AI provider returned an error");
-    expect(body.error.retryable).toBe(false);
+    expect(body.error.code).toBe("provider_unavailable");
+    expect(body.error.message).toBe("AI provider is temporarily unavailable");
+    expect(body.error.retryable).toBe(true);
     expect(body.error.requestId).toBe(res.headers.get("x-request-id"));
     expect(JSON.stringify(body)).not.toContain("Service unavailable");
   });
 
-  it("sanitizes a 502 when the Bedrock fallback is not configured", async () => {
+  it("sanitizes a retryable failure when the Bedrock fallback is not configured", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: false,
       status: 503,
@@ -131,18 +131,18 @@ describe("handleChat provider failure sanitization", () => {
       }),
     });
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(503);
     const body = (await res.json()) as {
       error: { code: string; message: string; requestId: string; retryable: boolean };
     };
-    expect(body.error.code).toBe("provider_error");
-    expect(body.error.message).toBe("AI provider returned an error");
-    expect(body.error.retryable).toBe(false);
+    expect(body.error.code).toBe("provider_unavailable");
+    expect(body.error.message).toBe("AI provider is temporarily unavailable");
+    expect(body.error.retryable).toBe(true);
     expect(body.error.requestId).toBe(res.headers.get("x-request-id"));
     expect(JSON.stringify(body)).not.toContain("Service unavailable");
   });
 
-  it("sanitizes a 502 when the fallback provider also fails", async () => {
+  it("sanitizes a retryable failure when the fallback provider also fails", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: false,
@@ -166,13 +166,13 @@ describe("handleChat provider failure sanitization", () => {
       }),
     });
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(503);
     const body = (await res.json()) as {
       error: { code: string; message: string; requestId: string; retryable: boolean };
     };
-    expect(body.error.code).toBe("provider_error");
-    expect(body.error.message).toBe("AI provider returned an error");
-    expect(body.error.retryable).toBe(false);
+    expect(body.error.code).toBe("provider_unavailable");
+    expect(body.error.message).toBe("AI provider is temporarily unavailable");
+    expect(body.error.retryable).toBe(true);
     expect(body.error.requestId).toBe(res.headers.get("x-request-id"));
     expect(JSON.stringify(body)).not.toContain("Bedrock unavailable");
   });

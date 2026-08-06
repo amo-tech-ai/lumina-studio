@@ -220,8 +220,10 @@ export async function handleChat(
           primaryProvider: entry.provider,
           fallbackEntry: fallbackEntry ? fallbackEntry.provider : "none",
         });
-        return gatewayErrorResponse(502, "provider_error", "AI provider returned an error", {
-          retryable: false,
+        const noFallback = mapProviderFailure(err, "AI provider");
+        return gatewayErrorResponse(noFallback.status, noFallback.code, noFallback.message, {
+          providerStatus: noFallback.providerStatus,
+          retryable: noFallback.retryable,
           requestId,
         });
       }
@@ -231,10 +233,17 @@ export async function handleChat(
         console.log(`[gateway] Bedrock fallback not configured (missing AWS_BEDROCK_API_KEY)`, {
           requestId,
         });
-        return gatewayErrorResponse(502, "provider_error", "AI provider returned an error", {
-          retryable: false,
-          requestId,
-        });
+        const bedrockMissing = mapProviderFailure(err, "AI provider");
+        return gatewayErrorResponse(
+          bedrockMissing.status,
+          bedrockMissing.code,
+          bedrockMissing.message,
+          {
+            providerStatus: bedrockMissing.providerStatus,
+            retryable: bedrockMissing.retryable,
+            requestId,
+          },
+        );
       }
 
       const fallbackProvider = getProvider(fallbackEntry.provider);
@@ -310,10 +319,17 @@ export async function handleChat(
         totalLatencyMs: fallbackLatency,
       });
 
-      return gatewayErrorResponse(502, "provider_error", "AI provider returned an error", {
-        retryable: false,
-        requestId,
-      });
+      const fallbackMapped = mapProviderFailure(fallbackErr, "AI provider");
+      return gatewayErrorResponse(
+        fallbackMapped.status,
+        fallbackMapped.code,
+        fallbackMapped.message,
+        {
+          providerStatus: fallbackMapped.providerStatus,
+          retryable: fallbackMapped.retryable,
+          requestId,
+        },
+      );
     }
   }
 }
