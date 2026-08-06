@@ -49,7 +49,10 @@ export function gatewayErrorResponse(
 }
 
 /** Map upstream provider failures to gateway HTTP status + code (never blind passthrough). */
-export function mapProviderFailure(err: unknown): {
+export function mapProviderFailure(
+  err: unknown,
+  providerLabel = "Embedding provider",
+): {
   status: number;
   code: GatewayErrorCode;
   message: string;
@@ -64,7 +67,7 @@ export function mapProviderFailure(err: unknown): {
     return {
       status: 429,
       code: "provider_rate_limited",
-      message: "Embedding provider rate limit exceeded",
+      message: `${providerLabel} rate limit exceeded`,
       providerStatus,
       retryable: true,
     };
@@ -78,7 +81,7 @@ export function mapProviderFailure(err: unknown): {
     return {
       status: 504,
       code: "provider_timeout",
-      message: "Embedding provider timed out",
+      message: `${providerLabel} timed out`,
       providerStatus,
       retryable: true,
     };
@@ -92,7 +95,7 @@ export function mapProviderFailure(err: unknown): {
     return {
       status: 503,
       code: "provider_unavailable",
-      message: "Embedding provider is temporarily unavailable",
+      message: `${providerLabel} is temporarily unavailable`,
       providerStatus,
       retryable: true,
     };
@@ -100,7 +103,7 @@ export function mapProviderFailure(err: unknown): {
   return {
     status: 502,
     code: "provider_error",
-    message: "Embedding provider returned an error",
+    message: `${providerLabel} returned an error`,
     providerStatus,
     retryable: false,
   };
