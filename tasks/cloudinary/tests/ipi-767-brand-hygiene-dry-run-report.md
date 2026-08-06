@@ -22,7 +22,7 @@ Branch: `ipi/767-assets-brand-hygiene` · Project: `nvdlhrodvevgwdsneplk` (remot
 | -- | -- | -- |
 | **R1** | Exact valid brand UUID in Cloudinary folder path (joined against `brands.id`) | reconcile candidates |
 | **R2** | Exact valid brand UUID in context / structured metadata (Cloudinary Search + `metadata` jsonb probed) | 0 matches |
-| **R3** | Unique mirror relationship (`cloudinary_assets.asset_id → assets.id`) carries folder evidence; shoot-linked rows → leave (legacy `shoots` has no `brand_id`, per IPI-513/IPI-524) | fixture + legacy seeds |
+| **R3** | Unique mirror relationship (`cloudinary_assets.asset_id → assets.id`) carries folder evidence; shoot-linked rows → leave (legacy `shoots` has no `brand_id`, per IPI-513 · CLD-DATA-001 and IPI-524 · SHOOT-ARCH-001) | fixture + legacy seeds |
 | **R4** | No valid evidence / fake UUID / demo seeds → leave or delete-needs-signoff (no weak heuristics, no mass assignment) | proofs, demo seeds |
 
 Cross-check source order used: Supabase MCP → Cloudinary Search MCP (`public_id` prefix queries) → context/metadata probes. Cloudinary CLI/CSV export not needed (only 3 distinct evidence classes; MCP returned complete results).
@@ -42,19 +42,19 @@ Notes: `db1f728d-…` verified present in `public.brands` (2026-08-05). Asset `i
 
 | Row ID | Table | Evidence | Reason |
 | -- | -- | -- | -- |
-| `bece4e2d-a010-4563-af73-e0d2bc83c835` | assets | `ipix/brands/11111111-…/products/ipi433-widget-sign-proof_zw8yg6` | IPI-433 widget-sign proof; brand `11111111-…` does not exist → FK would fail |
+| `bece4e2d-a010-4563-af73-e0d2bc83c835` | assets | `ipix/brands/11111111-…/products/ipi433-widget-sign-proof_zw8yg6` | IPI-433 · CLD-101 — Upload Workspace Queue States widget-sign proof; brand `11111111-…` does not exist → FK would fail |
 | `071da378-18dd-4743-929f-4d6355739c09` | assets | `ipix/brands/11111111-…/products/ipi433-widget-sign-proof2_bc7ql6` | same |
 | `c4ca2263-5cab-4c36-ab24-a4c28092ca67` | cloudinary_assets | `ipix/brands/11111111-…/products` | same (mirror) |
 | `a599cf58-41c2-4a63-89cb-5a711330541d` | cloudinary_assets | `ipix/brands/11111111-…/products` | same (mirror) |
 
-Cloudinary cross-check: both proofs exist (`context.brand_id: 11111111-…`, 70 bytes, 1×1 px, type `authenticated`). No brand matches → cannot reconcile. Recommend delete of proofs + mirrors after sign-off (IPI-757 C2 carries the same decision).
+Cloudinary cross-check: both proofs exist (`context.brand_id: 11111111-…`, 70 bytes, 1×1 px, type `authenticated`). No brand matches → cannot reconcile. Recommend delete of proofs + mirrors after sign-off (IPI-757 · CLD-004C — Post-merge DAM follow-ups C2 carries the same decision).
 
 ### leave (18) — no change
 
 | Class | n | Reason |
 | -- | -- | -- |
 | `fashionos/assets/*` mirrors | 4 | Pre-iPix legacy, stuck `processing`; not present in this Cloudinary account (Search MCP → 0) |
-| shoot-linked legacy seeds (`storage.example.com`, `storage.googleapis.com`) | 6 | R3: `shoot_id` set, legacy `shoots` has no brand_id → IPI-524 |
+| shoot-linked legacy seeds (`storage.example.com`, `storage.googleapis.com`) | 6 | R3: `shoot_id` set, legacy `shoots` has no brand_id → IPI-524 · SHOOT-ARCH-001 |
 | Cloudinary demo seeds (`res.cloudinary.com/demo/*/sample.jpg`) | 8 | R4: no ownership evidence; not this account's assets |
 | — | — | 18 total |
 
@@ -88,7 +88,7 @@ update public.cloudinary_assets set brand_id = null where id = '8b13a8d6-9f51-42
 
 ## 7. Constraint decision (AC6)
 
-**NOT NULL deferred.** After apply, 6 `cloudinary_assets` + 16 `assets` legitimate null rows remain (legacy FashionOS, shoot-linked per IPI-524, demo seeds). No constraint change in this issue.
+**NOT NULL deferred.** After apply, 6 `cloudinary_assets` + 16 `assets` legitimate null rows remain (legacy FashionOS, shoot-linked per IPI-524 · SHOOT-ARCH-001, demo seeds). No constraint change in this issue.
 
 ## 8. Files changed (branch `ipi/767-assets-brand-hygiene`)
 
