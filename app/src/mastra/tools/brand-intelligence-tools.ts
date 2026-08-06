@@ -292,10 +292,76 @@ export const startBrandAnalysis = createTool({
   },
 });
 
+export const searchSimilarBrands = createTool({
+  id: "searchSimilarBrands",
+  description:
+    "Find brands similar to a given brand using semantic embedding search (pgvector cosine similarity). Use when the operator asks who is similar, comparable, or competitive. Returns neighbors with brand name, brandId, similarity (0–1), and shared graph-node labels that explain why they matched.",
+  inputSchema: z.object({
+    brandId: z.string().uuid(),
+    limit: z.number().int().min(1).max(20).optional(),
+  }),
+  outputSchema: z.object({
+    neighbors: z.array(
+      z.object({
+        brandId: z.string(),
+        brandName: z.string(),
+        similarity: z.number(),
+        sharedNodes: z.array(z.object({ nodeType: z.string(), label: z.string() })).optional(),
+      }),
+    ),
+    message: z.string().optional(),
+  }),
+  execute: async ({ brandId, limit }) => {
+    const sb = adminClient();
+    const { data: brand, error: brandErr } = await sb
+      .from("brands")
+      .select("embedding")
+      .eq("id", brandId)
+      .maybeSingle();
+    if (brandErr) throw new Error(`Failed to look up brand embedding: ${brandErr.message}`);
+    if (!brand?.embedding) {
+      return {
+        neighbors: [],
+        message:
+          "This brand has no embedding yet — run a fresh brand analysis first so similar-brand search has a semantic vector to compare against.",
+      };
+    }
+
+    const { data, error } = await sb.rpc("search_brands", {
+      p_embedding: brand.embedding,
+      p_exclude_brand_id: brandId,
+      p_limit: limit ?? 5,
+    });
+    if (error) throw new Error(`Similar-brand search failed: ${error.message}`);
+
+    const neighbors = (data ?? []).map(
+      (row: {
+        brand_id: string;
+        brand_name: string;
+        similarity: number;
+        shared_nodes: unknown;
+      }) => ({
+        brandId: row.brand_id,
+        brandName: row.brand_name,
+        similarity: Number(row.similarity),
+        sharedNodes: Array.isArray(row.shared_nodes)
+          ? (row.shared_nodes as { node_type?: string; label?: string }[]).map((n) => ({
+              nodeType: n.node_type ?? "",
+              label: n.label ?? "",
+            }))
+          : undefined,
+      }),
+    );
+
+    return { neighbors };
+  },
+});
+
 export const brandIntelligenceTools = {
   getBrandProfile,
   getBrandScores,
   explainPillar: explainPillarTool,
+  searchSimilarBrands,
   approveDraft: approveDraftTool,
   startBrandAnalysis,
 } as const;
