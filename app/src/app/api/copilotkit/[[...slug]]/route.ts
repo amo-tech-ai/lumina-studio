@@ -30,6 +30,10 @@ import { rejectTenantKeyRewrite, TenantContextError } from "@/lib/db/mastra-tena
 // of an indefinite hang.
 const STREAM_IDLE_TIMEOUT_MS = 20_000;
 
+// IPI-955: Bound the org lookup for /info to prevent indefinite hangs during
+// cold starts or network issues. Combined with request.signal for cancellation.
+const INFO_ORG_LOOKUP_TIMEOUT_MS = 10_000;
+
 // AsyncLocalStorage propagates the resolved operator identity through the
 // entire async call-stack of a request — including agent factory callbacks that
 // CopilotKit may invoke with a wrapped copy of the original Request object.
@@ -67,9 +71,13 @@ class MastraOrgScopeError extends Error {
  * organization membership, rather than falling back to a bare `user.id`
  * (the pre-IPI-146 behavior, which isolated by user but not by org).
  */
-async function resolveOrgScopedResourceId(user: OperatorUser, accessToken: string): Promise<string> {
+async function resolveOrgScopedResourceId(
+  user: OperatorUser,
+  accessToken: string,
+  options?: { abortSignal?: AbortSignal },
+): Promise<string> {
   const client = createUserScopedClient(accessToken);
-  const orgId = await getCurrentOrgId(user.id, client);
+  const orgId = await getCurrentOrgId(user.id, client, options);
   if (!orgId) {
     throw new MastraOrgScopeError(`No organization membership for operator ${user.id}`);
   }
@@ -532,7 +540,11 @@ const handler = async (request: Request): Promise<Response> => {
       let resourceId: string;
       if (isInfoRequest(request)) {
         try {
-          resourceId = await resolveOrgScopedResourceId(user, token);
+          const timeoutSignal = AbortSignal.timeout(INFO_ORG_LOOKUP_TIMEOUT_MS);
+          const combinedSignal = request.signal?.aborted
+            ? request.signal
+            : AbortSignal.any([request.signal, timeoutSignal].filter(Boolean));
+          resourceId = await resolveOrgScopedResourceId(user, token, { abortSignal: combinedSignal });
         } catch (err) {
           if (err instanceof MastraOrgScopeError) {
             // Missing org membership → fail closed (403)

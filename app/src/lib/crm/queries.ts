@@ -13,14 +13,23 @@ export type ActivityRow = Database["public"]["Tables"]["crm_activities"]["Row"];
 
 /** First org the user belongs to. CRM is single-org-per-user for MVP — no org switcher yet.
  *  Uses `joined_at` for ordering because `org_members` does not have a `created_at` column. */
-export async function getCurrentOrgId(userId: string, client: Db): Promise<string | null> {
-  const { data, error } = await client
+export async function getCurrentOrgId(
+  userId: string,
+  client: Db,
+  options?: { abortSignal?: AbortSignal },
+): Promise<string | null> {
+  let q = client
     .from("org_members")
     .select("org_id")
     .eq("user_id", userId)
     .order("joined_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (options?.abortSignal) {
+    q = q.abortSignal(options.abortSignal);
+  }
+
+  const { data, error } = await q.maybeSingle();
   if (error) throw error;
   return data?.org_id ?? null;
 }
