@@ -223,9 +223,6 @@ export const hasMeaningfulProfile = (profile: AiProfile): boolean =>
     ([key, value]) => !key.startsWith("_") && isMeaningfulProfileValue(value),
   );
 
-export const isReAnalyzeDisabled = (status: BrandIntakeStatus | string | null | undefined) =>
-  status === "crawl_running" || status === "analysis_running" || status === "draft_ready";
-
 export const parseScoreDetails = (details: unknown): ScoreDetails | null => {
   if (!details || typeof details !== "object" || Array.isArray(details)) return null;
   const row = details as Record<string, unknown>;

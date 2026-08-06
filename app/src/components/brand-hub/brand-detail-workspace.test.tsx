@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("./brand-detail.module.css", () => ({
   default: new Proxy({}, { get: (_, key) => String(key) }),
@@ -11,26 +11,28 @@ vi.mock("@/components/intelligence-panel/evidence-dialog", () => ({
     <button type="button">{triggerLabel}</button>
   ),
 }));
-vi.mock("@/components/brand-hub/analysis-progress-banner", () => ({
-  AnalysisProgressBanner: () => null,
+vi.mock("@/components/brand-hub/analysis-progress-banner", async () => {
+  const { RestartAnalysisButton } = await import(
+    "@/components/brand-hub/restart-analysis-button"
+  );
+  return {
+    AnalysisProgressBanner: ({
+      brandId,
+      canRestart,
+    }: {
+      brandId: string;
+      canRestart?: boolean;
+    }) => (canRestart ? <RestartAnalysisButton brandId={brandId} /> : null),
+  };
+});
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 vi.mock("@/components/brand-hub/brand-detail-draft-card", () => ({
   BrandDetailDraftCard: () => <div data-testid="workflow-draft-card" />,
 }));
 vi.mock("@/components/brand-hub/draft-banner", () => ({
   DraftBanner: () => <div data-testid="draft-banner-fallback">Draft banner</div>,
-}));
-const mockReanalyzeBrand = vi.fn();
-vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
-  reanalyzeBrand: (...args: unknown[]) => mockReanalyzeBrand(...args),
-}));
-const mockRouterRefresh = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mockRouterRefresh, push: vi.fn() }),
-}));
-const mockToastError = vi.fn();
-vi.mock("sonner", () => ({
-  toast: { error: (...args: unknown[]) => mockToastError(...args) },
 }));
 const mockUseAgentContext = vi.fn();
 vi.mock("@copilotkit/react-core/v2", () => ({
@@ -41,9 +43,7 @@ import { BrandDetailWorkspace } from "./brand-detail-workspace";
 
 afterEach(() => {
   cleanup();
-  mockReanalyzeBrand.mockReset();
-  mockRouterRefresh.mockReset();
-  mockToastError.mockReset();
+  vi.unstubAllGlobals();
 });
 
 describe("BrandDetailWorkspace", () => {
@@ -92,55 +92,43 @@ describe("BrandDetailWorkspace", () => {
     expect(screen.queryByTestId("workflow-draft-card")).toBeNull();
   });
 
-  // IPI-722 — startAnalysis previously discarded a failed result silently;
-  // the button appeared to do nothing even though the server returned a
-  // real, specific error (e.g. "Brand has no website URL to analyze").
-  it("surfaces a toast error when Start analysis fails, without refreshing", async () => {
-    mockReanalyzeBrand.mockResolvedValue({
-      ok: false,
-      error: "Brand has no website URL to analyze",
+  it("recovers failed analysis via Restart analysis → restart-analysis API (IPI-919)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, mode: "crawl_restarted" }),
     });
-
-    render(
-      <BrandDetailWorkspace
-        brandId="nike-id"
-        brandName="Nike"
-        brandUrl={null}
-        intakeStatus="brand_created"
-        dnaScore={0}
-        profile={{}}
-        draftProfile={null}
-        baseScores={[]}
-        isAuthenticated
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
-
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith("Brand has no website URL to analyze"));
-    expect(mockRouterRefresh).not.toHaveBeenCalled();
-  });
-
-  it("refreshes without a toast when Start analysis succeeds", async () => {
-    mockReanalyzeBrand.mockResolvedValue({ ok: true, hasDraft: true });
+    vi.stubGlobal("fetch", fetchMock);
 
     render(
       <BrandDetailWorkspace
         brandId="nike-id"
         brandName="Nike"
         brandUrl="https://nike.com"
-        intakeStatus="brand_created"
+        intakeStatus="failed"
         dnaScore={0}
-        profile={{}}
+        profile={{ _error: "crawl timed out" }}
         draftProfile={null}
         baseScores={[]}
+        canRestartAnalysis
         isAuthenticated
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
+    const restart = screen.getByRole("button", { name: /Restart analysis/i });
+    expect(restart).toBeTruthy();
+    expect(screen.queryByText("Start analysis", { exact: true })).toBeNull();
 
-    await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalled());
-    expect(mockToastError).not.toHaveBeenCalled();
+    fireEvent.click(restart);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/brands/nike-id/restart-analysis",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "same-origin",
+        }),
+      );
+    });
   });
 });

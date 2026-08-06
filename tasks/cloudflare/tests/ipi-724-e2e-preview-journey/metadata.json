@@ -39,7 +39,7 @@
       "service": "ai-gateway"
     }
   },
-  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates #512 — redeploy HEAD before claiming current.",
+  "adapterAvailable_note": "If preview still returns adapterAvailable, Worker predates PR #512 · IPI-510 · CF-UJ-011 — Probe preview AI health via AI_GATEWAY service binding — redeploy HEAD before claiming current.",
   "criteria": {
     "01_login": {
       "pass": true,
