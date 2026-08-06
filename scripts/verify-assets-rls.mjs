@@ -314,7 +314,7 @@ async function run() {
 
     // Policy inventory via pg Client (requires DB_URL)
     if (DB_URL) {
-      const pgClient = new pg.Client({ connectionString: DB_URL, ssl: { rejectUnauthorized: false } });
+      const pgClient = new pg.Client({ connectionString: DB_URL });
       await pgClient.connect();
       try {
         const { rows } = await pgClient.query(`
@@ -325,10 +325,10 @@ async function run() {
         `);
         console.log("Current assets policies:", rows.map(r => r.policyname).join(", "));
 
-        const selectPolicies = rows.filter(r => (r.cmd === "SELECT" || r.cmd === "*") && r.roles && r.roles.includes("authenticated"));
-        const insertPolicies = rows.filter(r => (r.cmd === "INSERT" || r.cmd === "*") && r.roles && r.roles.includes("authenticated"));
-        const updatePolicies = rows.filter(r => (r.cmd === "UPDATE" || r.cmd === "*") && r.roles && r.roles.includes("authenticated"));
-        const deletePolicies = rows.filter(r => (r.cmd === "DELETE" || r.cmd === "*") && r.roles && r.roles.includes("authenticated"));
+        const selectPolicies = rows.filter(r => (r.cmd === "SELECT" || r.cmd === "ALL") && r.roles && r.roles.includes("authenticated"));
+        const insertPolicies = rows.filter(r => (r.cmd === "INSERT" || r.cmd === "ALL") && r.roles && r.roles.includes("authenticated"));
+        const updatePolicies = rows.filter(r => (r.cmd === "UPDATE" || r.cmd === "ALL") && r.roles && r.roles.includes("authenticated"));
+        const deletePolicies = rows.filter(r => (r.cmd === "DELETE" || r.cmd === "ALL") && r.roles && r.roles.includes("authenticated"));
 
         assert(selectPolicies.length === 1, `Policy inventory: exactly 1 authenticated SELECT policy (found ${selectPolicies.length})`);
         assert(insertPolicies.length === 1, `Policy inventory: exactly 1 authenticated INSERT policy (found ${insertPolicies.length})`);
