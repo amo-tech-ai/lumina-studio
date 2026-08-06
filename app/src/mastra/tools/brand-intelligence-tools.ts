@@ -8,6 +8,8 @@ import { parseScoreDetails } from "@/lib/brand-hub";
 import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/app/api/_lib/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
+import { getCurrentOrgId } from "@/lib/crm/queries";
+import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
 import { callEdgeFunction } from "./edge";
 
 function adminClient() {
@@ -25,6 +27,18 @@ async function resolveOperatorId(accessToken: string): Promise<string> {
   const { data: { user }, error } = await sb.auth.getUser(accessToken);
   if (error || !user) throw new Error("Access token not available in request context");
   return user.id;
+}
+
+/** Resolve the operator's org id from the per-request access token (ALS). */
+async function resolveOperatorOrgId(): Promise<string> {
+  const accessToken = requestToken.getStore();
+  if (!accessToken) throw new Error("Access token not available in request context");
+  const client = createUserScopedClient(accessToken);
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) throw new Error("Could not resolve operator identity");
+  const orgId = await getCurrentOrgId(user.id, client);
+  if (!orgId) throw new Error("No organization membership for this operator");
+  return orgId;
 }
 
 const PILLAR_ALIASES: Record<string, string> = {
@@ -296,11 +310,13 @@ export const searchSimilarBrands = createTool({
     message: z.string().optional(),
   }),
   execute: async ({ brandId, limit }) => {
+    const orgId = await resolveOperatorOrgId();
     const sb = adminClient();
     const { data: brand, error: brandErr } = await sb
       .from("brands")
       .select("id, name, embedding")
       .eq("id", brandId)
+      .eq("org_id", orgId)
       .single();
     if (brandErr || !brand) throw new Error(`Brand not found: ${brandId}`);
 
@@ -320,17 +336,25 @@ export const searchSimilarBrands = createTool({
       p_embedding: brand.embedding,
       p_limit: limit,
       p_exclude_brand_id: brandId,
+      p_org_id: orgId,
     });
     if (error) throw new Error(`search_brands failed: ${error.message}`);
 
-    const neighbors = (data ?? []).map((row) => ({
-      brandId: row.brand_id,
-      brandName: row.brand_name,
-      similarity: Number(row.similarity),
-      sharedNodes: Array.isArray(row.shared_nodes)
-        ? (row.shared_nodes as { node_type: string; label: string }[])
-        : null,
-    }));
+    const neighbors = (data ?? []).map(
+      (row: {
+        brand_id: string;
+        brand_name: string;
+        similarity: number;
+        shared_nodes: unknown;
+      }) => ({
+        brandId: row.brand_id,
+        brandName: row.brand_name,
+        similarity: Number(row.similarity),
+        sharedNodes: Array.isArray(row.shared_nodes)
+          ? (row.shared_nodes as { node_type: string; label: string }[])
+          : null,
+      }),
+    );
 
     return {
       sourceBrandId: brand.id,
