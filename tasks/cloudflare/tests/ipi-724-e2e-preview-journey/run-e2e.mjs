@@ -164,7 +164,7 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
     const raw = execFileSync(
       "npx",
       ["wrangler", "deployments", "list", "--env", "preview", "--json"],
-      { cwd: appDir, encoding: "utf8", timeout: 60_000 },
+      { cwd: appDir, encoding: "utf8", timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     const deployments = JSON.parse(raw);
     if (!Array.isArray(deployments) || deployments.length === 0) {
@@ -183,7 +183,14 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
     identity.identity_source =
       "wrangler deployments list --env preview --json (latest by created_on)";
   } catch (e) {
-    identity.identity_error = String(e?.message || e).slice(0, 300);
+    const error = String(e?.message || e);
+    identity.identity_error = error.slice(0, 300);
+    // IPI-964: If Wrangler auth is missing, treat as non-blocking metadata failure
+    // The verification can still complete without Worker version identity
+    if (/CLOUDFLARE_API_TOKEN|authentication|auth/i.test(error)) {
+      identity.identity_source = "wrangler_auth_unavailable";
+      identity.identity_error = "Wrangler auth not configured — identity metadata unavailable (non-blocking)";
+    }
   }
   return identity;
 }
@@ -274,14 +281,14 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const extraHTTPHeaders = loadExtraHeaders();
   const context = await browser.newContext({
-    // Minimal HAR — API URLs only; never embed bodies/headers with cookies.
-    // Prefer network-summary.json; HAR is deleted after the run and must not be committed.
-    recordHar: {
-      path: harPath,
-      mode: "minimal",
-      content: "omit",
-      urlFilter: "**/api/**",
-    },
+    // IPI-964: Disable HAR capture entirely to prevent auth secrets from reaching disk
+    // network-summary.json provides sufficient evidence for debugging
+    // recordHar: {
+    //   path: harPath,
+    //   mode: "minimal",
+    //   content: "omit",
+    //   urlFilter: "**/api/**",
+    // },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
     // Headers applied via route (origin-scoped) — not context-wide extraHTTPHeaders.
@@ -587,8 +594,13 @@ async function main() {
     await page.screenshot({ path: join(SHOTS, "03-chat.png"), fullPage: false });
 
     // 9. Console / network critical failures
+    // IPI-964: Filter out expected retryable 503 errors from blockingConsole
     const blockingConsole = consoleLog.errors.filter((e) => {
       const t = e.text || "";
+      // Ignore documented retryable /api/copilotkit/info 503 errors (IPI-955)
+      if (/Runtime info request failed with status 503/i.test(t)) return false;
+      if (/Failed to load resource.*503.*copilotkit\/info/i.test(t)) return false;
+      
       if (/hydration|Hydration/i.test(t)) return true;
       if (/Uncaught|uncaught/i.test(t)) return true;
       if (/Worker|Miniflare|Cloudflare/i.test(t) && /error/i.test(t)) return true;
@@ -598,10 +610,23 @@ async function main() {
       if (/Failed to load resource.*favicon/i.test(t)) return false;
       return e.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
     });
+    // IPI-964: Track /api/copilotkit/info 503 retries per IPI-955 documented contract
+    // A single retryable 503 is allowed; repeated 503s or other 5xx are critical failures
+    const info503Retries = [];
     const criticalFailed = networkLog.filter((n) => {
       const p = n.path || "";
       if (!p.includes("/api/")) return false;
+      
+      // Documented retryable 503 on /api/copilotkit/info (IPI-955)
+      if (p === "/api/copilotkit/info" && n.method === "GET" && n.status === 503) {
+        info503Retries.push(n);
+        // Only count as critical if more than MAX_TRANSIENT_RETRIES occur
+        return info503Retries.length > MAX_TRANSIENT_RETRIES;
+      }
+      
+      // Generic 5xx are critical
       if (n.status >= 500) return true;
+      
       // auth endpoints that should work while logged in
       if (p.includes("/api/copilotkit") && n.method === "POST" && n.status >= 400)
         return true;
