@@ -53,11 +53,10 @@ export function pickReferencesForDeliverable(
   count: number,
 ): ReferenceShotType[] {
   const matching = references.filter((r) => channelMatchesReference(deliverableChannel, r.channel_fit));
-  const pool = matching.length ? matching : references;
-  if (!pool.length) return [];
+  if (!matching.length) return [];
   const picked: ReferenceShotType[] = [];
   for (let i = 0; i < count; i++) {
-    picked.push(pool[i % pool.length]);
+    picked.push(matching[i % matching.length]);
   }
   return picked;
 }
@@ -69,11 +68,11 @@ export function buildShotListFromReferences(
 ): { shots: BuiltShot[]; uncovered_deliverable_warnings: string[] } {
   if (!referenceShotTypes.length) {
     throw new Error(
-      "reference_shot_types is empty — call lookupShotReferences before generateShotListDraft",
+    "reference_shot_types is empty — call lookupShotReferences before buildShotListFromReferences",
     );
   }
 
-  const allowedAngles = new Set(referenceShotTypes.map((r) => r.angle));
+  const allowedReferenceIds = new Set(referenceShotTypes.map((r) => r.id));
   let shotCounter = 0;
   const shots: BuiltShot[] = [];
 
@@ -84,8 +83,8 @@ export function buildShotListFromReferences(
     const refs = pickReferencesForDeliverable(deliverable.channel, referenceShotTypes, shotCount);
 
     for (const ref of refs) {
-      if (!allowedAngles.has(ref.angle)) {
-        throw new Error(`Invented angle "${ref.angle}" — angles must come from lookupShotReferences`);
+      if (!allowedReferenceIds.has(ref.id)) {
+        throw new Error(`Invented reference_id "${ref.id}" — references must come from lookupShotReferences`);
       }
       shots.push({
         shot_number: ++shotCounter,

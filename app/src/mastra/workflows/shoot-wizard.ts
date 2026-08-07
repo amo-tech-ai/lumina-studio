@@ -23,7 +23,7 @@ const ShotSchema = z.object({
   lighting: z.string(),
   deliverable_ids: z.array(z.string()),
   notes: z.string().optional(),
-  reference_id: z.string().optional(),
+  reference_id: z.string(),
 });
 
 const BudgetSchema = z.object({
@@ -153,6 +153,18 @@ const shotListGateStep = createStep({
         message:
           "Review shot list grounded in the reference library. Approve before budget — angles are from lookupShotReferences, not invented.",
       });
+    }
+    // Re-fetch trusted reference IDs and validate resumed shots against them.
+    // The agent may have edited shots during the HITL review — we must reject
+    // any reference_id that was not in the original lookupShotReferences call.
+    const trustedReferences = await queryShotReferences("clothing", inputData.channels);
+    const trustedIds = new Set(trustedReferences.map((r) => r.id));
+    for (const shot of resumeData.approved_shots) {
+      if (!trustedIds.has(shot.reference_id)) {
+        throw new Error(
+          `Invalid reference_id "${shot.reference_id}" in resumed shot ${shot.shot_number} — does not match lookupShotReferences`,
+        );
+      }
     }
     return {
       brand_id: inputData.brand_id,
