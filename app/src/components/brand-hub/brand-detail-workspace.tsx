@@ -10,6 +10,7 @@ import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress
 import { BrandDetailDraftCard } from "@/components/brand-hub/brand-detail-draft-card";
 import { DraftBanner } from "@/components/brand-hub/draft-banner";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
+import { SimilarBrandsSection } from "@/components/brand-hub/similar-brands-section";
 import { EvidenceDialog } from "@/components/intelligence-panel/evidence-dialog";
 import type { EvidenceBlockProps } from "@/components/evidence-block/types";
 import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
@@ -169,6 +170,8 @@ export function BrandDetailWorkspace({
             <p className={styles.cardBody}>{greeting}</p>
           </div>
         ) : null}
+
+        {!analysing ? <SimilarBrandsSection brandId={brandId} /> : null}
 
         {analysing ? (
           <BrandDetailAnalysingCard
