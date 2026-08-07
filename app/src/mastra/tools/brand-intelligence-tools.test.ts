@@ -162,6 +162,58 @@ describe("getBrandScores", () => {
     expect(r!.scores).toHaveLength(4);
     expect(r!.overallScore).toBe(70);
   });
+
+  it("returns null overallScore when base pillars are incomplete", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockClient({
+        from: vi.fn((table: string) => {
+          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
+          if (table === "brand_scores") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  { score_type: "visual", score: 72, rationale: "Good palette" },
+                  { score_type: "audience", score: 58, rationale: "Low engagement" },
+                ],
+                error: null,
+              }),
+              maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_PILLAR, error: null }),
+            };
+          }
+          return {};
+        }),
+      }) as never,
+    );
+    const result = await getBrandScores.execute!({ brandId: BRAND_ID }, {} as never);
+    const r = result as Awaited<ReturnType<typeof getBrandScores.execute>>;
+    expect(r!.scores).toHaveLength(2);
+    expect(r!.overallScore).toBeNull();
+  });
+
+  it("returns null overallScore when no scores exist", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockClient({
+        from: vi.fn((table: string) => {
+          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
+          if (table === "brand_scores") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_PILLAR, error: null }),
+            };
+          }
+          return {};
+        }),
+      }) as never,
+    );
+    const result = await getBrandScores.execute!({ brandId: BRAND_ID }, {} as never);
+    const r = result as Awaited<ReturnType<typeof getBrandScores.execute>>;
+    expect(r!.scores).toHaveLength(0);
+    expect(r!.overallScore).toBeNull();
+  });
 });
 
 describe("explainPillarTool", () => {
