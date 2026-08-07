@@ -24,6 +24,13 @@ as $$
 begin
   set local hnsw.ef_search = 400;
 
+  -- Reject invalid p_limit before the query runs: an explicit NULL makes
+  -- LIMIT NULL behave as LIMIT ALL (return every matching brand), and values
+  -- below 1 or above the documented maximum of 100 are out of contract.
+  if p_limit is null or p_limit < 1 or p_limit > 100 then
+    raise exception 'p_limit must be between 1 and 100';
+  end if;
+
   -- Fail closed: the excluded brand must belong to the caller org, otherwise
   -- shared_nodes would leak which labels of the caller's brands also exist on
   -- a foreign brand's graph (cross-tenant inference).
@@ -42,7 +49,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'node_type', n.node_type,
         'label', n.label
-      ))
+      ) order by n.node_type, n.label)
       from (
         select gn.node_type, gn.label
         from public.brand_graph_nodes gn
@@ -52,6 +59,7 @@ begin
             from public.brand_graph_nodes g2
             where (p_exclude_brand_id is null or g2.brand_id = p_exclude_brand_id)
           )
+        order by gn.node_type, gn.label
         limit 10
       ) n
     ) as shared_nodes
