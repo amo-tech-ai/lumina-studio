@@ -20,7 +20,7 @@ import {
   classifyNetworkResponse,
   countInfo503Responses,
   info503ExceedsThreshold,
-} from "../../copilotkit/classifiers/info-503-threshold.mjs";
+} from "../../../copilotkit/classifiers/info-503-threshold.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
