@@ -1,0 +1,229 @@
+/**
+ * Selfcheck for info-503-threshold classifier
+ * 
+ * IPI-967 · COPILOT-GATE-003
+ */
+
+import {
+  classifyConsoleError,
+  classifyNetworkResponse,
+  countInfo503Responses,
+  info503ExceedsThreshold,
+} from "./info-503-threshold.mjs";
+
+const tests = [
+  // Console error classification tests
+  {
+    name: "Console: Runtime info 503 error - tolerated",
+    input: { text: "Runtime info request failed with status 503", type: "error" },
+    expected: false,
+  },
+  {
+    name: "Console: Failed to load resource 503 copilotkit/info - tolerated",
+    input: { text: "Failed to load resource: the server responded with a status of 503 (/api/copilotkit/info)", type: "error" },
+    expected: false,
+  },
+  {
+    name: "Console: Hydration error - blocking",
+    input: { text: "Hydration failed", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Uncaught error - blocking",
+    input: { text: "Uncaught TypeError", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Worker error - blocking",
+    input: { text: "Worker error", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: ChunkLoadError - blocking",
+    input: { text: "ChunkLoadError", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: favicon - tolerated",
+    input: { text: "Failed to load resource: favicon.ico", type: "error" },
+    expected: false,
+  },
+  {
+    name: "Console: pageerror - blocking",
+    input: { text: "Some error", type: "pageerror" },
+    expected: true,
+  },
+  {
+    name: "Console: TypeError - blocking",
+    input: { text: "TypeError: x is not defined", type: "log" },
+    expected: true,
+  },
+  
+  // Network response classification tests
+  {
+    name: "Network: /info 200 - healthy",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 200 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "healthy",
+  },
+  {
+    name: "Network: First GET /info 503 - tolerated",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 503 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "tolerated_transient",
+  },
+  {
+    name: "Network: Second GET /info 503 (after 1 retry) - tolerated",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 503 },
+    info503Count: 1,
+    phase: "auth",
+    expected: "tolerated_transient",
+  },
+  {
+    name: "Network: Third GET /info 503 (after 2 retries) - critical",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 503 },
+    info503Count: 2,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: POST /info 503 - critical",
+    input: { path: "/api/copilotkit/info", method: "POST", status: 503 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: Unrelated API 500 - critical",
+    input: { path: "/api/other", method: "GET", status: 500 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: Unrelated API 503 - critical",
+    input: { path: "/api/other", method: "GET", status: 503 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: 401 after signout - expected_auth",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 401 },
+    info503Count: 0,
+    phase: "anon",
+    expected: "expected_auth",
+  },
+  {
+    name: "Network: Authenticated 401 - critical",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 401 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: Authenticated 403 - critical",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 403 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: POST copilotkit 400 - critical",
+    input: { path: "/api/copilotkit/agent/run", method: "POST", status: 400 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: AI health not 200 - critical",
+    input: { path: "/api/ai/health", method: "GET", status: 500 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "critical",
+  },
+  {
+    name: "Network: Non-API request - healthy",
+    input: { path: "/_next/static/chunk.js", method: "GET", status: 200 },
+    info503Count: 0,
+    phase: "auth",
+    expected: "healthy",
+  },
+  
+  // Helper function tests
+  {
+    name: "countInfo503Responses: zero 503s",
+    input: [
+      { path: "/api/copilotkit/info", method: "GET", status: 200 },
+      { path: "/api/other", method: "GET", status: 500 },
+    ],
+    expected: 0,
+  },
+  {
+    name: "countInfo503Responses: one 503",
+    input: [
+      { path: "/api/copilotkit/info", method: "GET", status: 503 },
+      { path: "/api/copilotkit/info", method: "GET", status: 200 },
+    ],
+    expected: 1,
+  },
+  {
+    name: "countInfo503Responses: two 503s",
+    input: [
+      { path: "/api/copilotkit/info", method: "GET", status: 503 },
+      { path: "/api/copilotkit/info", method: "GET", status: 503 },
+      { path: "/api/copilotkit/info", method: "GET", status: 200 },
+    ],
+    expected: 2,
+  },
+  {
+    name: "info503ExceedsThreshold: 0 <= 1",
+    input: 0,
+    expected: false,
+  },
+  {
+    name: "info503ExceedsThreshold: 1 <= 1",
+    input: 1,
+    expected: false,
+  },
+  {
+    name: "info503ExceedsThreshold: 2 > 1",
+    input: 2,
+    expected: true,
+  },
+];
+
+let passed = 0;
+let failed = 0;
+
+for (const test of tests) {
+  let result;
+  
+  if (test.name.startsWith("Console:")) {
+    result = classifyConsoleError(test.input);
+  } else if (test.name.startsWith("Network:")) {
+    result = classifyNetworkResponse(test.input, test.info503Count, test.phase);
+  } else if (test.name.startsWith("countInfo503Responses:")) {
+    result = countInfo503Responses(test.input);
+  } else if (test.name.startsWith("info503ExceedsThreshold:")) {
+    result = info503ExceedsThreshold(test.input);
+  }
+  
+  if (result === test.expected) {
+    passed++;
+  } else {
+    failed++;
+    console.error(`FAIL: ${test.name}`);
+    console.error(`  Input: ${JSON.stringify(test.input)}`);
+    console.error(`  Expected: ${test.expected}`);
+    console.error(`  Got: ${result}`);
+  }
+}
+
+console.log(`\ninfo-503-threshold.selfcheck: ${passed} passed, ${failed} failed`);
+
+if (failed > 0) {
+  process.exit(1);
+}
