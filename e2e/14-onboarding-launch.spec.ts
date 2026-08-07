@@ -180,15 +180,19 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
       }
     } finally {
       // Snapshot the real post-approval state BEFORE the fixture reset, so the
-      // evidence reflects the ready state this test just proved.
+      // evidence reflects the ready state this test just proved. A snapshot
+      // failure (transient PG blip) must not skip the reset — evidence is
+      // best-effort, fixture reuse is not (Devin cycle-3 BUG).
       const approved = await snapshotOnboardingProgress({
         brandId: draft.brandId,
         session: "resumed",
-      });
+      }).catch(() => null);
       // Restore brand to draft_ready even if assertions fail, so the fixture
       // can be reused by subsequent runs.
       await resetBrandToDraftReady(draft.brandId);
-      logProgress("post-approve", formatOnboardingProgress(approved));
+      if (approved) {
+        logProgress("post-approve", formatOnboardingProgress(approved));
+      }
     }
 
     console.log(`[IPI-836 timing] Approve+Hub ${Date.now() - startedAt}ms (existing)`);

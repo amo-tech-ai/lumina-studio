@@ -68,7 +68,15 @@ function resolvePgSsl():
   // Only an explicit VERIFY_RLS_PG_INSECURE_SSL=1 may bypass certificate
   // validation. NODE_TLS_REJECT_UNAUTHORIZED=0 is a common ambient dev/CI
   // setting and must NOT silently disable TLS here (fail-closed intent).
+  // The bypass is refused under CI (IPI-621 policy) so a shared CI env cannot
+  // silently downgrade the QA connection carrying the DB password.
   if (process.env.VERIFY_RLS_PG_INSECURE_SSL === "1") {
+    if (process.env.CI === "true") {
+      throw new Error(
+        "VERIFY_RLS_PG_INSECURE_SSL=1 is not allowed in CI (IPI-621). " +
+          "Remove the variable or run this outside CI with a pinned CA.",
+      );
+    }
     return { rejectUnauthorized: false };
   }
   const explicitCa =
