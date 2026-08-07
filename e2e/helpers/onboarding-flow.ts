@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
-import { expect } from "@playwright/test";
 
 import { getQaCredentials, loadEnvLocal } from "./qa-credentials";
+import { waitForPersistedDraftAnswers } from "./onboarding-sql";
 import type { DraftReadySession } from "./onboarding-sql";
 
 function resolveAppEnv(): string {
@@ -44,12 +44,11 @@ export async function loginAndResumeDraftReady(
   page: Page,
   session: DraftReadySession,
 ): Promise<boolean> {
-  const ok = await performQaLogin(page);
-  if (!ok) return false;
-
-  // Land on /onboarding then seed storage + reload so bootstrap reads the key.
-  await page.goto("/onboarding");
-  await page.evaluate(
+  // Seed the per-user idempotency key before ANY navigation can render
+  // /onboarding, so the very first bootstrap resumes the fixture session
+  // instead of minting a throwaway draft row (per navigation the app would
+  // otherwise getOrCreate a new session under a fresh key).
+  await page.addInitScript(
     ({ userId, idem }) => {
       const prefix = "ipix:onboarding:idempotency:v1:";
       localStorage.setItem(`${prefix}${userId}`, idem);
@@ -57,7 +56,12 @@ export async function loginAndResumeDraftReady(
     },
     { userId: session.userId, idem: session.idempotencyKey },
   );
-  await page.reload();
+
+  const ok = await performQaLogin(page);
+  if (!ok) return false;
+
+  // Post-login redirect may land on /app (existing brands) — force /onboarding.
+  await page.goto("/onboarding");
   await page.waitForURL(/\/onboarding/, { timeout: 20_000 });
 
   // Prefer a single unique locator — heading proves screen 13; then wait out DNA load.
@@ -123,13 +127,18 @@ export async function fillQuestionnaireThroughGrowth(
   // 7 growth
   await selectGrowthOption(page, "social");
   await clickPrimaryCta(page, "Continue");
-  // Autosave is debounced 400ms — wait until resume storage has settled.
-  await expect
-    .poll(async () => (await readIdempotencyKey(page)) != null, {
-      timeout: 5_000,
-      intervals: [200, 400, 800],
-    })
-    .toBe(true);
+  // Autosave is debounced ~400ms. The idempotency key exists from bootstrap
+  // (before any answer is typed), so wait on the persisted draft_answers row
+  // containing brandName — the reload after this must not drop answers.
+  const userId = await readAuthUserId(page);
+  const idem = await readIdempotencyKey(page);
+  if (userId && idem) {
+    await waitForPersistedDraftAnswers({
+      userId,
+      idempotencyKey: idem,
+      brandName: opts.brandName,
+    });
+  }
 }
 
 /**

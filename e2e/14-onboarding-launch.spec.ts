@@ -179,17 +179,18 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
         });
       }
     } finally {
+      // Snapshot the real post-approval state BEFORE the fixture reset, so the
+      // evidence reflects the ready state this test just proved.
+      const approved = await snapshotOnboardingProgress({
+        brandId: draft.brandId,
+        session: "resumed",
+      });
       // Restore brand to draft_ready even if assertions fail, so the fixture
       // can be reused by subsequent runs.
       await resetBrandToDraftReady(draft.brandId);
+      logProgress("post-approve", formatOnboardingProgress(approved));
     }
 
-    logProgress(
-      "post-approve",
-      formatOnboardingProgress(
-        await snapshotOnboardingProgress({ brandId: draft.brandId, session: "resumed" }),
-      ),
-    );
     console.log(`[IPI-836 timing] Approve+Hub ${Date.now() - startedAt}ms (existing)`);
   });
 });
