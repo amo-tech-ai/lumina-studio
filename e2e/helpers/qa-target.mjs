@@ -180,7 +180,6 @@ export function qaWebServerEnv() {
     QA_DATABASE_URL: databaseUrl,
     QA_SUPABASE_URL: supabaseUrl.replace(/\/$/, ""),
     QA_SUPABASE_ANON_KEY: anonKey,
-    [QA_SR_KEY]: serviceRoleKey,
     OPERATOR_AUTH_ENABLED: process.env.OPERATOR_AUTH_ENABLED ?? "true",
     CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH: databaseUrl,
   };

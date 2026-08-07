@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 import { getQaCredentials, loadEnvLocal } from "./qa-credentials";
 import { waitForPersistedDraftAnswers } from "./onboarding-sql";
