@@ -239,4 +239,47 @@ describe("BrandDnaPayoffScreen (IPI-835 · D)", () => {
     await waitFor(() => expect(screen.getByTestId("dna-ready")).toBeTruthy());
     expect(onReadyChange).toHaveBeenCalledWith(true);
   });
+
+  it("does not mark a new brand ready from the previous brand's stale realtime status", async () => {
+    const onReadyChange = vi.fn();
+    // Brand A already reached ready over Realtime.
+    mockProgress.mockReturnValue({
+      intakeStatus: "ready",
+      crawl: null,
+      phase: "done",
+      reconnect: vi.fn(),
+    });
+    mockEnsure.mockResolvedValue({
+      ok: true,
+      intakeStatus: "draft_ready",
+      runId: "run-2",
+      brandName: "Maison",
+      pillars: PILLARS,
+    });
+
+    const { rerender } = render(
+      <BrandDnaPayoffScreen brandId="brand-1" onReadyChange={onReadyChange} />,
+    );
+    await waitFor(() => expect(onReadyChange).toHaveBeenCalledWith(true));
+
+    // Switch to brand B while the hook still reports the old brand's stale "ready".
+    mockEnsure.mockClear();
+    onReadyChange.mockClear();
+    rerender(<BrandDnaPayoffScreen brandId="brand-2" onReadyChange={onReadyChange} />);
+
+    // The new brand must land back on the review state — not approved.
+    await waitFor(() => expect(mockEnsure).toHaveBeenCalledWith("brand-2"));
+    await waitFor(() => expect(screen.getByTestId("approve-brand-dna")).toBeTruthy());
+    expect(screen.queryByTestId("dna-ready")).toBeNull();
+    expect(onReadyChange).not.toHaveBeenCalled();
+  });
+
+  it("paints the Return to Brand Hub link in readable ink on the white card", async () => {
+    mockEnsure.mockRejectedValueOnce(new Error("network"));
+    render(<BrandDnaPayoffScreen brandId="brand-1" />);
+    await waitFor(() => expect(screen.getByTestId("dna-return-brand-hub")).toBeTruthy());
+    const link = screen.getByTestId("dna-return-brand-hub");
+    expect(link.className).toContain("text-[var(--onboarding-ink)]");
+    expect(link.className).not.toContain("text-[var(--onboarding-card)]");
+  });
 });

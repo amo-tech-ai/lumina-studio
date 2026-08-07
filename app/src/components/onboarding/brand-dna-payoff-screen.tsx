@@ -173,20 +173,22 @@ function BrandDnaPayoffLive({
   }, [brandId, loadAttempt]);
 
   // Realtime (or poll) truth — never treat client success alone as ready.
+  // Deps intentionally exclude brandId: the render-phase reset above already
+  // clears durableReady on switch, and intakeStatus can lag one render behind a
+  // brandId change (the hook re-reads asynchronously), so re-running here with a
+  // stale status would mark the new brand ready without approval.
   useEffect(() => {
     if (!isDurableIntakeReady(intakeStatus)) return;
-    if (brandIdRef.current !== brandId) return;
     setApproveError(null);
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
-  }, [intakeStatus, brandId]);
+  }, [intakeStatus]);
 
   // Keep footer Open iPix in lockstep with the card (approve/realtime races).
   useEffect(() => {
     if (!durableReady) return;
-    if (brandIdRef.current !== brandId) return;
     onReadyChangeRef.current?.(true);
-  }, [durableReady, brandId]);
+  }, [durableReady]);
 
   const handleApprove = async () => {
     if (!runId || approving || durableReady) return;
@@ -286,7 +288,7 @@ function BrandDnaPayoffLive({
           <Link
             href="/app/brand"
             data-testid="dna-return-brand-hub"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--onboarding-hair)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)] no-underline"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--onboarding-hair)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-ink)] no-underline"
           >
             Return to Brand Hub
           </Link>
