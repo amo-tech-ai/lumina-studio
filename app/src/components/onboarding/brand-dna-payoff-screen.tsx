@@ -176,6 +176,7 @@ function BrandDnaPayoffLive({
   useEffect(() => {
     if (!isDurableIntakeReady(intakeStatus)) return;
     if (brandIdRef.current !== brandId) return;
+    setApproveError(null);
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
   }, [intakeStatus, brandId]);
@@ -345,7 +346,7 @@ function BrandDnaPayoffLive({
         </p>
       )}
 
-      {approveError ? (
+      {approveError && !durableReady ? (
         <p role="alert" data-testid="dna-approve-error" className="mt-3 text-sm text-destructive">
           {approveError}
         </p>
