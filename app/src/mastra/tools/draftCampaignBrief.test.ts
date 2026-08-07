@@ -149,4 +149,20 @@ describe("draftCampaignBrief", () => {
     expect(result?.error).toMatch(/Access token/);
     expect(generateObject).not.toHaveBeenCalled();
   });
+
+  it("fails when brand has no AI profile", async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: BRAND_ID, name: "Lumina", brand_url: null, ai_profile: null },
+      error: null,
+    });
+
+    const result = await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Test" },
+      {} as never,
+    );
+
+    expect(result?.ok).toBe(false);
+    expect(result?.error).toMatch(/no AI profile/i);
+    expect(generateObject).not.toHaveBeenCalled();
+  });
 });
