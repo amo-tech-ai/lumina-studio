@@ -102,13 +102,15 @@ function BrandDnaPayoffLive({
     quietGapMs: 0,
   });
 
-  // Reset readiness when brandId changes — prevents stale ready state from previous brand.
-  // Uses prevLoadedBrandIdRef (only mutated inside the load effect) to detect an
-  // actual change, since brandIdRef.current is overwritten during render and would
-  // always equal the current brandId in the effect.
+  // Reset readiness when brandId changes — prevents stale ready state from a
+  // previous brand. This is a render-phase adjustment (React's "derived state
+  // from props"): the ref is updated in the same pass so the guard self-terminates
+  // on the next render. prevLoadedBrandIdRef (not brandIdRef.current, which is
+  // overwritten during render) detects an actual switch. Parent readiness is not
+  // touched here — onboarding-flow.tsx already resets dnaReady on brandId change.
   if (prevLoadedBrandIdRef.current !== brandId) {
+    prevLoadedBrandIdRef.current = brandId;
     setDurableReady(false);
-    onReadyChangeRef.current?.(false);
     setPillars(null);
     setBrandName(null);
     setRunId(null);
