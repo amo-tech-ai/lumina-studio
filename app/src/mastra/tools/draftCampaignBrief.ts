@@ -161,7 +161,17 @@ export const draftCampaignBrief = createTool({
       return { ok: false, error: loaded.error, draft: null };
     }
 
-    const rawChannelList = channels.length ? channels.join(", ") : "to be confirmed with operator";
+    const rawChannelList = channels.length
+      ? channels
+          .map((c) =>
+            c
+              .replace(/\u0000/g, "")
+              .replace(/<\/?untrusted_user_content[^>]*>/gi, "")
+              .replace(/<\/?evidence[^>]*>/gi, "")
+              .trim(),
+          )
+          .join(", ")
+      : "to be confirmed with operator";
     const channelList = channels.length
       ? channels.map((c) => fenceUntrusted(c.trim(), 200)).join(", ")
       : "to be confirmed with operator";
@@ -198,7 +208,7 @@ Rules:
     });
 
     const summary =
-      `Draft campaign brief for "${fenceUntrusted(campaignName, 200)}" (${fenceUntrusted(loaded.brandName, 100)}). ` +
+      `Draft campaign brief for "${campaignName}" (${loaded.brandName}). ` +
       `Mood: ${object.mood}. Channels: ${rawChannelList}. ` +
       "Awaiting operator review — nothing has been saved.";
 
