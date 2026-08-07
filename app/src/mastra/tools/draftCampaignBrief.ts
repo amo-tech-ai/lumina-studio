@@ -198,7 +198,7 @@ Rules:
     });
 
     const summary =
-      `Draft campaign brief for "${campaignName}" (${loaded.brandName}). ` +
+      `Draft campaign brief for "${fenceUntrusted(campaignName, 200)}" (${fenceUntrusted(loaded.brandName, 100)}). ` +
       `Mood: ${object.mood}. Channels: ${rawChannelList}. ` +
       "Awaiting operator review — nothing has been saved.";
 
