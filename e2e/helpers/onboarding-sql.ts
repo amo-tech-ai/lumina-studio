@@ -365,7 +365,7 @@ export async function assertTenantIsolation(opts: {
         opts.userId,
       ]);
       await client.query(
-        `select set_config('request.jwt.claims', json_build_object('sub', $1)::text, true)`,
+        `select set_config('request.jwt.claims', json_build_object('sub', $1::text)::text, true)`,
         [opts.userId],
       );
       await client.query(`select set_config('request.jwt.claim.role', 'authenticated', true)`);
@@ -385,7 +385,7 @@ export async function assertTenantIsolation(opts: {
       // claim shapes so a policy keyed on either shape is still blocked.
       await client.query(`select set_config('request.jwt.claim.sub', $1, true)`, [stranger]);
       await client.query(
-        `select set_config('request.jwt.claims', json_build_object('sub', $1)::text, true)`,
+        `select set_config('request.jwt.claims', json_build_object('sub', $1::text)::text, true)`,
         [stranger],
       );
 
