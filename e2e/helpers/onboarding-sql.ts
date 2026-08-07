@@ -415,13 +415,23 @@ export async function assertTenantIsolation(opts: {
 }
 
 /**
- * Reset a brand's intake status to draft_ready for test fixture reuse.
- * Uses the QA database connection directly.
+ * Reset a brand to a reusable draft_ready fixture for test fixture reuse.
+ *
+ * promoteBrandDraft (app/src/lib/brand/promote-draft.ts) moves ai_profile_draft
+ * into ai_profile and nulls the draft on approval, so merely flipping
+ * intake_status leaves a broken fixture: draft_ready with no draft → the Approve
+ * button never enables on the next run. Restore the draft payload and clear the
+ * promoted profile so the fixture can be approved again.
  */
 export async function resetBrandToDraftReady(brandId: string): Promise<void> {
   return withQaPg(async (client) => {
     await client.query(
-      `update public.brands set intake_status = 'draft_ready', updated_at = now() where id = $1::uuid`,
+      `update public.brands
+          set intake_status = 'draft_ready',
+              ai_profile_draft = coalesce(ai_profile_draft, ai_profile),
+              ai_profile = null,
+              updated_at = now()
+        where id = $1::uuid`,
       [brandId],
     );
   });
