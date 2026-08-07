@@ -5,11 +5,10 @@
  * Usage (from worktree root):
  *   node --env-file=app/.env.local tasks/cloudflare/tests/ipi-724-e2e-preview-journey/run-e2e.mjs
  *
- * Security: never commit full HARs with embedded bodies. Prefer network-summary.json.
- * HAR mode is minimal + content omit; assertNoSecrets() runs before write.
+ * Security: network-summary.json is the durable network artifact (HAR capture disabled).
  */
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -25,7 +24,8 @@ const DEFAULT_PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
 // IPI-734: verify:copilot sets BASE_URL; default stays the CF preview Worker.
 const PREVIEW = (process.env.BASE_URL || DEFAULT_PREVIEW).replace(/\/$/, "");
 const READONLY = process.env.VERIFY_READONLY === "1";
-const MAX_TRANSIENT_RETRIES = 1;
+const MAX_TRANSIENT_RETRIES = 2; // Page navigation retries (login, /app, settle, logout)
+const MAX_INFO_503_RETRIES = 1; // Documented /api/copilotkit/info 503 threshold (IPI-955)
 const REPO_ROOT = process.cwd();
 const SECRET_HEADER_NAME_RE =
   /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
@@ -603,7 +603,7 @@ async function main() {
       (n) => (n.path || "") === "/api/copilotkit/info" && n.method === "GET" && n.status === 503
     );
     const info503Count = info503Responses.length;
-    const info503ExceedsThreshold = info503Count > MAX_TRANSIENT_RETRIES;
+    const info503ExceedsThreshold = info503Count > MAX_INFO_503_RETRIES;
     
     const criticalFailed = networkLog.filter((n) => {
       const p = n.path || "";
@@ -943,7 +943,7 @@ async function main() {
       : "Needs Fix";
 
   metadata.evidence_policy = {
-    har: "minimal + content omit + urlFilter **/api/**; deleted after run — never commit",
+    har: "disabled (IPI-964) — network-summary.json provides sufficient evidence",
     preferred: "network-summary.json (host/path/method/status/latency/cf-ray only)",
     ignoreHTTPSErrors: false,
   };
