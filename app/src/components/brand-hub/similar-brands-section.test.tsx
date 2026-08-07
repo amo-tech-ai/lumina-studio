@@ -72,6 +72,6 @@ describe("SimilarBrandsSection", () => {
     render(<SimilarBrandsSection brandId="11111111-1111-1111-1111-111111111111" />);
     fireEvent.click(screen.getByRole("button", { name: "Find similar brands" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be loaded/i);
+    expect((await screen.findByRole("alert")).textContent).toMatch(/could not be loaded/i);
   });
 });
