@@ -92,6 +92,7 @@ describe("operator agents — structure (IPI2-121)", () => {
       [
         "draftBulkAssetApproval",
         "draftCampaignBrief",
+        "getCurrentPageContext",
         "getAssetDnaEvidence",
         "suggestAssetRetakes",
       ].sort(),

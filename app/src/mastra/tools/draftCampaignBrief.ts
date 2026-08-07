@@ -6,6 +6,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { scoreLabel } from "@/lib/brand-utils";
 import { parseAiProfile, type AiProfile } from "@/lib/brand-hub";
+import { fenceUntrusted } from "@/lib/crm/relationship-evidence";
 import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
 import { requestToken } from "@/lib/request-token";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
@@ -151,10 +152,10 @@ export const draftCampaignBrief = createTool({
 
     const channelList = channels.length ? channels.join(", ") : "to be confirmed with operator";
     const goalLine = goal?.trim()
-      ? `Campaign goal: ${goal.trim()}`
-      : "Campaign goal: general brand awareness and content planning.";
+      ? fenceUntrusted(`Campaign goal: ${goal.trim()}`)
+      : fenceUntrusted("Campaign goal: general brand awareness and content planning.");
     const seedLine = briefSeed?.trim()
-      ? `Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`
+      ? fenceUntrusted(`Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`)
       : "";
 
     const { object } = await generateObject({
@@ -163,11 +164,9 @@ export const draftCampaignBrief = createTool({
       prompt: `You are an iPix creative director drafting a campaign brief for a fashion/DTC operator.
 
 Brand DNA context:
-<untrusted_user_content>
-${loaded.context}
-</untrusted_user_content>
+${fenceUntrusted(loaded.context)}
 
-Campaign name: <untrusted_user_content>${campaignName}</untrusted_user_content>
+Campaign name: ${fenceUntrusted(campaignName)}
 Target channels: ${channelList}
 ${goalLine}
 ${seedLine}

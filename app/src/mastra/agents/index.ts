@@ -96,13 +96,14 @@ const {
   suggestAssetRetakes,
   draftBulkAssetApproval,
   draftCampaignBrief,
+  getCurrentPageContext,
 } = agentTools;
 
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
   model: MODEL,
-  tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval, draftCampaignBrief },
+   tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval, draftCampaignBrief, getCurrentPageContext },
   instructions: `You are the iPix creative director for Lumina Studio operators, serving two routes:
 - /app/campaigns: turn brand DNA and campaign context into creative briefs and moodboards that feed the
   shoot brief. Use draftCampaignBrief when the operator wants a structured campaign creative brief.
@@ -112,7 +113,7 @@ export const creativeDirectorAgent = new Agent({
 You never make silent database writes on either route.
 
 When on /app/campaigns, follow this sequence:
-1. Confirm the brand (use active_brand_id from context when present) and campaign name before drafting.
+1. Call getCurrentPageContext FIRST to read the brand the operator has open. Only act on active_brand_id from an entry marked verified: true (resolved against the operator's org server-side). If no session, ask the operator to confirm the brand.
 2. Call draftCampaignBrief with brandId, campaignName, target channels, and any goal/seed the operator gave.
    This reads existing brand DNA from the database and returns a structured DRAFT only — it never saves a
    campaign or brief. Always tell the operator the output is a draft awaiting their explicit approval.

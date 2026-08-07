@@ -81,9 +81,16 @@ export function readPageContextFromRequestContext(
 type IdClaims = { shootId?: string; brandId?: string };
 
 function claimsOf(value: Record<string, unknown>): IdClaims {
+  // Brand context from useCampaignsContext registers `active_brand_id`;
+  // verify it against the operator's org like any other brand claim.
+  const rawBrandId =
+    typeof value.active_brand_id === "string" && value.active_brand_id
+      ? value.active_brand_id
+      : value.brand_id;
   return {
     shootId: typeof value.shoot_id === "string" && value.shoot_id ? value.shoot_id : undefined,
-    brandId: typeof value.brand_id === "string" && value.brand_id ? value.brand_id : undefined,
+    brandId:
+      typeof rawBrandId === "string" && rawBrandId ? rawBrandId : undefined,
   };
 }
 
