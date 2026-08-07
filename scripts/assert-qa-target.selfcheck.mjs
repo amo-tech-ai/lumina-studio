@@ -42,6 +42,15 @@ async function main() {
       ),
     /must reference QA/,
   );
+  // Host-embedded decoy (substring in attacker domain) must not satisfy the gate.
+  assert.throws(
+    () =>
+      assertQaOnly(
+        "QA_DATABASE_URL",
+        `postgresql://u:p@db.${QA_PROJECT_REF}.attacker.example:5432/postgres`,
+      ),
+    /must reference QA/,
+  );
 
   console.log("qa-target self-check OK");
 }

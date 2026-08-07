@@ -92,10 +92,10 @@ export function assertQaOnly(label, value) {
 
   const qaOk =
     host === `db.${QA_PROJECT_REF}.supabase.co` ||
-    host.endsWith(`.${QA_PROJECT_REF}.supabase.co`) ||
     host === `${QA_PROJECT_REF}.supabase.co` ||
-    (host.includes("pooler.supabase.com") && user.includes(QA_PROJECT_REF)) ||
-    host.includes(QA_PROJECT_REF);
+    host.endsWith(`.${QA_PROJECT_REF}.supabase.co`) ||
+    ((host === "pooler.supabase.com" || host.endsWith(".pooler.supabase.com")) &&
+      user.includes(QA_PROJECT_REF));
 
   if (!qaOk) {
     refuseQaTarget(

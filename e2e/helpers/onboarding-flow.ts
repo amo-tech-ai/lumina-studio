@@ -170,7 +170,12 @@ export async function ensureAnswersForMaterialize(
     if (await next.isDisabled()) {
       throw new Error("Continue still disabled after refill — cannot reach analysis");
     }
-    const stepText = (await page.getByText(/Step\s+(\d+)\s*\/\s*13/i).textContent()) ?? "";
+    const stepText =
+      (await page
+        .getByText(/Step\s+(\d+)\s*\/\s*13/i)
+        .first()
+        .textContent()
+        .catch(() => "")) ?? "";
     await next.click();
     // After clicking Continue on screen 11, materialize may take a moment.
     if (/Step\s+11\b/i.test(stepText)) {
@@ -182,6 +187,7 @@ export async function ensureAnswersForMaterialize(
       return;
     }
   }
+  throw new Error("Refill walk exhausted 12 screens without reaching analysis");
 }
 
 /** Advance remaining marketing screens 8–11 into analysis (12). */

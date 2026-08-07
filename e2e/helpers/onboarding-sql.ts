@@ -38,7 +38,7 @@ export type DraftReadySession = {
 export type OnboardingProgressSnapshot = {
   browser: "healthy" | "unknown";
   session: "created" | "resumed" | "missing";
-  crawl: "pending" | "running" | "completed" | "unknown";
+  crawl: "pending" | "running" | "completed" | "failed" | "unknown";
   brandIntelligence:
     | "pending"
     | "running"
@@ -358,9 +358,36 @@ export async function assertTenantIsolation(opts: {
     const stranger = randomUUID();
     await client.query("begin");
     try {
-      await client.query(`select set_config('request.jwt.claim.sub', $1, true)`, [stranger]);
+      // Positive control first: with the owner as the JWT subject and the
+      // authenticated role, the brand must remain readable. Guard against a
+      // claim-shape mismatch silently passing the deny assertions below.
+      await client.query(`select set_config('request.jwt.claim.sub', $1, true)`, [
+        opts.userId,
+      ]);
+      await client.query(
+        `select set_config('request.jwt.claims', json_build_object('sub', $1)::text, true)`,
+        [opts.userId],
+      );
       await client.query(`select set_config('request.jwt.claim.role', 'authenticated', true)`);
       await client.query(`set local role authenticated`);
+
+      const ownerBrand = await client.query<{ n: number }>(
+        `select count(*)::int as n from public.brands where id = $1::uuid`,
+        [opts.brandId],
+      );
+      if ((ownerBrand.rows[0]?.n ?? 0) !== 1) {
+        throw new Error(
+          "RLS allow control: owner JWT subject cannot read own brand",
+        );
+      }
+
+      // Now impersonate a stranger — deny assertions must hold under both
+      // claim shapes so a policy keyed on either shape is still blocked.
+      await client.query(`select set_config('request.jwt.claim.sub', $1, true)`, [stranger]);
+      await client.query(
+        `select set_config('request.jwt.claims', json_build_object('sub', $1)::text, true)`,
+        [stranger],
+      );
 
       const foreignSession = await client.query<{ n: number }>(
         `select count(*)::int as n
