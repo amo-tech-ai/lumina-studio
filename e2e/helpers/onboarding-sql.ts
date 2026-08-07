@@ -420,8 +420,9 @@ export async function assertTenantIsolation(opts: {
  * promoteBrandDraft (app/src/lib/brand/promote-draft.ts) moves ai_profile_draft
  * into ai_profile and nulls the draft on approval, so merely flipping
  * intake_status leaves a broken fixture: draft_ready with no draft → the Approve
- * button never enables on the next run. Restore the draft payload and clear the
- * promoted profile so the fixture can be approved again.
+ * button never enables on the next run. Restore the draft payload so the fixture
+ * can be approved again. ai_profile is not touched — it is NOT NULL in the schema
+ * and promote reads only ai_profile_draft, overwriting ai_profile on re-approval.
  */
 export async function resetBrandToDraftReady(brandId: string): Promise<void> {
   return withQaPg(async (client) => {
@@ -429,7 +430,6 @@ export async function resetBrandToDraftReady(brandId: string): Promise<void> {
       `update public.brands
           set intake_status = 'draft_ready',
               ai_profile_draft = coalesce(ai_profile_draft, ai_profile),
-              ai_profile = null,
               updated_at = now()
         where id = $1::uuid`,
       [brandId],
