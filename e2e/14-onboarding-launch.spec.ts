@@ -125,61 +125,64 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
     const started = await loginAndResumeDraftReady(page, draft);
     requireOrSkip(started, "QA_PASSWORD not set or login failed");
 
-    const approve = page.getByTestId("approve-brand-dna");
-    await expect(approve).toBeVisible({ timeout: 30_000 });
+    try {
+      const approve = page.getByTestId("approve-brand-dna");
+      await expect(approve).toBeVisible({ timeout: 30_000 });
 
-    await approve.click();
+      await approve.click();
 
-    // Server returns ok only after promote → ready; card + footer must unlock.
-    await expect(page.getByRole("heading", { name: /Brand DNA is ready/i })).toBeVisible({
-      timeout: 120_000,
-    });
-    await expect(page.getByText("Brand DNA approved")).toBeVisible({ timeout: 30_000 });
-    const openApp = page.getByRole("button", { name: "Open iPix" });
-    await expect(openApp).toBeEnabled({ timeout: 60_000 });
-
-    await expect
-      .poll(
-        async () => {
-          const u = await queryOnboardingUniqueness({
-            userId: draft.userId,
-            idempotencyKey: draft.idempotencyKey,
-          });
-          return u.intakeStatus;
-        },
-        { timeout: 2 * 60_000, intervals: [1000, 2000, 5000] },
-      )
-      .toBe("ready");
-
-    const after = await queryOnboardingUniqueness({
-      userId: draft.userId,
-      idempotencyKey: draft.idempotencyKey,
-    });
-    assertUniqueMaterialized(after);
-    expect(after.crawls, "approval must not start a second crawl").toBe(1);
-    expect(after.brandId).toBe(draft.brandId);
-    expect(after.organizationId).toBe(draft.organizationId);
-
-    await assertTenantIsolation({
-      userId: draft.userId,
-      organizationId: draft.organizationId,
-      brandId: draft.brandId,
-      idempotencyKey: draft.idempotencyKey,
-    });
-
-    await openApp.click();
-    await page.waitForURL(/\/app/, { timeout: 30_000 });
-    await page.reload();
-    await expect(page).toHaveURL(/\/app/);
-    // Brand Hub — brand name or ready chip when present.
-    if (draft.brandName) {
-      await expect(page.getByText(draft.brandName, { exact: false }).first()).toBeVisible({
-        timeout: 30_000,
+      // Server returns ok only after promote → ready; card + footer must unlock.
+      await expect(page.getByRole("heading", { name: /Brand DNA is ready/i })).toBeVisible({
+        timeout: 120_000,
       });
-    }
+      await expect(page.getByText("Brand DNA approved")).toBeVisible({ timeout: 30_000 });
+      const openApp = page.getByRole("button", { name: "Open iPix" });
+      await expect(openApp).toBeEnabled({ timeout: 60_000 });
 
-    // Restore brand to draft_ready so the fixture can be reused by subsequent runs.
-    await resetBrandToDraftReady(draft.brandId);
+      await expect
+        .poll(
+          async () => {
+            const u = await queryOnboardingUniqueness({
+              userId: draft.userId,
+              idempotencyKey: draft.idempotencyKey,
+            });
+            return u.intakeStatus;
+          },
+          { timeout: 2 * 60_000, intervals: [1000, 2000, 5000] },
+        )
+        .toBe("ready");
+
+      const after = await queryOnboardingUniqueness({
+        userId: draft.userId,
+        idempotencyKey: draft.idempotencyKey,
+      });
+      assertUniqueMaterialized(after);
+      expect(after.crawls, "approval must not start a second crawl").toBe(1);
+      expect(after.brandId).toBe(draft.brandId);
+      expect(after.organizationId).toBe(draft.organizationId);
+
+      await assertTenantIsolation({
+        userId: draft.userId,
+        organizationId: draft.organizationId,
+        brandId: draft.brandId,
+        idempotencyKey: draft.idempotencyKey,
+      });
+
+      await openApp.click();
+      await page.waitForURL(/\/app/, { timeout: 30_000 });
+      await page.reload();
+      await expect(page).toHaveURL(/\/app/);
+      // Brand Hub — brand name or ready chip when present.
+      if (draft.brandName) {
+        await expect(page.getByText(draft.brandName, { exact: false }).first()).toBeVisible({
+          timeout: 30_000,
+        });
+      }
+    } finally {
+      // Restore brand to draft_ready even if assertions fail, so the fixture
+      // can be reused by subsequent runs.
+      await resetBrandToDraftReady(draft.brandId);
+    }
 
     logProgress(
       "post-approve",

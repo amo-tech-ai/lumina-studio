@@ -25,7 +25,7 @@ const DNA_LOAD_TIMEOUT_MS = 45_000;
 /** Dedup Strict Mode double-mount so both effects share one server-action flight. */
 const dnaEnsureInflight = new Map<
   string,
-  { promise: ReturnType<typeof ensureOnboardingIntakeDraft>; generation: number }
+  { promise: ReturnType<typeof ensureOnboardingIntakeDraft>; generation: symbol }
 >();
 
 function loadOnboardingDnaDraft(brandId: string, bust = false) {
@@ -34,7 +34,7 @@ function loadOnboardingDnaDraft(brandId: string, bust = false) {
   if (entry) {
     return entry.promise;
   }
-  const generation = Date.now();
+  const generation = Symbol();
   const promise = ensureOnboardingIntakeDraft(brandId).finally(() => {
     const current = dnaEnsureInflight.get(brandId);
     if (current && current.generation === generation) {
@@ -92,6 +92,9 @@ function BrandDnaPayoffLive({
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const loadGenerationRef = useRef(0);
+  // Only mutated inside the load effect — detects brand switches that would be
+  // hidden by the render-time brandIdRef.current assignment.
+  const prevLoadedBrandIdRef = useRef(brandId);
 
   const { intakeStatus } = useBrandAnalysisProgress({
     brandId,
@@ -100,26 +103,27 @@ function BrandDnaPayoffLive({
   });
 
   // Reset readiness when brandId changes — prevents stale ready state from previous brand.
-  useEffect(() => {
-    if (brandIdRef.current !== brandId) {
-      setDurableReady(false);
-      onReadyChangeRef.current?.(false);
-      setPillars(null);
-      setBrandName(null);
-      setRunId(null);
-      setLoadError(null);
-      setApproveError(null);
-      setApproving(false);
-      setLoading(true);
-      setLoadAttempt(0);
-      loadGenerationRef.current = 0;
-      brandIdRef.current = brandId;
-    }
-  }, [brandId]);
+  // Uses prevLoadedBrandIdRef (only mutated inside the load effect) to detect an
+  // actual change, since brandIdRef.current is overwritten during render and would
+  // always equal the current brandId in the effect.
+  if (prevLoadedBrandIdRef.current !== brandId) {
+    setDurableReady(false);
+    onReadyChangeRef.current?.(false);
+    setPillars(null);
+    setBrandName(null);
+    setRunId(null);
+    setLoadError(null);
+    setApproveError(null);
+    setApproving(false);
+    setLoading(true);
+    setLoadAttempt(0);
+    loadGenerationRef.current = 0;
+  }
 
   useEffect(() => {
     const requestedId = brandId;
     const thisGeneration = ++loadGenerationRef.current;
+    prevLoadedBrandIdRef.current = brandId;
     setLoading(true);
     setLoadError(null);
 

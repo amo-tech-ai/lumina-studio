@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { after } from "next/server";
 import {
   DRAFT_ACTION_DOMAIN,
   DRAFT_ACTION_MESSAGES,
@@ -261,10 +262,7 @@ export async function processBrandIntelligenceDraftApproval(params: {
  * Mastra runs and will error "not suspended", which is expected.
  */
 function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
-  // Use a microtask to defer until after the response; Next.js `after()` is
-  // not available in this context (not a route handler), so we use setImmediate
-  // equivalent via queueMicrotask to run after the current execution context.
-  queueMicrotask(async () => {
+  const schedule = async () => {
     try {
       const { getMastra } = await import("@/mastra");
       const mastra = getMastra();
@@ -273,11 +271,18 @@ function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
         await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
       }
     } catch (err) {
-      // Expected for edge onboarding runIds (not suspended Mastra runs) or cold-start failures.
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.toLowerCase().includes("not suspended")) {
         console.error("[process-draft-approval] workflow resume failed", { runId, approved, error: msg });
       }
     }
-  });
+  };
+  try {
+    after(schedule);
+  } catch {
+    // `after()` is only available within a Next.js request scope (route handler,
+    // server action). Outside that context (e.g. test environments), it throws.
+    // Fall back to queueMicrotask to avoid blocking the response.
+    queueMicrotask(schedule);
+  }
 }

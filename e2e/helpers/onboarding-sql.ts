@@ -287,9 +287,10 @@ export async function snapshotOnboardingProgress(opts: {
 
     let crawlPhase: OnboardingProgressSnapshot["crawl"] = "unknown";
     if (crawlN === 0) crawlPhase = "pending";
-    else if (/run|pend|start/i.test(crawlStatus)) crawlPhase = "running";
+    else if (/run|pend|start|queue/i.test(crawlStatus)) crawlPhase = "running";
     else if (/fail|cancel|abort/i.test(crawlStatus)) crawlPhase = "failed";
-    else crawlPhase = "completed";
+    else if (/complete|success|done|finish/i.test(crawlStatus)) crawlPhase = "completed";
+    else crawlPhase = "running";
 
     let bi: OnboardingProgressSnapshot["brandIntelligence"] = "unknown";
     if (!intake) bi = "pending";
