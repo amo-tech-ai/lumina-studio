@@ -96,11 +96,22 @@ async function loadBrandDnaContext(brandId: string): Promise<
   if (scoresErr) {
     return { ok: false, error: `Brand scores lookup failed: ${scoresErr.message}` };
   }
-  if (!brand.ai_profile) {
+  if (!brand.ai_profile || Object.keys(brand.ai_profile as Record<string, unknown>)?.length === 0) {
     return { ok: false, error: "Brand has no AI profile — run brand intelligence analysis before drafting a campaign brief" };
   }
 
   const profile = parseAiProfile(brand.ai_profile);
+  if (
+    !profile.overview &&
+    !profile.tagline &&
+    !profile.brandVoice &&
+    !profile.targetAudience &&
+    !profile.contentPillars?.length &&
+    !profile.visualIdentity?.mood &&
+    !profile.visualIdentity?.colors?.length
+  ) {
+    return { ok: false, error: "Brand has no AI profile — run brand intelligence analysis before drafting a campaign brief" };
+  }
   const context = formatBrandDnaContext(brand as BrandRow, profile, (scoreRows ?? []) as ScoreRow[]);
 
   return { ok: true, brandName: brand.name, context };
@@ -150,12 +161,15 @@ export const draftCampaignBrief = createTool({
       return { ok: false, error: loaded.error, draft: null };
     }
 
-    const channelList = channels.length ? channels.join(", ") : "to be confirmed with operator";
+    const rawChannelList = channels.length ? channels.join(", ") : "to be confirmed with operator";
+    const channelList = channels.length
+      ? channels.map((c) => fenceUntrusted(c.trim(), 200)).join(", ")
+      : "to be confirmed with operator";
     const goalLine = goal?.trim()
-      ? fenceUntrusted(`Campaign goal: ${goal.trim()}`)
+      ? fenceUntrusted(`Campaign goal: ${goal.trim()}`, 2100)
       : fenceUntrusted("Campaign goal: general brand awareness and content planning.");
     const seedLine = briefSeed?.trim()
-      ? fenceUntrusted(`Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`)
+      ? fenceUntrusted(`Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`, 4100)
       : "";
 
     const { object } = await generateObject({
@@ -185,7 +199,7 @@ Rules:
 
     const summary =
       `Draft campaign brief for "${campaignName}" (${loaded.brandName}). ` +
-      `Mood: ${object.mood}. Channels: ${channelList}. ` +
+      `Mood: ${object.mood}. Channels: ${rawChannelList}. ` +
       "Awaiting operator review — nothing has been saved.";
 
     return {
