@@ -56,7 +56,7 @@ export function classifyNetworkResponse(response, info503Count, phase) {
   
   // Documented retryable 503 on /api/copilotkit/info (IPI-955)
   if (p === "/api/copilotkit/info" && response.method === "GET" && response.status === 503) {
-    if (info503Count <= MAX_INFO_503_RETRIES) {
+    if (info503Count <= MAX_INFO_503_RETRIES + 1) {
       return "tolerated_transient";
     }
     return "critical";
@@ -115,5 +115,5 @@ export function countInfo503Responses(networkLog) {
  * @returns {boolean} - True if threshold exceeded
  */
 export function info503ExceedsThreshold(info503Count) {
-  return info503Count > MAX_INFO_503_RETRIES;
+  return info503Count > MAX_INFO_503_RETRIES + 1;
 }

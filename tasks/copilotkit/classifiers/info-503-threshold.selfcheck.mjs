@@ -82,9 +82,16 @@ const tests = [
     expected: "tolerated_transient",
   },
   {
-    name: "Network: Third GET /info 503 (after 2 retries) - critical",
+    name: "Network: Third GET /info 503 (after 2 retries) - tolerated",
     input: { path: "/api/copilotkit/info", method: "GET", status: 503 },
     info503Count: 2,
+    phase: "auth",
+    expected: "tolerated_transient",
+  },
+  {
+    name: "Network: Fourth GET /info 503 (after 3 retries) - critical",
+    input: { path: "/api/copilotkit/info", method: "GET", status: 503 },
+    info503Count: 3,
     phase: "auth",
     expected: "critical",
   },
@@ -179,18 +186,23 @@ const tests = [
     expected: 2,
   },
   {
-    name: "info503ExceedsThreshold: 0 <= 1",
+    name: "info503ExceedsThreshold: 0 <= 2",
     input: 0,
     expected: false,
   },
   {
-    name: "info503ExceedsThreshold: 1 <= 1",
+    name: "info503ExceedsThreshold: 1 <= 2",
     input: 1,
     expected: false,
   },
   {
-    name: "info503ExceedsThreshold: 2 > 1",
+    name: "info503ExceedsThreshold: 2 <= 2",
     input: 2,
+    expected: false,
+  },
+  {
+    name: "info503ExceedsThreshold: 3 > 2",
+    input: 3,
     expected: true,
   },
 ];
