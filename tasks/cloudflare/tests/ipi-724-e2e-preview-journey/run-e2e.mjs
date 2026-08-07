@@ -21,12 +21,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
 const OUT = resolve(process.env.VERIFY_OUT || __dirname);
 const SHOTS = join(OUT, "screenshots");
-const HAR_DIR = join(OUT, "har");
 const DEFAULT_PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
 // IPI-734: verify:copilot sets BASE_URL; default stays the CF preview Worker.
 const PREVIEW = (process.env.BASE_URL || DEFAULT_PREVIEW).replace(/\/$/, "");
 const READONLY = process.env.VERIFY_READONLY === "1";
-const MAX_TRANSIENT_RETRIES = 2;
+const MAX_TRANSIENT_RETRIES = 1;
 const REPO_ROOT = process.cwd();
 const SECRET_HEADER_NAME_RE =
   /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
@@ -271,24 +270,12 @@ async function main() {
   const password = loadQaPassword();
   const email = "qa@ipix.test";
   mkdirSync(SHOTS, { recursive: true });
-  mkdirSync(HAR_DIR, { recursive: true });
-  const harPath = join(HAR_DIR, "session.har");
-  // Remove any leftover full HAR from a previous unsafe run.
-  if (existsSync(harPath)) unlinkSync(harPath);
 
   const deploymentIdentity = resolvePreviewDeploymentIdentity(PREVIEW);
 
   const browser = await chromium.launch({ headless: true });
   const extraHTTPHeaders = loadExtraHeaders();
   const context = await browser.newContext({
-    // IPI-964: Disable HAR capture entirely to prevent auth secrets from reaching disk
-    // network-summary.json provides sufficient evidence for debugging
-    // recordHar: {
-    //   path: harPath,
-    //   mode: "minimal",
-    //   content: "omit",
-    //   urlFilter: "**/api/**",
-    // },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
     // Headers applied via route (origin-scoped) — not context-wide extraHTTPHeaders.
@@ -611,17 +598,21 @@ async function main() {
       return e.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
     });
     // IPI-964: Track /api/copilotkit/info 503 retries per IPI-955 documented contract
-    // A single retryable 503 is allowed; repeated 503s or other 5xx are critical failures
-    const info503Retries = [];
+    // Count first, then decide tolerance — ensures evidence blob is accurate
+    const info503Responses = networkLog.filter(
+      (n) => (n.path || "") === "/api/copilotkit/info" && n.method === "GET" && n.status === 503
+    );
+    const info503Count = info503Responses.length;
+    const info503ExceedsThreshold = info503Count > MAX_TRANSIENT_RETRIES;
+    
     const criticalFailed = networkLog.filter((n) => {
       const p = n.path || "";
       if (!p.includes("/api/")) return false;
       
       // Documented retryable 503 on /api/copilotkit/info (IPI-955)
+      // Include all in evidence when threshold is exceeded
       if (p === "/api/copilotkit/info" && n.method === "GET" && n.status === 503) {
-        info503Retries.push(n);
-        // Only count as critical if more than MAX_TRANSIENT_RETRIES occur
-        return info503Retries.length > MAX_TRANSIENT_RETRIES;
+        return info503ExceedsThreshold;
       }
       
       // Generic 5xx are critical
@@ -972,17 +963,6 @@ async function main() {
       (n) => (n.path || "").includes("/api/") && n.status >= 500,
     ),
   });
-
-  // Never commit HAR — network-summary.json is the durable network artifact.
-  if (existsSync(harPath)) {
-    try {
-      assertNoSecrets(harPath, readFileSync(harPath, "utf8"));
-    } catch (e) {
-      console.warn(String(e.message || e));
-    }
-    unlinkSync(harPath);
-    console.log("Deleted local HAR — commit network-summary.json only.");
-  }
 
   console.log("\n=== SUMMARY ===");
   console.log(
