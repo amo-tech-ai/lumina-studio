@@ -30,6 +30,10 @@ import { rejectTenantKeyRewrite, TenantContextError } from "@/lib/db/mastra-tena
 // of an indefinite hang.
 const STREAM_IDLE_TIMEOUT_MS = 20_000;
 
+// IPI-955: Bound the org lookup for /info to prevent indefinite hangs during
+// cold starts or network issues. Combined with request.signal for cancellation.
+const INFO_ORG_LOOKUP_TIMEOUT_MS = 10_000;
+
 // AsyncLocalStorage propagates the resolved operator identity through the
 // entire async call-stack of a request — including agent factory callbacks that
 // CopilotKit may invoke with a wrapped copy of the original Request object.
@@ -67,9 +71,13 @@ class MastraOrgScopeError extends Error {
  * organization membership, rather than falling back to a bare `user.id`
  * (the pre-IPI-146 behavior, which isolated by user but not by org).
  */
-async function resolveOrgScopedResourceId(user: OperatorUser, accessToken: string): Promise<string> {
+async function resolveOrgScopedResourceId(
+  user: OperatorUser,
+  accessToken: string,
+  options?: { abortSignal?: AbortSignal },
+): Promise<string> {
   const client = createUserScopedClient(accessToken);
-  const orgId = await getCurrentOrgId(user.id, client);
+  const orgId = await getCurrentOrgId(user.id, client, options);
   if (!orgId) {
     throw new MastraOrgScopeError(`No organization membership for operator ${user.id}`);
   }
@@ -441,6 +449,11 @@ function requestNeedsDurableStorage(request: Request): boolean {
   return pathname.includes("/agent/") || pathname.includes("/threads/");
 }
 
+/** True for /api/copilotkit/info — agent discovery only; no turn, no DB writes. */
+function isInfoRequest(request: Request): boolean {
+  return new URL(request.url).pathname.endsWith("/info");
+}
+
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
   const exposeDetail = shouldExposeRuntimeErrorDetail();
   return Response.json(
@@ -511,7 +524,53 @@ const handler = async (request: Request): Promise<Response> => {
       // that thread belongs to it — both BEFORE endpoint(request) runs, so a
       // failure here never reaches CopilotKit's internals as an opaque thrown
       // error.
-      const resourceId = await resolveOrgScopedResourceId(user, token);
+      //
+      // IPI-955 — /info path: /info is agent discovery only (returns the
+      // registered agent list and runtime mode). No agent turn runs, no
+      // Mastra memory is read or written, no thread is accessed.
+      //
+      // For /info: preserve org membership validation (fail closed) and return
+      // proper error codes for all failure modes. Infrastructure failures
+      // (cold start, DB timeout) return 503 to signal retry-able conditions.
+      // The E2E gate should be configured to handle legitimate 503s properly
+      // rather than compromising the API contract with empty 200 responses.
+      //
+      // For all other requests (agent turns, thread CRUD) the full
+      // fail-closed org gate applies unchanged.
+      let resourceId: string;
+      if (isInfoRequest(request)) {
+        try {
+          const timeoutSignal = AbortSignal.timeout(INFO_ORG_LOOKUP_TIMEOUT_MS);
+          const combinedSignal = request.signal?.aborted
+            ? request.signal
+            : AbortSignal.any([request.signal, timeoutSignal].filter(Boolean));
+          resourceId = await resolveOrgScopedResourceId(user, token, { abortSignal: combinedSignal });
+        } catch (err) {
+          if (err instanceof MastraOrgScopeError) {
+            // Missing org membership → fail closed (403)
+            console.error("[copilotkit] /info org resolution failed — no membership (fail closed)", user.id);
+            return Response.json(
+              { error: "No organization membership for this operator", code: "org_required" },
+              { status: 403 },
+            );
+          }
+          // Infrastructure failure (cold start, DB timeout, RLS error) → controlled 503
+          console.error(
+            "[copilotkit] /info org lookup failed — refusing (503, fail closed)",
+            err instanceof Error ? err.message : String(err),
+          );
+          return Response.json(
+            {
+              error: "Organization membership could not be verified",
+              code: "org_lookup_error",
+              degraded: true,
+            },
+            { status: 503 },
+          );
+        }
+      } else {
+        resourceId = await resolveOrgScopedResourceId(user, token);
+      }
 
       const urlThreadId = extractThreadIdFromUrl(request);
       if (urlThreadId) {

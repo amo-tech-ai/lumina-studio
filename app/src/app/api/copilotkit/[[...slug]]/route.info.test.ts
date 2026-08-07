@@ -349,4 +349,335 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.code).toBe("storage_unavailable");
     expect(body.degraded).toBe(true);
   });
+
+  it("returns 503 org_lookup_error on /info when org lookup fails (proper fail-closed, IPI-955)", async () => {
+    // Infrastructure failures (cold start, DB timeout) return proper 503 error
+    // to maintain fail-closed behavior and proper API contract.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "qa-user",
+          email: "qa@ipix.test",
+          name: "QA",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("cold-start-token"),
+      };
+    });
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    // Simulate cold-start/timeout → infrastructure error
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockRejectedValue(new Error("connection timeout")),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => {
+        return Response.json({ agents: mockAgents }, { status: 200 });
+      }),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    // Proper 503 response — maintains fail-closed behavior and API contract
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { 
+      code?: string; 
+      degraded?: boolean;
+    };
+    expect(body.code).toBe("org_lookup_error");
+    expect(body.degraded).toBe(true);
+  }, 15_000);
+
+  it("returns 403 org_required on /info when operator has no org membership (security preserved)", async () => {
+    // Missing org membership → fail closed (403) — security gate preserved
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "no-org-user",
+          email: "noorg@ipix.test",
+          name: "No Org",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("no-org-token"),
+      };
+    });
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    // null → no membership → MastraOrgScopeError → 403
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => {
+        return Response.json({ agents: mockAgents }, { status: 200 });
+      }),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_required");
+  }, 15_000);
+
+  it("returns 200 with agents on /info when org membership is valid", async () => {
+    // Valid org membership → normal discovery with org-scoped resourceId
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "qa-user",
+          email: "qa@ipix.test",
+          name: "QA",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("valid-org-token"),
+      };
+    });
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue("org-test-123"),
+    }));
+
+    // Wire CopilotRuntime to capture and invoke agents factory
+    let capturedAgentsFactory: (() => Promise<unknown>) | undefined;
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(function (this: unknown, config: { agents: () => Promise<unknown> }) {
+        capturedAgentsFactory = config.agents;
+      }),
+      createCopilotRuntimeHandler: vi.fn(() => async () => {
+        if (capturedAgentsFactory) await capturedAgentsFactory();
+        return Response.json({ agents: mockAgents }, { status: 200 });
+      }),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({ agents: mockAgents })),
+    }));
+
+    const { MastraAgent } = await import("@ag-ui/mastra");
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { agents?: Record<string, unknown> };
+    expect(body.agents?.default).toBeDefined();
+    // Verify org-scoped resourceId passed to agents
+    expect(MastraAgent.getLocalAgents).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceId: expect.stringContaining("org-test-123") }),
+    );
+  }, 15_000);
+
+  it("agent run still calls resolveOrgScopedResourceId and fails closed when org is missing", async () => {
+    // /info has a clean skip; agent turns use the original
+    // resolveOrgScopedResourceId unchanged — no org → 403 org_required.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
+        "@/lib/operator-gate",
+      );
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({
+          id: "no-org-user",
+          email: "noorg@ipix.test",
+          name: "No Org",
+        }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return {
+        ...actual,
+        extractAccessToken: vi.fn().mockReturnValue("no-org-agent-token"),
+      };
+    });
+
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue(mockAgents) },
+    }));
+
+    vi.doMock("@/mastra", () => ({
+      getMastra: vi.fn(() => ({ agents: mockAgents })),
+    }));
+
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/default/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_required");
+  }, 15_000);
+
+  it("returns 503 org_lookup_error on /info when org lookup times out (bounded query, IPI-955)", async () => {
+    // AbortSignal.timeout() uses the native scheduler which vi.useFakeTimers()
+    // does not intercept (vitest-dev/vitest#3088 — @sinonjs/fake-timers does
+    // not patch the AbortSignal scheduler). We mock AbortSignal.timeout() to
+    // return a controller-backed signal driven by a fake-timer setTimeout so
+    // vi.advanceTimersByTimeAsync() fires it deterministically.
+    vi.useFakeTimers();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const timeoutController = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
+      setTimeout(
+        () => timeoutController.abort(new DOMException("TimeoutError", "TimeoutError")),
+        ms,
+      );
+      return timeoutController.signal;
+    });
+
+    vi.doMock("@/lib/operator-gate", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/operator-gate")>("@/lib/operator-gate");
+      return {
+        ...actual,
+        withOperatorAuth: vi.fn().mockResolvedValue({ id: "qa-user", email: "qa@ipix.test", name: "QA" }),
+        isOperatorAuthEnforced: vi.fn(() => true),
+      };
+    });
+    vi.doMock("@/lib/auth", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+      return { ...actual, extractAccessToken: vi.fn().mockReturnValue("timeout-test-token") };
+    });
+    vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+      createUserScopedClient: vi.fn(() => ({})),
+    }));
+    // Simulate a hung cold-start query — never resolves, aborts on signal
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockImplementation((_userId: string, _client: unknown, options?: { abortSignal?: AbortSignal }) =>
+        new Promise<null>((_resolve, reject) => {
+          options?.abortSignal?.addEventListener("abort", () =>
+            reject(new DOMException("Query timed out", "AbortError")),
+          );
+        }),
+      ),
+    }));
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => Response.json({ agents: {} }, { status: 200 })),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+    vi.doMock("@ag-ui/mastra", () => ({ MastraAgent: { getLocalAgents: vi.fn().mockResolvedValue({}) } }));
+    vi.doMock("@/mastra", () => ({ getMastra: vi.fn(() => ({})) }));
+
+    try {
+      const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+      const responsePromise = route.GET(new Request("http://localhost/api/copilotkit/info"));
+      // Advance past INFO_ORG_LOOKUP_TIMEOUT_MS (10_000) — fires the mocked
+      // AbortSignal.timeout() via setTimeout, aborting the hung query
+      await vi.advanceTimersByTimeAsync(11_000);
+      const response = await responsePromise;
+
+      expect(response.status).toBe(503);
+      const body = (await response.json()) as { code?: string; degraded?: boolean };
+      expect(body.code).toBe("org_lookup_error");
+      expect(body.degraded).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+  }, 15_000);
 });

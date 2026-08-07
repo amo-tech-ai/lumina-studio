@@ -9,6 +9,10 @@ import { resolveJwtActor } from "@/lib/jwt-actor";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 
 export const dynamic = "force-dynamic";
+// IPI-905/919 — recovery can wait up to ~50s for crawl completion before
+// brand-intelligence (whose own Gemini/Groq call has up to a 55s timeout).
+// Default serverless duration limits are too short for that combined path.
+export const maxDuration = 120;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
