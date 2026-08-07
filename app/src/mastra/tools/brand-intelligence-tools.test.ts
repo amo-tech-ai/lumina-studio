@@ -59,8 +59,10 @@ const MOCK_BRAND = {
 };
 
 const MOCK_SCORES = [
-  { score_type: "visual_identity", score: 72, rationale: "Good palette" },
-  { score_type: "social_presence", score: 58, rationale: "Low engagement" },
+  { score_type: "visual", score: 72, rationale: "Good palette" },
+  { score_type: "audience", score: 58, rationale: "Low engagement" },
+  { score_type: "consistency", score: 70, rationale: "Consistent messaging" },
+  { score_type: "commerce_readiness", score: 80, rationale: "Ready to sell" },
 ];
 
 const MOCK_PILLAR = {
@@ -157,8 +159,8 @@ describe("getBrandScores", () => {
   it("returns scores with computed overallScore", async () => {
     const result = await getBrandScores.execute!({ brandId: BRAND_ID }, {} as never);
     const r = result as Awaited<ReturnType<typeof getBrandScores.execute>>;
-    expect(r!.scores).toHaveLength(2);
-    expect(r!.overallScore).toBe(65);
+    expect(r!.scores).toHaveLength(4);
+    expect(r!.overallScore).toBe(70);
   });
 });
 

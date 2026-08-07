@@ -7,6 +7,7 @@ import { z } from "zod";
 import { parseScoreDetails } from "@/lib/brand-hub";
 import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/app/api/_lib/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
+import { computeDnaScore, type BrandScoreRow } from "@/lib/brand-scores";
 import { requestToken } from "@/lib/request-token";
 import { callEdgeFunction } from "./edge";
 
@@ -160,9 +161,7 @@ export const getBrandScores = createTool({
       score: Number(s.score),
       rationale: (s.rationale as string | null) ?? null,
     }));
-    const overall = scores.length
-      ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
-      : null;
+    const overall = computeDnaScore(scores as BrandScoreRow[] | null);
     return { scores, overallScore: overall };
   },
 });
