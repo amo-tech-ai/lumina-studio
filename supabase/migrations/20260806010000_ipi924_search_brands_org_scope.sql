@@ -4,6 +4,15 @@
 -- brands from the operator's own organization (cross-tenant safety).
 -- Drop the previous unscoped overload so no service-role path can bypass the
 -- org filter, and make p_org_id required so omitting it fails closed.
+--
+-- Rollback / recovery: re-create the dropped overload
+--   create or replace function public.search_brands(p_embedding vector(768),
+--     p_limit int default 20, p_exclude_brand_id uuid default null) ...
+-- and drop the org-scoped function. DROP FUNCTION takes a brief ACCESS EXCLUSIVE
+-- lock on the function only (no table rewrite); concurrent callers of the old
+-- overload fail fast until the replacement is committed. No data migration is
+-- involved, so recovery is a forward-fix (re-run the corrected DDL), not a
+-- data restore.
 drop function if exists public.search_brands(vector, int, uuid);
 
 create or replace function public.search_brands(
@@ -22,7 +31,10 @@ language plpgsql stable security definer
 set search_path = public
 as $$
 begin
-  set local hnsw.ef_search = 400;
+  -- set_config(..., true) is local to the transaction; plain `set local` is
+  -- rejected inside a STABLE function ("SET is not allowed in a non-volatile
+  -- function"), so use the function form.
+  perform set_config('hnsw.ef_search', '400', true);
 
   -- Reject invalid p_limit before the query runs: an explicit NULL makes
   -- LIMIT NULL behave as LIMIT ALL (return every matching brand), and values
