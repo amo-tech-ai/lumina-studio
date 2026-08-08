@@ -29,15 +29,22 @@ ignore_pr_authors = ["coderabbitai[bot]", "chatgpt-codex-connector[bot]", "copil
 auto_review = true
 auto_describe = false
 auto_improve = false
-pr_actions = ["opened", "reopened", "ready_for_review"]
-handle_push_trigger = false       # explicit: no push/synchronize-triggered reviews (workflow has no
-                                  # push trigger; pin kept as documentation per rollout audit)
+pr_actions = ["opened", "reopened", "ready_for_review", "synchronize"]
+handle_push_trigger = true        # push/synchronize-triggered reviews via push_commands (PRAGENT-PUSH)
+push_trigger_ignore_bot_commits = true     # skip review when push contains only bot commits (upstream default)
+push_trigger_ignore_merge_commits = true   # skip review when push contains only merge commits (upstream default)
+push_commands = ["/review"]       # auto re-review on meaningful pushes (mirrors github_app.push_commands)
 
 [pr_reviewer]
 num_max_findings = 5                          # cap comment volume
-persistent_comment = false                    # fresh review comment each run (no stale edits)
+persistent_comment = true                     # one evolving review per PR (no duplicate comments per push)
+final_update_message = false                  # suppress "review updated" link-spam on persistent-comment updates
 publish_output_no_suggestions = false         # stay silent when there is nothing worth posting
 approve_pr_on_self_review = false             # no silent AI approvals — humans decide (rule #1)
+# incremental review (/review -i) — pinned to freeze upstream defaults
+require_all_thresholds_for_incremental_review = false
+minimal_commits_for_incremental_review = 1
+minimal_minutes_for_incremental_review = 0
 extra_instructions = """
 Respect AGENTS.md and the iPix one-concern-per-PR rule.
 The iPix review contract is docs/pr-review-guidelines.md (Phase A context file); follow it.
@@ -58,3 +65,12 @@ Only report findings supported by the changed code.
 
 [pr_code_suggestions]
 commitable_code_suggestions = false           # no write-like suggested commits (advisor, not boss)
+
+[ignore]
+glob = [
+    "**/package-lock.json",
+    "**/*.lock",
+    "**/src/types/**.generated.*",
+    "**/src/generated/**",
+]
+regex = []
