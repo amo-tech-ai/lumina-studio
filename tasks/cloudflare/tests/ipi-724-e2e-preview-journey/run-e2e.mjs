@@ -932,9 +932,13 @@ async function main() {
   writeEvidence(join(OUT, "network-summary.json"), {
     count: networkLog.length,
     entries: networkLog,
-    critical_failures: networkLog.filter(
-      (n) => (n.path || "").includes("/api/") && n.status >= 500,
-    ),
+    // IPI-966: Use classifier for network-summary.json critical failures
+    // This ensures consistency with the gate semantics in 09_console_network
+    info503Count: countInfo503Responses(networkLog),
+    critical_failures: networkLog.filter((n) => {
+      const classification = classifyNetworkResponse(n, countInfo503Responses(networkLog), "auth");
+      return classification === "critical";
+    }),
   });
 
   console.log("\n=== SUMMARY ===");
