@@ -2,6 +2,7 @@
 # lean audit.sh — safe, read-only repo + environment scan
 # Run from repo root: bash .claude/skills/lean/scripts/audit.sh
 
+# Use pipefail for safety, but avoid SIGPIPE by using awk instead of head
 set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
@@ -12,22 +13,25 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 echo ""
 echo "── REPO SIZE ──────────────────────────────"
-du -sh . --exclude=.git --exclude=node_modules 2>/dev/null || du -sh . 2>/dev/null
+du -sh . --exclude=.git --exclude=node_modules 2>/dev/null || du -sh . 2>/dev/null || echo "du failed"
 echo -n "File count (excl. node_modules/dist/.next): "
 find . -not -path '*/node_modules/*' -not -path '*/.git/*' \
   -not -path '*/dist/*' -not -path '*/.next/*' -type f 2>/dev/null | wc -l
 
 echo ""
 echo "── LARGEST DIRS ───────────────────────────"
-# Handle SIGPIPE from head truncating the pipeline
-(du -sh */ 2>/dev/null | sort -rh | head -15) || true
+du -sh -- */ 2>/dev/null | sort -rh | awk 'NR <= 15' || echo "No directories found"
 
 echo ""
 echo "── LARGEST FILES (excl. node_modules) ─────"
-# Handle SIGPIPE from head truncating the pipeline
-(find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
-  -printf '%s %p\n' 2>/dev/null | sort -rn | head -15 \
-  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}') || true
+files_output=$(find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
+  -printf '%s %p\n' 2>/dev/null | sort -rn | awk 'NR <= 15' \
+  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}')
+if [ -z "$files_output" ]; then
+  echo "No files found"
+else
+  echo "$files_output"
+fi
 
 echo ""
 echo "── IGNORE FILES ───────────────────────────"
@@ -64,8 +68,8 @@ echo "  manyFiles: $(git config feature.manyFiles 2>/dev/null || echo NOT SET)"
 
 echo ""
 echo -n "Stale merged branches: "
-# Handle case where grep finds no matches (exit code 1) - capture output to prevent double print
-count=$(git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' 2>/dev/null | wc -l | tr -d ' ' || true)
+# Use awk to count, avoiding blanket || true that would mask git failures
+count=$(git branch --merged main 2>/dev/null | awk '!/^\*|main|master|develop/ { n++ } END { print n + 0 }')
 echo "${count:-0}"
 
 echo ""
@@ -113,9 +117,17 @@ echo ""
 free -h | awk 'NR==1{print "  " $0} NR==2{print "  " $0}'
 
 echo -n "SSD/NVMe: "
+<<<<<<< HEAD
+lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | awk 'NR <= 3' \
+  || echo "N/A"
+||||||| 8fc29be0
+lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
+  || echo "N/A"
+=======
 # Handle SIGPIPE from head truncating the pipeline
 (lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
   || echo "N/A") || true
+>>>>>>> origin/main
 
 echo ""
 echo "── CI RECENT RUNS ─────────────────────────"
@@ -125,8 +137,7 @@ gh run list --limit 5 --json status,conclusion,createdAt,updatedAt,name \
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Audit complete — feed output to Claude"
-echo "  for the scored report and recommendations"
+echo "  Audit script completed"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "✅ All 11 audit sections completed successfully"
