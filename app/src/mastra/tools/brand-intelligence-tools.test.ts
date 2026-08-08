@@ -34,6 +34,7 @@ import {
   getBrandProfile,
   getBrandScores,
   normalizePillar,
+  searchSimilarBrands,
   startBrandAnalysis,
 } from "./brand-intelligence-tools";
 
@@ -103,6 +104,7 @@ export type MockClient = {
     getUser: ReturnType<typeof vi.fn>;
   };
   from: ReturnType<typeof vi.fn>;
+  rpc: ReturnType<typeof vi.fn>;
   [key: string]: unknown;
 };
 
@@ -139,6 +141,7 @@ function makeMockClient(overrides: Partial<MockClient> = {}): MockClient {
       }
       return {};
     }),
+    rpc: vi.fn(),
     ...overrides,
   };
   return client;
@@ -452,10 +455,35 @@ describe("tenant isolation (cross-org denial)", () => {
         {} as never,
       ),
     ).rejects.toThrow(/No score found/);
-  });
+   });
 
-  it("getBrandProfile allows brand in a non-first org membership", async () => {
-    const SECONDARY_ORG_MEMBER = { org_id: "org-456" };
+   it("searchSimilarBrands rejects when brand is outside the operator org", async () => {
+     vi.mocked(createClient).mockReturnValue({
+       auth: {
+         getUser: vi.fn().mockResolvedValue({ data: { user: { id: MOCK_USER_ID } }, error: null }),
+       },
+       from: vi.fn((table: string) => {
+         if (table === "brands") {
+           return {
+             select: vi.fn().mockReturnThis(),
+             eq: vi.fn().mockReturnThis(),
+             maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+           };
+         }
+         if (table === "org_members") {
+           return orgMembersMock();
+         }
+         return {};
+       }),
+       rpc: vi.fn(),
+     } as never);
+     await expect(
+       searchSimilarBrands.execute!({ brandId: FOREIGN_BRAND_ID }, {} as never),
+     ).rejects.toThrow(/Brand not found/);
+   });
+
+   it("getBrandProfile allows brand in a non-first org membership", async () => {
+     const SECONDARY_ORG_MEMBER = { org_id: "org-456" };
     const SECONDARY_ORG_BRAND = { ...MOCK_BRAND, org_id: "org-456" };
     vi.mocked(createClient).mockReturnValue({
       auth: {
@@ -498,6 +526,184 @@ describe("startBrandAnalysis", () => {
   });
 });
 
+describe("searchSimilarBrands", () => {
+  const MOCK_EMBEDDING = "[0.1,0.2,0.3]";
+  const MOCK_NEIGHBORS = [
+    {
+      brand_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      brand_name: "Armani",
+      similarity: 0.87,
+      shared_nodes: [{ node_type: "audience_overlap", label: "luxury" }],
+    },
+    {
+      brand_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      brand_name: "COS",
+      similarity: 0.72,
+      shared_nodes: [{ node_type: "color_palette", label: "neutral" }],
+    },
+  ];
+
+   function makeSimilarClient({
+    brand = { ...MOCK_BRAND, embedding: MOCK_EMBEDDING },
+    rpcData = MOCK_NEIGHBORS,
+    rpcError = null,
+    brandError = null,
+  } = {}) {
+    return {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: MOCK_USER_ID } }, error: null }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "brands") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: brand, error: brandError }),
+          };
+        }
+        if (table === "org_members") {
+          return orgMembersMock();
+        }
+        return {};
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: rpcData, error: rpcError }),
+    } as never;
+  }
+
+  function setupSimilarMocks(opts: {
+    brand?: unknown;
+    rpcData?: unknown;
+    rpcError?: unknown;
+    brandError?: unknown;
+    adminRpcData?: unknown;
+    adminRpcError?: unknown;
+  } = {}) {
+    const userMock = makeSimilarClient({
+      brand: opts.brand,
+      rpcData: opts.rpcData,
+      rpcError: opts.rpcError,
+      brandError: opts.brandError,
+    });
+    const adminMock = makeSimilarClient({
+      brand: opts.brand,
+      rpcData: opts.adminRpcData ?? opts.rpcData,
+      rpcError: opts.adminRpcError ?? opts.rpcError,
+      brandError: opts.brandError,
+    });
+    vi.mocked(createClient).mockReset();
+    vi.mocked(createClient).mockImplementation((_url: string, key: string) => {
+      return (key === "test-anon-key" ? userMock : adminMock) as never;
+    });
+    return { userMock, adminMock };
+  }
+
+   it("calls search_brands RPC with p_org_id and returns neighbors", async () => {
+    const { adminMock } = setupSimilarMocks();
+    const result = await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    );
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.sourceBrandId).toBe(BRAND_ID);
+    expect(r!.sourceBrandName).toBe("Everlane");
+    expect(r!.neighbors).toHaveLength(2);
+    expect(r!.neighbors[0]).toMatchObject({
+      brandId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      brandName: "Armani",
+      similarity: 0.87,
+      sharedNodes: [{ node_type: "audience_overlap", label: "luxury" }],
+    });
+    expect(r!.message).toBeUndefined();
+    expect(adminMock.rpc).toHaveBeenCalledWith(
+      "search_brands",
+      expect.objectContaining({
+        p_embedding: MOCK_EMBEDDING,
+        p_exclude_brand_id: BRAND_ID,
+        p_org_id: "org-123",
+      }),
+    );
+  });
+
+   it("returns helpful message when brand has no embedding", async () => {
+    setupSimilarMocks({ brand: { ...MOCK_BRAND, embedding: null } });
+    const result = await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    );
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.neighbors).toHaveLength(0);
+    expect(r!.message).toContain("no embedding");
+    expect(r!.message).not.toContain("run brand analysis first");
+  });
+
+   it("passes p_limit to the RPC", async () => {
+    const { adminMock } = setupSimilarMocks();
+    await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID, limit: 3 },
+      {} as never,
+    );
+    expect(adminMock.rpc).toHaveBeenCalledWith(
+      "search_brands",
+      expect.objectContaining({ p_limit: 3 }),
+    );
+  });
+
+   it("throws when brand is not in the operator's org", async () => {
+    setupSimilarMocks({ brand: null, brandError: { message: "not found" } });
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/Brand not found/);
+   });
+
+   it("returns empty neighbors when RPC returns no matches", async () => {
+    const { adminMock } = setupSimilarMocks({ rpcData: [] });
+    const result = await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    );
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.neighbors).toHaveLength(0);
+    expect(r!.message).toContain("organization");
+    expect(adminMock.rpc).toHaveBeenCalled();
+  });
+
+   it("throws when search_brands RPC fails", async () => {
+    setupSimilarMocks({ rpcError: { message: "rpc failure" } });
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/search_brands RPC failed/);
+  });
+
+   it("uses adminClient (service_role) for the RPC, userClient (anon) for brand lookup", async () => {
+    setupSimilarMocks();
+    await searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never);
+    const calls = vi.mocked(createClient).mock.calls;
+    const keys = calls.map((c) => c[1]);
+    expect(keys).toContain("test-anon-key");
+    expect(keys).toContain("test-key");
+  });
+
+   it("clamps negative similarity to 0", async () => {
+    const { adminMock } = setupSimilarMocks({
+      rpcData: [
+        {
+          brand_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          brand_name: "Weak Match",
+          similarity: -0.15,
+          shared_nodes: [],
+        },
+      ],
+    });
+    const result = await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    );
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.neighbors[0].similarity).toBe(0);
+    expect(adminMock.rpc).toHaveBeenCalled();
+   });
+ });
+
 describe("brandIntelligenceTools registry", () => {
   it("exports explainPillar and approveDraft for brand-intelligence agent", async () => {
     const { brandIntelligenceTools } = await import("./brand-intelligence-tools");
@@ -507,6 +713,7 @@ describe("brandIntelligenceTools registry", () => {
       "getBrandProfile",
       "getBrandScores",
       "explainPillar",
+      "searchSimilarBrands",
       "approveDraft",
       "startBrandAnalysis",
     ]);
