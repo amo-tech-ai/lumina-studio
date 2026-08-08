@@ -51,4 +51,14 @@ describe("shot-list-from-references", () => {
     expect(() => buildShotListFromReferences([], REFS)).not.toThrow();
     expect(buildShotListFromReferences([], REFS).shots).toHaveLength(0);
   });
+
+  it("returns zero shots and an uncovered warning when channel has no compatible references", () => {
+    const { shots, uncovered_deliverable_warnings } = buildShotListFromReferences(
+      [{ channel: "tiktok", format: "9:16 video", quantity: 6 }],
+      REFS,
+    );
+    expect(shots).toHaveLength(0);
+    expect(uncovered_deliverable_warnings).toHaveLength(1);
+    expect(uncovered_deliverable_warnings[0]).toContain("tiktok");
+  });
 });

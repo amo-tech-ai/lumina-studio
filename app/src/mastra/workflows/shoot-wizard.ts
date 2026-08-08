@@ -117,11 +117,13 @@ const shotListGateStep = createStep({
     shots: z.array(ShotSchema),
     uncovered_warnings: z.array(z.string()),
     total_shots: z.number(),
+    trusted_reference_ids: z.array(z.string()),
     message: z.string(),
   }),
   resumeSchema: z.object({
     approved: z.boolean(),
     approved_shots: z.array(ShotSchema).min(1),
+    trusted_reference_ids: z.array(z.string()),
   }),
   outputSchema: z.object({
     brand_id: z.string(),
@@ -137,10 +139,18 @@ const shotListGateStep = createStep({
     if (!resumeData?.approved) {
       // ponytail: wizard input has no product category yet — clothing default for fashion shoots
       const referenceShotTypes = await queryShotReferences("clothing", inputData.channels);
+      const trustedReferenceIds = referenceShotTypes.map((r) => r.id);
       if (!referenceShotTypes.length) {
-        throw new Error(
-          "No shot references found for these channels — lookupShotReferences returned empty; cannot invent angles",
-        );
+        return await suspend({
+          shots: [],
+          uncovered_warnings: inputData.approved_deliverables.map(
+            (d) => `Deliverable ${d.channel}/${d.format ?? ""} has no matching reference angles`,
+          ),
+          total_shots: 0,
+          trusted_reference_ids: [],
+          message:
+            "No shot references found for these channels — please revise deliverables or channels to include coverage (e.g. shopify_pdp, instagram_feed, tiktok).",
+        });
       }
       const { shots, uncovered_deliverable_warnings } = buildShotListFromReferences(
         inputData.approved_deliverables,
@@ -150,15 +160,14 @@ const shotListGateStep = createStep({
         shots,
         uncovered_warnings: uncovered_deliverable_warnings,
         total_shots: shots.length,
+        trusted_reference_ids: trustedReferenceIds,
         message:
           "Review shot list grounded in the reference library. Approve before budget — angles are from lookupShotReferences, not invented.",
       });
     }
-    // Re-fetch trusted reference IDs and validate resumed shots against them.
-    // The agent may have edited shots during the HITL review — we must reject
-    // any reference_id that was not in the original lookupShotReferences call.
-    const trustedReferences = await queryShotReferences("clothing", inputData.channels);
-    const trustedIds = new Set(trustedReferences.map((r) => r.id));
+    // Validate resumed shots against the trusted reference ids persisted at suspend time.
+    // This avoids re-querying the DB, which is non-deterministic (no ORDER BY, limit 20).
+    const trustedIds = new Set(resumeData.trusted_reference_ids);
     for (const shot of resumeData.approved_shots) {
       if (!trustedIds.has(shot.reference_id)) {
         throw new Error(
