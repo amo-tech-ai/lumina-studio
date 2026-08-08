@@ -22,8 +22,8 @@ const {
   getAssetDnaEvidence: _getAssetDnaEvidence,
   suggestAssetRetakes: _suggestAssetRetakes,
   draftBulkAssetApproval: _draftBulkAssetApproval,
-  draftCampaignBrief: _draftCampaignBrief,
-  searchCompanies: _searchCompanies,
+   draftCampaignBrief: _draftCampaignBrief,
+   searchCompanies: _searchCompanies,
   searchContacts: _searchContacts,
   logActivity: _logActivity,
   moveDealStage: _moveDealStage,
@@ -50,7 +50,6 @@ You have navigateTo(section). For planning a new production, call navigateTo FIR
 - "Open Shoots" / "shoots list" / "show my shoots" → navigateTo({ section: "shoots" }) → /app/shoots
 Do not send operators to the shoots list when they asked for the wizard.
 
-<<<<<<< HEAD
 ## Current page context
 You have a getCurrentPageContext tool — it reads the context CopilotKit attaches to this conversation turn (the screen the operator is viewing right now: the open shoot, its brand, status, shot/deliverable counts).
 - Call getCurrentPageContext FIRST whenever the operator refers to "this shoot", "the current shoot", "my shoot", "the open brand", or asks about the page they are on. Use the returned shoot_id / brand_id — never ask the operator to paste IDs the context already has.

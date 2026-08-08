@@ -47,7 +47,7 @@ const CHANNEL_DEFAULTS: Record<string, { format: string; quantity: number }[]> =
   website: [{ format: "16:9 JPG hero", quantity: 3 }, { format: "1:1 JPG card", quantity: 6 }],
 };
 
-// ── Gate 1: plan deliverables → operator approves ─────────────────────────────
+const ProductCategoryEnum = z.enum(["clothing", "beauty", "accessories", "home_goods", "ai_services"]);
 
 const deliverableGateStep = createStep({
   id: "deliverable-gate",
@@ -56,6 +56,7 @@ const deliverableGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum.default("clothing"),
   }),
   suspendSchema: z.object({
     deliverables: z.array(DeliverableSchema),
@@ -71,6 +72,7 @@ const deliverableGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum,
     approved_deliverables: z.array(DeliverableSchema),
     total_assets: z.number(),
   }),
@@ -95,6 +97,7 @@ const deliverableGateStep = createStep({
       shoot_name: inputData.shoot_name,
       brief: inputData.brief,
       channels: inputData.channels,
+      product_category: inputData.product_category ?? "clothing",
       approved_deliverables: resumeData.approved_deliverables,
       total_assets: resumeData.approved_deliverables.reduce((s, d) => s + d.quantity, 0),
     };
@@ -110,6 +113,7 @@ const shotListGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum,
     approved_deliverables: z.array(DeliverableSchema),
     total_assets: z.number(),
   }),
@@ -120,11 +124,18 @@ const shotListGateStep = createStep({
     trusted_reference_ids: z.array(z.string()),
     message: z.string(),
   }),
-  resumeSchema: z.object({
-    approved: z.boolean(),
-    approved_shots: z.array(ShotSchema).min(1),
-    trusted_reference_ids: z.array(z.string()),
-  }),
+  resumeSchema: z.discriminatedUnion("approved", [
+    z.object({
+      approved: z.literal(true),
+      approved_shots: z.array(ShotSchema).min(1),
+      trusted_reference_ids: z.array(z.string()),
+    }),
+    z.object({
+      approved: z.literal(false),
+      approved_shots: z.array(ShotSchema).optional(),
+      trusted_reference_ids: z.array(z.string()).optional(),
+    }),
+  ]),
   outputSchema: z.object({
     brand_id: z.string(),
     shoot_name: z.string(),
@@ -137,8 +148,7 @@ const shotListGateStep = createStep({
   }),
   execute: async ({ inputData, resumeData, suspend }) => {
     if (!resumeData?.approved) {
-      // ponytail: wizard input has no product category yet — clothing default for fashion shoots
-      const referenceShotTypes = await queryShotReferences("clothing", inputData.channels);
+      const referenceShotTypes = await queryShotReferences(inputData.product_category, inputData.channels);
       const trustedReferenceIds = referenceShotTypes.map((r) => r.id);
       if (!referenceShotTypes.length) {
         return await suspend({
