@@ -7136,6 +7136,7 @@ export type Database = {
           p_embedding: string
           p_exclude_brand_id?: string
           p_limit?: number
+          p_org_id: string
         }
         Returns: {
           brand_id: string

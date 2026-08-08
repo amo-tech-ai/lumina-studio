@@ -78,17 +78,26 @@ export function readPageContextFromRequestContext(
   return { available: contexts.length > 0, contexts };
 }
 
-type IdClaims = { shootId?: string; brandId?: string };
+type IdClaims = { shootId?: string; brandIds: string[] };
 
 function claimsOf(value: Record<string, unknown>): IdClaims {
+  // Collect every brand-ish claim present on the entry. The ag-ui context
+  // payload is browser-supplied, so an entry can carry both active_brand_id
+  // and brand_id — ALL must be verified against the operator's org. A single
+  // foreign claim must fail the whole entry closed.
+  const ids = new Set<string>();
+  for (const key of ["active_brand_id", "brand_id"] as const) {
+    const v = value[key];
+    if (typeof v === "string" && v) ids.add(v);
+  }
   return {
     shootId: typeof value.shoot_id === "string" && value.shoot_id ? value.shoot_id : undefined,
-    brandId: typeof value.brand_id === "string" && value.brand_id ? value.brand_id : undefined,
+    brandIds: [...ids.values()],
   };
 }
 
 function hasClaims(claims: IdClaims): boolean {
-  return Boolean(claims.shootId || claims.brandId);
+  return Boolean(claims.shootId || claims.brandIds.length > 0);
 }
 
 export type PageContextIdentity = { client: SupabaseClient; orgId: string };
@@ -158,13 +167,18 @@ export async function verifyPageContextClaims(
   const verifiedContexts: VerifiedPageContextEntry[] = claims.map(({ entry, claims: c }) => {
     if (!hasClaims(c)) return { ...entry, verified: true };
     let ok = true;
-    if (c.brandId) ok = ok && orgBrandIds.has(c.brandId);
+    // Every brand claim on the entry must resolve to the operator's org.
+    for (const bid of c.brandIds) {
+      ok = ok && orgBrandIds.has(bid);
+    }
     if (ok && c.shootId) {
       const row = shootRows.get(c.shootId);
       ok = Boolean(row) && (!row!.brand_id || orgBrandIds.has(row!.brand_id));
-      // The claimed brand must be the shoot's actual brand — a foreign brand
+      // The shoot's brand must match every claimed brand id — a foreign brand
       // claim alongside a real shoot_id must not survive either.
-      if (ok && c.brandId) ok = row!.brand_id === c.brandId;
+      for (const bid of c.brandIds) {
+        ok = ok && row!.brand_id === bid;
+      }
     }
     return ok ? { ...entry, verified: true } : { ...entry, value: {}, verified: false };
   });
