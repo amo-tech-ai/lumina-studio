@@ -310,7 +310,13 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
   let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
   const logFailure = (
-    category: "configuration" | "orchestration/invocation" | "provider" | "schema" | "database write",
+    category:
+      | "configuration"
+      | "orchestration/invocation"
+      | "provider"
+      | "schema"
+      | "database read"
+      | "database write",
     errorCode: string,
     details: Record<string, unknown> = {},
   ) => logBiDiagnostic(correlationId, "BI_FAILED", {
@@ -443,7 +449,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       .maybeSingle();
 
     if (fetchErr) {
-      logFailure("database write", "database_error");
+      logFailure("database read", "database_error");
       return errorResponse("database_error", "Failed to load brand", 500);
     }
 

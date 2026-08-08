@@ -213,7 +213,7 @@ Deno.test("brand-intelligence classifies brand lookup errors as database failure
       const body = await parseError(res);
       assertEquals(body.error.code, "database_error");
       const failure = events.find((event) => event.checkpoint === "BI_FAILED");
-      assertEquals(failure?.category, "database write");
+      assertEquals(failure?.category, "database read");
       assertEquals(failure?.errorCode, "database_error");
     });
   });
