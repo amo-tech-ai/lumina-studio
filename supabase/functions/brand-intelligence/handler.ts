@@ -28,7 +28,10 @@ import {
   groqEmptyCrawlError,
   missingBiProviderConfigError,
 } from "../_shared/bi-groq-guards.ts";
-import { generateStructuredContent as generateLlmStructuredContent } from "../_shared/llm/structured.ts";
+import {
+  generateStructuredContent as generateLlmStructuredContent,
+  StructuredOutputValidationError,
+} from "../_shared/llm/structured.ts";
 import type {
   StructuredGenerationLog,
   StructuredGenerationOptions,
@@ -235,12 +238,16 @@ function logBiDiagnostic(
   checkpoint: BiDiagnosticStage | "BI_FAILED",
   details: Record<string, unknown> = {},
 ) {
-  console.info(JSON.stringify({
-    event: "brand_intelligence_diagnostic",
-    correlationId,
-    checkpoint,
-    ...details,
-  }));
+  try {
+    console.info(JSON.stringify({
+      event: "brand_intelligence_diagnostic",
+      correlationId,
+      checkpoint,
+      ...details,
+    }));
+  } catch {
+    // Diagnostics must never change the request outcome.
+  }
 }
 
 function configuredModel(provider: "gemini" | "groq" | "workers-ai") {
@@ -270,19 +277,41 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
   let diagnosticProvider: "gemini" | "groq" | "workers-ai" | null = null;
   let diagnosticModel: string | null = null;
   let providerStarted = 0;
+  let providerDurationMs: number | null = null;
   let failureBrandId: string | null = null;
+  let failureCrawlResultId: string | null = null;
   let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
+  const logFailure = (
+    category: "configuration" | "orchestration/invocation" | "provider" | "schema" | "database write",
+    errorCode: string,
+    details: Record<string, unknown> = {},
+  ) => logBiDiagnostic(correlationId, "BI_FAILED", {
+    category,
+    provider: diagnosticProvider,
+    model: diagnosticModel,
+    brandId: failureBrandId,
+    crawlResultId: failureCrawlResultId,
+    errorCode,
+    totalDurationMs: Math.round(performance.now() - started),
+    ...details,
+  });
 
   try {
+    logBiDiagnostic(correlationId, diagnosticStage);
+
     if (req.method !== "POST") {
+      logFailure("orchestration/invocation", "method_not_allowed");
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
-    logBiDiagnostic(correlationId, diagnosticStage);
-
     const caller = await resolveCaller(req);
-    if (isCallerFailure(caller)) return caller.response;
+    if (isCallerFailure(caller)) {
+      logFailure("orchestration/invocation", "authentication_failed", {
+        httpStatus: caller.response.status,
+      });
+      return caller.response;
+    }
 
     const biProvider = resolveBiProvider();
     diagnosticProvider = biProvider;
@@ -297,13 +326,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       cloudflareAccountId: getOptionalSecret("CLOUDFLARE_ACCOUNT_ID"),
     });
     if (configError) {
-      logBiDiagnostic(correlationId, "BI_FAILED", {
-        category: "configuration",
-        provider: biProvider,
-        model: diagnosticModel,
-        errorCode: configError.code,
-        totalDurationMs: Math.round(performance.now() - started),
-      });
+      logFailure("configuration", configError.code);
       return errorResponse(
         configError.code,
         configError.message,
@@ -320,6 +343,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
     if (contentLength > 16384) {
+      logFailure("orchestration/invocation", "payload_too_large");
       return errorResponse("payload_too_large", "Payload too large", 413);
     }
 
@@ -333,6 +357,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     try {
       const parsed: unknown = await req.json();
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        logFailure("orchestration/invocation", "invalid_json");
         return errorResponse(
           "invalid_json",
           "Request body must be a JSON object",
@@ -341,6 +366,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       }
       body = parsed as typeof body;
     } catch {
+      logFailure("orchestration/invocation", "invalid_json");
       return errorResponse("invalid_json", "Request body must be JSON", 422);
     }
 
@@ -350,6 +376,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
         : null;
 
     if (!brandId) {
+      logFailure("orchestration/invocation", "validation_error");
       return errorResponse(
         "validation_error",
         "brandId is required",
@@ -361,6 +388,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!url || normalizeBrandUrl(url) === null) {
+      logFailure("orchestration/invocation", "validation_error");
       return errorResponse(
         "validation_error",
         "A valid http(s) url is required",
@@ -372,6 +400,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       typeof body.crawlResultId === "string" && body.crawlResultId.length > 0
         ? body.crawlResultId
         : null;
+    failureCrawlResultId = crawlResultId;
 
     const brandName =
       typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
@@ -387,6 +416,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       .maybeSingle();
 
     if (fetchErr || !existing) {
+      logFailure("orchestration/invocation", "not_found");
       return errorResponse("not_found", "Brand not found", 404);
     }
 
@@ -400,6 +430,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     await markIntakeStatus(client, brandId, "analysis_running");
 
     const crawlRow = await loadCrawlRow(client, brandId, crawlResultId, url);
+    failureCrawlResultId = crawlRow?.id ?? crawlResultId;
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
     // IPI-741 — provider-neutral budget: a full 10-page crawl easily exceeds
     // rate/cost limits on smaller-tier models (e.g. Groq's openai/gpt-oss-20b
@@ -433,13 +464,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       const crawlError = groqEmptyCrawlError(crawlText, rawData);
       if (crawlError) {
         await markIntakeFailedIfRunning(client, brandId);
-        logBiDiagnostic(correlationId, "BI_FAILED", {
-          category: "orchestration/invocation",
-          provider: biProvider,
-          model: diagnosticModel,
-          errorCode: crawlError.code,
-          totalDurationMs: Math.round(performance.now() - started),
-        });
+        logFailure("orchestration/invocation", crawlError.code);
         return errorResponse(
           crawlError.code,
           crawlError.message,
@@ -452,6 +477,8 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     providerStarted = llmStarted;
     diagnosticStage = "PROVIDER_STARTED";
     logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
       provider: biProvider,
       model: diagnosticModel,
       usedCrawl: usedCrawlInRequest,
@@ -545,9 +572,12 @@ Use URL content AND web search for press, social, and competitor signals.
     }
 
     const geminiMs = Math.round(performance.now() - llmStarted);
+    providerDurationMs = geminiMs;
     diagnosticStage = "PROVIDER_COMPLETED";
     diagnosticModel = model;
     logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
       provider: llmLog?.provider ?? biProvider,
       model,
       providerDurationMs: geminiMs,
@@ -556,18 +586,17 @@ Use URL content AND web search for press, social, and competitor signals.
     const validationError = validateBrandProfilePayload(profile);
     if (validationError) {
       await markIntakeStatus(client, brandId, "failed");
-      logBiDiagnostic(correlationId, "BI_FAILED", {
-        category: "schema",
+      logFailure("schema", "validation_error", {
         provider: llmLog?.provider ?? biProvider,
         model,
-        errorCode: "validation_error",
         providerDurationMs: geminiMs,
-        totalDurationMs: Math.round(performance.now() - started),
       });
       return errorResponse("validation_error", validationError, 422);
     }
     diagnosticStage = "SCHEMA_VALID";
     logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
       provider: llmLog?.provider ?? biProvider,
       model,
     });
@@ -643,10 +672,15 @@ Use URL content AND web search for press, social, and competitor signals.
       }
       updated = draftUpdated;
       diagnosticStage = "DRAFT_WRITTEN";
-      logBiDiagnostic(correlationId, diagnosticStage);
+      logBiDiagnostic(correlationId, diagnosticStage, {
+        brandId,
+        crawlResultId: crawlRow?.id ?? crawlResultId,
+      });
       draftPersisted = true;
       diagnosticStage = "DRAFT_READY";
       logBiDiagnostic(correlationId, diagnosticStage, {
+        brandId,
+        crawlResultId: crawlRow?.id ?? crawlResultId,
         totalDurationMs: Math.round(performance.now() - started),
       });
     } else {
@@ -734,10 +768,13 @@ Use URL content AND web search for press, social, and competitor signals.
       provider: llmLog?.provider ?? biProvider,
       usedCrawl: usedCrawlInRequest,
       crawlResultId: crawlRow?.id ?? null,
+      correlationId,
     });
   } catch (err) {
     console.error("brand-intelligence error; correlationId:", correlationId);
-    const category = diagnosticStage === "REQUEST_RECEIVED"
+    const category = err instanceof StructuredOutputValidationError
+      ? "schema"
+      : diagnosticStage === "REQUEST_RECEIVED"
       ? "configuration"
       : diagnosticStage === "PROVIDER_SELECTED"
       ? "orchestration/invocation"
@@ -745,16 +782,14 @@ Use URL content AND web search for press, social, and competitor signals.
       ? "provider"
       : diagnosticStage === "PROVIDER_COMPLETED"
       ? "schema"
+      : diagnosticStage === "DRAFT_READY"
+      ? "orchestration/invocation"
       : "database write";
-    logBiDiagnostic(correlationId, "BI_FAILED", {
-      category,
-      provider: diagnosticProvider,
-      model: diagnosticModel,
-      errorCode: "internal_error",
+    logFailure(category, "internal_error", {
       ...(providerStarted > 0 && {
-        providerDurationMs: Math.round(performance.now() - providerStarted),
+        providerDurationMs: providerDurationMs ??
+          Math.round(performance.now() - providerStarted),
       }),
-      totalDurationMs: Math.round(performance.now() - started),
     });
     // If draft was already persisted successfully, don't overwrite draft_ready → failed.
     // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
