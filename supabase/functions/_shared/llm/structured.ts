@@ -35,6 +35,10 @@ import type {
 const REPAIR_SUFFIX =
   "\n\nReturn valid JSON only. Include every required field from the schema.";
 
+export class StructuredOutputValidationError extends Error {
+  override name = "StructuredOutputValidationError";
+}
+
 type ParseJsonResult =
   | { ok: true; value: unknown }
   | { ok: false; error: string };
@@ -136,7 +140,7 @@ async function generateGeminiStructured<T>(
     });
     validation = validateParsedText(repair.text);
     if (validation.error) {
-      throw new Error(validation.error);
+      throw new StructuredOutputValidationError(validation.error);
     }
   }
 
@@ -194,7 +198,7 @@ async function generateGroqStructured<T>(
     result = repairResult;
     validation = validateParsedText(result.text);
     if (validation.error) {
-      throw new Error(validation.error);
+      throw new StructuredOutputValidationError(validation.error);
     }
   }
 
@@ -253,7 +257,7 @@ async function generateCloudflareStructured<T>(
     result = repairResult;
     validation = validateParsedText(result.text);
     if (validation.error) {
-      throw new Error(validation.error);
+      throw new StructuredOutputValidationError(validation.error);
     }
   }
 
