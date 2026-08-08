@@ -4,7 +4,8 @@ import type { Database } from "@/types/supabase";
 
 import { sanitizeCrmSearchTerm } from "./search";
 
-type Db = SupabaseClient<Database>;
+export type Db = SupabaseClient<Database>;
+export type { Database } from "@/types/supabase";
 
 export type CompanyRow = Database["public"]["Tables"]["crm_companies"]["Row"];
 export type ContactRow = Database["public"]["Tables"]["crm_contacts"]["Row"];
