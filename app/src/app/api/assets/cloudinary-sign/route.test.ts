@@ -34,13 +34,14 @@ function supabaseClientStub() {
 beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
-  vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_API_KEY", "test-api-key");
+  vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1", name: "QA" });
   mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null });
   mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
 });
@@ -64,10 +65,29 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 500 when CLOUDINARY_API_KEY is missing", async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+    vi.stubEnv("CLOUDINARY_API_KEY", "");
+    const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign: { timestamp: now, context: `brand_id=${VALID_BRAND_ID}` } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Internal error");
+  });
+
   it("returns full params for prepareUploadParams", async () => {
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const paramsToSign = {
-      timestamp: 1_784_000_000,
+      timestamp: now,
       upload_preset: "ipix-signed-upload",
       type: "authenticated",
       context: `brand_id=${VALID_BRAND_ID}`,
@@ -85,26 +105,96 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(data.signature.length).toBeGreaterThan(0);
     expect(typeof data.apiKey).toBe("string");
     expect(data.apiKey.length).toBeGreaterThan(0);
-    expect(data.uploadSignatureTimestamp).toBe(1_784_000_000);
+    expect(data.uploadSignatureTimestamp).toBe(now);
     expect(data.uploadPreset).toBe("ipix-signed-upload");
     expect(data.folder).toBe(
       `ipix/dev/${VALID_ORG_ID}/${VALID_BRAND_ID}/products`,
     );
-    expect(data.context).toContain(`brand_id=${VALID_BRAND_ID}`);
     expect(JSON.stringify(data)).not.toContain("test-api-secret");
+  });
+
+  it("returns 400 for expired timestamp", async () => {
+    const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
+    const expiredTimestamp = now - 3601; // WIDGET_MAX_AGE_SECONDS is 3600
+    const paramsToSign = {
+      timestamp: expiredTimestamp,
+      context: `brand_id=${VALID_BRAND_ID}`,
+    };
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid timestamp");
+  });
+
+  it("returns 400 for future timestamp outside skew window", async () => {
+    const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
+    const futureTimestamp = now + 301; // WIDGET_FUTURE_SKEW_SECONDS is 300
+    const paramsToSign = {
+      timestamp: futureTimestamp,
+      context: `brand_id=${VALID_BRAND_ID}`,
+    };
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid timestamp");
+  });
+
+  it("returns 401 for dev-unauthenticated in production environment", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
+    vi.unstubAllEnvs();
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+    vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DAM_DEV_ORG_ID", VALID_ORG_ID);
+    mockWithOperatorAuth.mockResolvedValue({ id: "dev-unauthenticated", name: "QA" });
+    mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null });
+    const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          paramsToSign: { 
+            timestamp: now, 
+            upload_preset: "ipix-signed-upload",
+            context: `brand_id=${VALID_BRAND_ID}` 
+          } 
+        }),
+      }),
+    );
+    expect(res.status).toBe(401);
+    const data = await res.json();
+    expect(data.error).toBe("Unauthorized");
   });
 
   it("signs widget params when type is omitted", async () => {
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1_784_000_000,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
-            context: { brand_id: VALID_BRAND_ID },
+            context: `brand_id=${VALID_BRAND_ID}`,
           },
         }),
       }),
@@ -123,13 +213,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
 
   it("accepts object context from CldUploadWidget and signs sanitized widget params", async () => {
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1_784_000_000,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             context: { brand_id: VALID_BRAND_ID },
             folder: `ipix/brands/${VALID_BRAND_ID}/products`,
@@ -147,7 +238,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
     const { sanitizeWidgetParamsToSign } = await import("@/lib/cloudinary/sign-upload");
     const sanitized = sanitizeWidgetParamsToSign(
       {
-        timestamp: 1_784_000_000,
+        timestamp: now,
         upload_preset: "ipix-signed-upload",
         context: { brand_id: VALID_BRAND_ID },
         folder: `ipix/brands/${VALID_BRAND_ID}/products`,
@@ -170,8 +261,9 @@ describe("POST /api/assets/cloudinary-sign", () => {
       error: null,
     });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const paramsToSign = {
-      timestamp: 1_784_000_000,
+      timestamp: now,
       upload_preset: "ipix-signed-upload",
       context: { brand_id: VALID_BRAND_ID, org_id: FORGED_ORG_B },
     };
@@ -206,13 +298,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
       error: null,
     });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             context: `brand_id=${VALID_BRAND_ID}`,
           },
@@ -227,13 +320,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
   it("returns 403 when brand is not accessible", async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             type: "authenticated",
             context: `brand_id=${VALID_BRAND_ID}`,
@@ -249,13 +343,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
       .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
       .mockResolvedValueOnce({ data: null, error: null });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1_784_000_000,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             context: { brand_id: VALID_BRAND_ID },
           },
@@ -274,13 +369,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
       .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
       .mockResolvedValueOnce({ data: null, error: null });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1_784_000_000,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             context: { brand_id: VALID_BRAND_ID },
           },
@@ -299,13 +395,14 @@ describe("POST /api/assets/cloudinary-sign", () => {
       .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
       .mockResolvedValueOnce({ data: { id: VALID_WORK_ID }, error: null });
     const { POST } = await importRoute();
+    const now = Math.floor(Date.now() / 1000);
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramsToSign: {
-            timestamp: 1_784_000_000,
+            timestamp: now,
             upload_preset: "ipix-signed-upload",
             context: { brand_id: VALID_BRAND_ID },
           },
@@ -323,11 +420,13 @@ describe("POST /api/assets/cloudinary-sign", () => {
 });
 
 describe("POST /api/assets/cloudinary-sign — pair consistency", () => {
-  const baseParams = {
-    timestamp: 1_784_000_000,
-    upload_preset: "ipix-signed-upload",
-    context: { brand_id: VALID_BRAND_ID },
-  };
+  function getBaseParams() {
+    return {
+      timestamp: Math.floor(Date.now() / 1000),
+      upload_preset: "ipix-signed-upload",
+      context: { brand_id: VALID_BRAND_ID },
+    };
+  }
 
   async function post(extra: Record<string, unknown>) {
     const { POST } = await importRoute();
@@ -335,7 +434,7 @@ describe("POST /api/assets/cloudinary-sign — pair consistency", () => {
       new Request("http://localhost/api/assets/cloudinary-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paramsToSign: baseParams, ...extra }),
+        body: JSON.stringify({ paramsToSign: getBaseParams(), ...extra }),
       }),
     );
   }

@@ -5,28 +5,33 @@
  * Usage (from worktree root):
  *   node --env-file=app/.env.local tasks/cloudflare/tests/ipi-724-e2e-preview-journey/run-e2e.mjs
  *
- * Security: never commit full HARs with embedded bodies. Prefer network-summary.json.
- * HAR mode is minimal + content omit; assertNoSecrets() runs before write.
+ * Security: network-summary.json is the durable network artifact (HAR capture disabled).
  */
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
 import { assertNoSecrets } from "./assert-no-secrets.mjs";
 import { isPreviewSignoutSuccessRedirect } from "./signout-redirect.mjs";
+import {
+  classifyConsoleError,
+  classifyNetworkResponse,
+  countInfo503Responses,
+  info503ExceedsThreshold,
+} from "../../../copilotkit/classifiers/info-503-threshold.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
 const OUT = resolve(process.env.VERIFY_OUT || __dirname);
 const SHOTS = join(OUT, "screenshots");
-const HAR_DIR = join(OUT, "har");
 const DEFAULT_PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
 // IPI-734: verify:copilot sets BASE_URL; default stays the CF preview Worker.
 const PREVIEW = (process.env.BASE_URL || DEFAULT_PREVIEW).replace(/\/$/, "");
 const READONLY = process.env.VERIFY_READONLY === "1";
-const MAX_TRANSIENT_RETRIES = 2;
+const MAX_TRANSIENT_RETRIES = 2; // Page navigation retries (login, /app, settle, logout)
+// IPI-967: MAX_INFO_503_RETRIES is now defined in info-503-threshold.mjs as the single source of truth
 const REPO_ROOT = process.cwd();
 const SECRET_HEADER_NAME_RE =
   /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
@@ -164,7 +169,7 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
     const raw = execFileSync(
       "npx",
       ["wrangler", "deployments", "list", "--env", "preview", "--json"],
-      { cwd: appDir, encoding: "utf8", timeout: 60_000 },
+      { cwd: appDir, encoding: "utf8", timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     const deployments = JSON.parse(raw);
     if (!Array.isArray(deployments) || deployments.length === 0) {
@@ -183,7 +188,14 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
     identity.identity_source =
       "wrangler deployments list --env preview --json (latest by created_on)";
   } catch (e) {
-    identity.identity_error = String(e?.message || e).slice(0, 300);
+    const error = String(e?.message || e);
+    identity.identity_error = error.slice(0, 300);
+    // IPI-964: If Wrangler auth is missing, treat as non-blocking metadata failure
+    // The verification can still complete without Worker version identity
+    if (/CLOUDFLARE_API_TOKEN|authentication|auth/i.test(error)) {
+      identity.identity_source = "wrangler_auth_unavailable";
+      identity.identity_error = "Wrangler auth not configured — identity metadata unavailable (non-blocking)";
+    }
   }
   return identity;
 }
@@ -264,24 +276,12 @@ async function main() {
   const password = loadQaPassword();
   const email = "qa@ipix.test";
   mkdirSync(SHOTS, { recursive: true });
-  mkdirSync(HAR_DIR, { recursive: true });
-  const harPath = join(HAR_DIR, "session.har");
-  // Remove any leftover full HAR from a previous unsafe run.
-  if (existsSync(harPath)) unlinkSync(harPath);
 
   const deploymentIdentity = resolvePreviewDeploymentIdentity(PREVIEW);
 
   const browser = await chromium.launch({ headless: true });
   const extraHTTPHeaders = loadExtraHeaders();
   const context = await browser.newContext({
-    // Minimal HAR — API URLs only; never embed bodies/headers with cookies.
-    // Prefer network-summary.json; HAR is deleted after the run and must not be committed.
-    recordHar: {
-      path: harPath,
-      mode: "minimal",
-      content: "omit",
-      urlFilter: "**/api/**",
-    },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
     // Headers applied via route (origin-scoped) — not context-wide extraHTTPHeaders.
@@ -587,26 +587,15 @@ async function main() {
     await page.screenshot({ path: join(SHOTS, "03-chat.png"), fullPage: false });
 
     // 9. Console / network critical failures
-    const blockingConsole = consoleLog.errors.filter((e) => {
-      const t = e.text || "";
-      if (/hydration|Hydration/i.test(t)) return true;
-      if (/Uncaught|uncaught/i.test(t)) return true;
-      if (/Worker|Miniflare|Cloudflare/i.test(t) && /error/i.test(t)) return true;
-      if (/ChunkLoadError|Script error/i.test(t)) return true;
-      // Ignore known noisy third-party
-      if (/favicon|Download the React DevTools/i.test(t)) return false;
-      if (/Failed to load resource.*favicon/i.test(t)) return false;
-      return e.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
-    });
+    // IPI-967: Use classifier for console error classification
+    const blockingConsole = consoleLog.errors.filter((e) => classifyConsoleError(e));
+    
+    // IPI-967: Use classifier for network response classification
+    const info503Count = countInfo503Responses(networkLog);
+    
     const criticalFailed = networkLog.filter((n) => {
-      const p = n.path || "";
-      if (!p.includes("/api/")) return false;
-      if (n.status >= 500) return true;
-      // auth endpoints that should work while logged in
-      if (p.includes("/api/copilotkit") && n.method === "POST" && n.status >= 400)
-        return true;
-      if (p.includes("/api/ai/health") && n.status !== 200) return true;
-      return false;
+      const classification = classifyNetworkResponse(n, info503Count, "auth");
+      return classification === "critical";
     });
     mark(
       "09_console_network",
@@ -927,7 +916,7 @@ async function main() {
       : "Needs Fix";
 
   metadata.evidence_policy = {
-    har: "minimal + content omit + urlFilter **/api/**; deleted after run — never commit",
+    har: "disabled (IPI-964) — network-summary.json provides sufficient evidence",
     preferred: "network-summary.json (host/path/method/status/latency/cf-ray only)",
     ignoreHTTPSErrors: false,
   };
@@ -943,21 +932,14 @@ async function main() {
   writeEvidence(join(OUT, "network-summary.json"), {
     count: networkLog.length,
     entries: networkLog,
-    critical_failures: networkLog.filter(
-      (n) => (n.path || "").includes("/api/") && n.status >= 500,
-    ),
+    // IPI-966: Use classifier for network-summary.json critical failures
+    // This ensures consistency with the gate semantics in 09_console_network
+    info503Count: countInfo503Responses(networkLog),
+    critical_failures: networkLog.filter((n) => {
+      const classification = classifyNetworkResponse(n, countInfo503Responses(networkLog), "auth");
+      return classification === "critical";
+    }),
   });
-
-  // Never commit HAR — network-summary.json is the durable network artifact.
-  if (existsSync(harPath)) {
-    try {
-      assertNoSecrets(harPath, readFileSync(harPath, "utf8"));
-    } catch (e) {
-      console.warn(String(e.message || e));
-    }
-    unlinkSync(harPath);
-    console.log("Deleted local HAR — commit network-summary.json only.");
-  }
 
   console.log("\n=== SUMMARY ===");
   console.log(

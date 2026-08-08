@@ -109,6 +109,42 @@ describe("POST /api/assets/upload-sign — validation", () => {
     const res = await post(uploadBody({ resourceType: "audio" }));
     expect(res.status).toBe(400);
   });
+
+  it("returns 401 for dev-unauthenticated in production environment", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DAM_DEV_ORG_ID", VALID_ORG_ID);
+    mockWithOperatorAuth.mockResolvedValue({ id: "dev-unauthenticated", name: "Dev" });
+    vi.resetModules();
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/upload-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(uploadBody()),
+      }),
+    );
+    expect(res.status).toBe(401);
+    const data = await res.json();
+    expect(data.error).toBe("Unauthorized");
+  });
+
+  it("accepts dev-unauthenticated in development environment with DAM_DEV_ORG_ID", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DAM_DEV_ORG_ID", VALID_ORG_ID);
+    mockWithOperatorAuth.mockResolvedValue({ id: "dev-unauthenticated", name: "Dev" });
+    vi.resetModules();
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/upload-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(uploadBody()),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(typeof data.signature).toBe("string");
+  });
 });
 
 describe("POST /api/assets/upload-sign — workType validation", () => {
@@ -180,6 +216,80 @@ describe("POST /api/assets/upload-sign — workId validation", () => {
   it("rejects non-UUID workId", async () => {
     const res = await post(uploadBody({ workType: "shoots", workId: "not-a-uuid" }));
     expect(res.status).toBe(400);
+  });
+
+  it("rejects non-string workId", async () => {
+    const res = await post(uploadBody({ workType: "shoots", workId: 42 as unknown as string }));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects null workId", async () => {
+    const res = await post(uploadBody({ workType: "shoots", workId: null as unknown as string }));
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /api/assets/upload-sign — context validation", () => {
+  it("rejects non-string context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: 42 } as Record<string, unknown> }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.shootId");
+  });
+
+  it("rejects non-UUID context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: "not-a-uuid" } }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.shootId");
+  });
+
+  it("rejects non-string context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: 42 } as Record<string, unknown> }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.campaignId");
+  });
+
+  it("rejects non-UUID context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: "not-a-uuid" } }),
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid context.campaignId");
+  });
+
+  it("accepts valid UUID context.shootId", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: VALID_SHOOT_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts valid UUID context.campaignId", async () => {
+    const res = await post(
+      uploadBody({ context: { campaignId: VALID_CAMPAIGN_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts context when both IDs are valid", async () => {
+    const res = await post(
+      uploadBody({ context: { shootId: VALID_SHOOT_WORK_ID, campaignId: VALID_CAMPAIGN_WORK_ID } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts context when omitted", async () => {
+    const res = await post(uploadBody());
+    expect(res.status).toBe(200);
   });
 });
 
