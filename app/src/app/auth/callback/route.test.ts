@@ -77,18 +77,23 @@ describe("GET /auth/callback", () => {
   });
 
   it("uses TRUSTED_OAUTH_FORWARDED_HOSTS for Cloudflare preview redirect origin", async () => {
-    vi.stubEnv("TRUSTED_OAUTH_FORWARDED_HOSTS", "ipix-operator.workers.dev");
+    vi.stubEnv(
+      "TRUSTED_OAUTH_FORWARDED_HOSTS",
+      "ipix-operator-preview.sk-498.workers.dev",
+    );
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();
 
     const res = await GET(
       callbackRequest("code=abc123", {
-        "x-forwarded-host": "ipix-operator.workers.dev",
+        "x-forwarded-host": "ipix-operator-preview.sk-498.workers.dev",
         "x-forwarded-proto": "https",
       }),
     );
 
-    expect(res.headers.get("location")).toBe("https://ipix-operator.workers.dev/app");
+    expect(res.headers.get("location")).toBe(
+      "https://ipix-operator-preview.sk-498.workers.dev/app",
+    );
   });
 
   it("rejects spoofed *.workers.dev not in the allowlist", async () => {
