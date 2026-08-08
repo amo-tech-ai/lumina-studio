@@ -3,7 +3,7 @@ name: PR Agent — Bedrock Qwen3 Coder Next (restricted)
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review,synchronize]
   issue_comment:                      # manual commands (stage 2 allowlist) — gated below
     types: [created]
 
@@ -13,8 +13,12 @@ permissions:
   issues: write
 
 concurrency:
-  group: pr-agent-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
+  group: >-
+    pr-agent-${{
+      github.event.pull_request.number ||
+      github.event.issue.number
+    }}-${{ github.event_name }}
+  cancel-in-progress: false
 
 jobs:
   pr_agent_job:
