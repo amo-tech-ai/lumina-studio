@@ -679,7 +679,7 @@ export default function NewShootPage() {
                 }}
               />
 
-              <HITLGate message="Review and approve these deliverables before the agent generates the shot list. Un-approved = no shot list." />
+              <HITLGate message="Gate 1 — Approve deliverables before the agent can call lookupShotReferences or generateShotListDraft. No shot list until you approve here." />
 
               <div className={styles.footer}>
                 <button
@@ -711,7 +711,7 @@ export default function NewShootPage() {
                 onChange={(shots) => update({ shots })}
               />
 
-              <HITLGate message="Approve shot list to proceed to budget estimate. All deliverables must be covered." />
+              <HITLGate message="Gate 2 — Approve this shot list before budget estimate. Angles must match the reference library (lookupShotReferences), not invented names." />
 
               <div className={styles.footer}>
                 <button
@@ -742,7 +742,7 @@ export default function NewShootPage() {
                 onOverrideChange={(val) => update({ budgetOverride: val })}
               />
 
-              <HITLGate message="Approve budget to commit the shoot. No DB rows exist until you approve here." />
+              <HITLGate message="Gate 3 — Approve budget to commit the shoot. Nothing is saved to the database until you approve here." />
 
               <div className={styles.footer}>
                 <button onClick={() => setStep(3)} className={styles.btnGhost}>← Edit shot list</button>
