@@ -18,7 +18,11 @@ import {
   generateStructuredContent as generateGeminiStructuredContent,
   resolveGeminiModel,
 } from "../_shared/gemini.ts";
-import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
+import {
+  resolveBiProvider,
+  resolveCloudflareModel,
+  resolveGroqModelId,
+} from "../_shared/llm/allowlist.ts";
 import {
   biUsedCrawlInRequest,
   groqEmptyCrawlError,
@@ -217,11 +221,55 @@ function runLlmStructuredContent<T>(
   return generate<T>(options);
 }
 
+type BiDiagnosticStage =
+  | "REQUEST_RECEIVED"
+  | "PROVIDER_SELECTED"
+  | "PROVIDER_STARTED"
+  | "PROVIDER_COMPLETED"
+  | "SCHEMA_VALID"
+  | "DRAFT_WRITTEN"
+  | "DRAFT_READY";
+
+function logBiDiagnostic(
+  correlationId: string,
+  checkpoint: BiDiagnosticStage | "BI_FAILED",
+  details: Record<string, unknown> = {},
+) {
+  console.info(JSON.stringify({
+    event: "brand_intelligence_diagnostic",
+    correlationId,
+    checkpoint,
+    ...details,
+  }));
+}
+
+function configuredModel(provider: "gemini" | "groq" | "workers-ai") {
+  if (provider === "gemini") return resolveGeminiModel();
+  if (provider === "workers-ai") return resolveCloudflareModel();
+  return resolveGroqModelId("structured");
+}
+
+function biConfigurationSource() {
+  if (getOptionalSecret("BI_PROVIDER")?.trim()) return "BI_PROVIDER";
+  const forceGemini = getOptionalSecret("BI_USE_GEMINI")?.trim().toLowerCase();
+  return forceGemini === "1" || forceGemini === "true" || forceGemini === "yes"
+    ? "BI_USE_GEMINI"
+    : "AI_PROVIDER";
+}
+
 export async function handleBrandIntelligenceRequest(req: Request): Promise<Response> {
   const cors = handleCors(req);
   if (cors) return cors;
 
   const started = performance.now();
+  const suppliedCorrelationId = req.headers.get("x-request-id")?.trim() ?? "";
+  const correlationId = /^[A-Za-z0-9._:-]{1,128}$/.test(suppliedCorrelationId)
+    ? suppliedCorrelationId
+    : crypto.randomUUID();
+  let diagnosticStage: BiDiagnosticStage = "REQUEST_RECEIVED";
+  let diagnosticProvider: "gemini" | "groq" | "workers-ai" | null = null;
+  let diagnosticModel: string | null = null;
+  let providerStarted = 0;
   let failureBrandId: string | null = null;
   let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
@@ -231,10 +279,14 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
+    logBiDiagnostic(correlationId, diagnosticStage);
+
     const caller = await resolveCaller(req);
     if (isCallerFailure(caller)) return caller.response;
 
     const biProvider = resolveBiProvider();
+    diagnosticProvider = biProvider;
+    diagnosticModel = configuredModel(biProvider);
     // Same preference as resolveCloudflareCredentials; whitespace GATEWAY falls through to API.
     const configError = missingBiProviderConfigError(biProvider, {
       geminiApiKey: getOptionalSecret("GEMINI_API_KEY"),
@@ -245,12 +297,26 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       cloudflareAccountId: getOptionalSecret("CLOUDFLARE_ACCOUNT_ID"),
     });
     if (configError) {
+      logBiDiagnostic(correlationId, "BI_FAILED", {
+        category: "configuration",
+        provider: biProvider,
+        model: diagnosticModel,
+        errorCode: configError.code,
+        totalDurationMs: Math.round(performance.now() - started),
+      });
       return errorResponse(
         configError.code,
         configError.message,
         configError.status,
       );
     }
+
+    diagnosticStage = "PROVIDER_SELECTED";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      provider: biProvider,
+      model: diagnosticModel,
+      configurationSource: biConfigurationSource(),
+    });
 
     const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
     if (contentLength > 16384) {
@@ -363,7 +429,34 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       crawlText,
     );
 
+    if (biProvider !== "gemini") {
+      const crawlError = groqEmptyCrawlError(crawlText, rawData);
+      if (crawlError) {
+        await markIntakeFailedIfRunning(client, brandId);
+        logBiDiagnostic(correlationId, "BI_FAILED", {
+          category: "orchestration/invocation",
+          provider: biProvider,
+          model: diagnosticModel,
+          errorCode: crawlError.code,
+          totalDurationMs: Math.round(performance.now() - started),
+        });
+        return errorResponse(
+          crawlError.code,
+          crawlError.message,
+          crawlError.status,
+        );
+      }
+    }
+
     const llmStarted = performance.now();
+    providerStarted = llmStarted;
+    diagnosticStage = "PROVIDER_STARTED";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      provider: biProvider,
+      model: diagnosticModel,
+      usedCrawl: usedCrawlInRequest,
+      crawlPages: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+    });
     let profile: BrandProfilePayload;
     let model: string;
     let llmLog: StructuredGenerationLog | null = null;
@@ -429,16 +522,6 @@ Use URL content AND web search for press, social, and competitor signals.
         profile = JSON.parse(result.text) as BrandProfilePayload;
       }
     } else {
-      const crawlError = groqEmptyCrawlError(crawlText, rawData);
-      if (crawlError) {
-        await markIntakeFailedIfRunning(client, brandId);
-        return errorResponse(
-          crawlError.code,
-          crawlError.message,
-          crawlError.status,
-        );
-      }
-
       const structured = await runLlmStructuredContent<BrandProfilePayload>({
         scope: "bi",
         systemPrompt: GROQ_BI_SYSTEM_PROMPT,
@@ -462,12 +545,32 @@ Use URL content AND web search for press, social, and competitor signals.
     }
 
     const geminiMs = Math.round(performance.now() - llmStarted);
+    diagnosticStage = "PROVIDER_COMPLETED";
+    diagnosticModel = model;
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      provider: llmLog?.provider ?? biProvider,
+      model,
+      providerDurationMs: geminiMs,
+    });
 
     const validationError = validateBrandProfilePayload(profile);
     if (validationError) {
       await markIntakeStatus(client, brandId, "failed");
+      logBiDiagnostic(correlationId, "BI_FAILED", {
+        category: "schema",
+        provider: llmLog?.provider ?? biProvider,
+        model,
+        errorCode: "validation_error",
+        providerDurationMs: geminiMs,
+        totalDurationMs: Math.round(performance.now() - started),
+      });
       return errorResponse("validation_error", validationError, 422);
     }
+    diagnosticStage = "SCHEMA_VALID";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      provider: llmLog?.provider ?? biProvider,
+      model,
+    });
 
     const aiProfile = buildAiProfileFromPayload(profile, url);
 
@@ -539,7 +642,13 @@ Use URL content AND web search for press, social, and competitor signals.
         throw new Error(updateErr?.message ?? "Failed to update brand");
       }
       updated = draftUpdated;
+      diagnosticStage = "DRAFT_WRITTEN";
+      logBiDiagnostic(correlationId, diagnosticStage);
       draftPersisted = true;
+      diagnosticStage = "DRAFT_READY";
+      logBiDiagnostic(correlationId, diagnosticStage, {
+        totalDurationMs: Math.round(performance.now() - started),
+      });
     } else {
       const liveScoreRows = scoreRows.map((r) => ({ ...r, brand_id: brandId }));
       const { data: scoresData, error: scoresErr } = await client
@@ -627,7 +736,26 @@ Use URL content AND web search for press, social, and competitor signals.
       crawlResultId: crawlRow?.id ?? null,
     });
   } catch (err) {
-    console.error("brand-intelligence error:", err);
+    console.error("brand-intelligence error; correlationId:", correlationId);
+    const category = diagnosticStage === "REQUEST_RECEIVED"
+      ? "configuration"
+      : diagnosticStage === "PROVIDER_SELECTED"
+      ? "orchestration/invocation"
+      : diagnosticStage === "PROVIDER_STARTED"
+      ? "provider"
+      : diagnosticStage === "PROVIDER_COMPLETED"
+      ? "schema"
+      : "database write";
+    logBiDiagnostic(correlationId, "BI_FAILED", {
+      category,
+      provider: diagnosticProvider,
+      model: diagnosticModel,
+      errorCode: "internal_error",
+      ...(providerStarted > 0 && {
+        providerDurationMs: Math.round(performance.now() - providerStarted),
+      }),
+      totalDurationMs: Math.round(performance.now() - started),
+    });
     // If draft was already persisted successfully, don't overwrite draft_ready → failed.
     // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
     if (failureBrandId && failureClient && !draftPersisted) {
