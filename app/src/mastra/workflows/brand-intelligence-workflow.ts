@@ -244,6 +244,7 @@ export const extractProfile = createStep({
     // Use service role key — user JWT may be expired after a long crawl (>1h)
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
+    const correlationId = `BI-${crypto.randomUUID()}`;
     let res: Response;
     try {
       res = await fetch(edgeFnUrl("brand-intelligence"), {
@@ -252,6 +253,7 @@ export const extractProfile = createStep({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceKey}`,
+          "x-request-id": correlationId,
         },
         body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
       });
@@ -264,7 +266,7 @@ export const extractProfile = createStep({
       throw await failAnalysis(
         sb,
         brandId,
-        "brand-intelligence edge fn unreachable",
+        `brand-intelligence edge fn unreachable (${correlationId})`,
         cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause),
       );
     }
@@ -286,7 +288,12 @@ export const extractProfile = createStep({
     // plus brand detail UI) and is tracked separately.
     if (!res.ok) {
       const detail = await res.text().catch(() => res.statusText);
-      throw await failAnalysis(sb, brandId, `brand-intelligence edge fn ${res.status}`, detail);
+      throw await failAnalysis(
+        sb,
+        brandId,
+        `brand-intelligence edge fn ${res.status} (${correlationId})`,
+        detail,
+      );
     }
 
     // IPI-834 — re-read draft and fail closed on contract mismatch. Do not rewrite
