@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { approveWorkflowDraft } from "@/app/(operator)/app/brand/[id]/actions";
@@ -17,6 +18,32 @@ export type BrandDnaPayoffScreenProps = {
 };
 
 const SAFE_APPROVE_ERROR = "We couldn’t approve your Brand DNA. Please try again.";
+const SAFE_LOAD_ERROR = "We couldn’t load your Brand DNA. Please try again.";
+/** Fail-open bound — never leave screen 13 on Loading forever (IPI-836). */
+const DNA_LOAD_TIMEOUT_MS = 45_000;
+
+/** Dedup Strict Mode double-mount so both effects share one server-action flight. */
+const dnaEnsureInflight = new Map<
+  string,
+  { promise: ReturnType<typeof ensureOnboardingIntakeDraft>; generation: symbol }
+>();
+
+function loadOnboardingDnaDraft(brandId: string, bust = false) {
+  if (bust) dnaEnsureInflight.delete(brandId);
+  const entry = dnaEnsureInflight.get(brandId);
+  if (entry) {
+    return entry.promise;
+  }
+  const generation = Symbol();
+  const promise = ensureOnboardingIntakeDraft(brandId).finally(() => {
+    const current = dnaEnsureInflight.get(brandId);
+    if (current && current.generation === generation) {
+      dnaEnsureInflight.delete(brandId);
+    }
+  });
+  dnaEnsureInflight.set(brandId, { promise, generation });
+  return promise;
+}
 
 /**
  * IPI-835 · D — screen 13: load generated Brand DNA, approve via existing
@@ -52,6 +79,8 @@ function BrandDnaPayoffLive({
 }) {
   const onReadyChangeRef = useRef(onReadyChange);
   onReadyChangeRef.current = onReadyChange;
+  const brandIdRef = useRef(brandId);
+  brandIdRef.current = brandId;
 
   const [pillars, setPillars] = useState<OnboardingDnaPillar[] | null>(null);
   const [brandName, setBrandName] = useState<string | null>(null);
@@ -61,6 +90,11 @@ function BrandDnaPayoffLive({
   const [approving, setApproving] = useState(false);
   const [durableReady, setDurableReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const loadGenerationRef = useRef(0);
+  // Only mutated inside the load effect — detects brand switches that would be
+  // hidden by the render-time brandIdRef.current assignment.
+  const prevLoadedBrandIdRef = useRef(brandId);
 
   const { intakeStatus } = useBrandAnalysisProgress({
     brandId,
@@ -68,53 +102,111 @@ function BrandDnaPayoffLive({
     quietGapMs: 0,
   });
 
+  // Reset readiness when brandId changes — prevents stale ready state from a
+  // previous brand. This is a render-phase adjustment (React's "derived state
+  // from props"): the ref is updated in the same pass so the guard self-terminates
+  // on the next render. prevLoadedBrandIdRef (not brandIdRef.current, which is
+  // overwritten during render) detects an actual switch. Parent readiness is not
+  // touched here — onboarding-flow.tsx already resets dnaReady on brandId change.
+  if (prevLoadedBrandIdRef.current !== brandId) {
+    prevLoadedBrandIdRef.current = brandId;
+    setDurableReady(false);
+    setPillars(null);
+    setBrandName(null);
+    setRunId(null);
+    setLoadError(null);
+    setApproveError(null);
+    setApproving(false);
+    setLoading(true);
+    setLoadAttempt(0);
+    loadGenerationRef.current = 0;
+  }
+
   useEffect(() => {
-    let cancelled = false;
+    const requestedId = brandId;
+    const thisGeneration = ++loadGenerationRef.current;
+    prevLoadedBrandIdRef.current = brandId;
     setLoading(true);
     setLoadError(null);
 
-    void ensureOnboardingIntakeDraft(brandId).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        setLoadError(result.error);
-        setLoading(false);
-        return;
-      }
-      setPillars(result.pillars);
-      setBrandName(result.brandName);
-      setRunId(result.runId);
-      if (isDurableIntakeReady(result.intakeStatus)) {
-        setDurableReady(true);
-        onReadyChangeRef.current?.(true);
-      }
+    // No `cancelled` flag — Strict Mode cleanup used to drop the only settled
+    // server-action result and leave Loading forever. Share one in-flight call.
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled || brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
+      settled = true;
+      setLoadError(SAFE_LOAD_ERROR);
       setLoading(false);
-    });
+    }, DNA_LOAD_TIMEOUT_MS);
+
+    void loadOnboardingDnaDraft(requestedId, loadAttempt > 0)
+      .then((result) => {
+        if (brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
+        settled = true;
+        clearTimeout(timer);
+        if (!result.ok) {
+          setLoadError(result.error);
+          setLoading(false);
+          return;
+        }
+        setLoadError(null);
+        setPillars(result.pillars);
+        setBrandName(result.brandName);
+        setRunId(result.runId);
+        if (isDurableIntakeReady(result.intakeStatus)) {
+          setDurableReady(true);
+          onReadyChangeRef.current?.(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (brandIdRef.current !== requestedId || loadGenerationRef.current !== thisGeneration) return;
+        settled = true;
+        clearTimeout(timer);
+        setLoadError(SAFE_LOAD_ERROR);
+        setLoading(false);
+      });
 
     return () => {
-      cancelled = true;
+      clearTimeout(timer);
     };
-  }, [brandId]);
+  }, [brandId, loadAttempt]);
 
   // Realtime (or poll) truth — never treat client success alone as ready.
+  // Deps intentionally exclude brandId: the render-phase reset above already
+  // clears durableReady on switch, and intakeStatus can lag one render behind a
+  // brandId change (the hook re-reads asynchronously), so re-running here with a
+  // stale status would mark the new brand ready without approval.
   useEffect(() => {
     if (!isDurableIntakeReady(intakeStatus)) return;
+    setApproveError(null);
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
   }, [intakeStatus]);
 
+  // Keep footer Open iPix in lockstep with the card (approve/realtime races).
+  useEffect(() => {
+    if (!durableReady) return;
+    onReadyChangeRef.current?.(true);
+  }, [durableReady]);
+
   const handleApprove = async () => {
     if (!runId || approving || durableReady) return;
+    const currentBrandId = brandId;
+    const currentGeneration = loadGenerationRef.current;
     setApproving(true);
     setApproveError(null);
     try {
-      const result = await approveWorkflowDraft(brandId, runId);
+      const result = await approveWorkflowDraft(currentBrandId, runId);
       if (!result.ok) {
         if (result.error === "already_processed") {
           // Refresh draft/status — idempotent path may already be ready.
-          const again = await ensureOnboardingIntakeDraft(brandId);
+          const again = await ensureOnboardingIntakeDraft(currentBrandId);
           if (again.ok && isDurableIntakeReady(again.intakeStatus)) {
-            setDurableReady(true);
-            onReadyChangeRef.current?.(true);
+            if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+              setDurableReady(true);
+              onReadyChangeRef.current?.(true);
+            }
             return;
           }
         }
@@ -125,16 +217,30 @@ function BrandDnaPayoffLive({
         );
         return;
       }
-      // Promote ran server-side — wait for Realtime/re-read before enabling Open iPix.
-      const confirm = await ensureOnboardingIntakeDraft(brandId);
+      // Server returned ok, but promotion may have been idempotent (brand not actually ready).
+      // Wait for the follow-up ensure to confirm durable ready before flipping UI.
+      const confirm = await ensureOnboardingIntakeDraft(currentBrandId);
       if (confirm.ok && isDurableIntakeReady(confirm.intakeStatus)) {
-        setDurableReady(true);
-        onReadyChangeRef.current?.(true);
+        if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+          setDurableReady(true);
+          onReadyChangeRef.current?.(true);
+          setPillars(confirm.pillars);
+          setBrandName(confirm.brandName);
+        }
+      } else {
+        // Promotion didn't land ready — surface error, don't claim success.
+        if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+          setApproveError(SAFE_APPROVE_ERROR);
+        }
       }
     } catch {
-      setApproveError(SAFE_APPROVE_ERROR);
+      if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+        setApproveError(SAFE_APPROVE_ERROR);
+      }
     } finally {
-      setApproving(false);
+      if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+        setApproving(false);
+      }
     }
   };
 
@@ -168,6 +274,25 @@ function BrandDnaPayoffLive({
         >
           {loadError}
         </p>
+        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+          <button
+            type="button"
+            data-testid="dna-load-retry"
+            onClick={() => {
+              setLoadAttempt((n) => n + 1);
+            }}
+            className="rounded-full bg-[var(--onboarding-cta)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)]"
+          >
+            Retry
+          </button>
+          <Link
+            href="/app/brand"
+            data-testid="dna-return-brand-hub"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--onboarding-hair)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-ink)] no-underline"
+          >
+            Return to Brand Hub
+          </Link>
+        </div>
       </OnboardingCard>
     );
   }
@@ -223,7 +348,7 @@ function BrandDnaPayoffLive({
         </p>
       )}
 
-      {approveError ? (
+      {approveError && !durableReady ? (
         <p role="alert" data-testid="dna-approve-error" className="mt-3 text-sm text-destructive">
           {approveError}
         </p>
