@@ -6951,6 +6951,12 @@ export type Database = {
         Args: { p_event_id: string }
         Returns: number
       }
+      get_openable_shoots: {
+        Args: { p_shoot_ids: string[] }
+        Returns: {
+          id: string
+        }[]
+      }
       get_or_create_shortlist: { Args: { p_org_id: string }; Returns: string }
       get_shoot_detail: { Args: { p_shoot_id: string }; Returns: Json }
       get_user_shoots: {
@@ -7130,6 +7136,7 @@ export type Database = {
           p_embedding: string
           p_exclude_brand_id?: string
           p_limit?: number
+          p_org_id: string
         }
         Returns: {
           brand_id: string

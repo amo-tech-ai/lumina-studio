@@ -176,6 +176,22 @@ See `my-marketplace/AGENTS.md`. Commerce catalog, sellers, checkout, and Stripe 
 ### Service Page Pattern (Vite legacy)
 Every service page: Header › Hero (image + copy) › Feature grid (cards w/ Lucide icons) › FAQ accordion › Portfolio/case study › CTA › Footer.
 
+## Efficiency Guidelines
+
+**Always use parallel and batched operations for speed:**
+
+1. **Parallelize upfront discovery** - Batch all file reads and grep searches together instead of sequential reads. When investigating code patterns, run multiple grep searches in parallel.
+
+2. **Understand validation flow before coding** - Read the full validation chain first to avoid iterative debugging. The timestamp validation order issue required 4 iterations that could have been prevented by reading the complete flow upfront.
+
+3. **Use simpler test fixtures** - Prefer vi.useFakeTimers() without vi.resetModules() when possible. Complex module reset setups cause unnecessary failures.
+
+4. **Check API permissions early** - Verify integration permissions before attempting operations (e.g., GitHub review thread resolution).
+
+5. **Batch verification steps** - Run typecheck, lint, and focused tests in parallel when safe, rather than sequentially.
+
+6. **Skip obsolete threads faster** - Dismiss trivial nitpicks and outdated comments immediately without deep investigation.
+
 ## Coding Conventions
 
 - **Path alias (Vite):** `@/*` → `./src/*`
