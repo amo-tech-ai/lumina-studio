@@ -10,18 +10,8 @@ const mockGetStore = vi.fn(() => "tok");
 vi.mock("@/lib/request-token", () => ({
   requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
 }));
-vi.mock("@/lib/crm/queries", () => ({
-  getCurrentOrgId: vi.fn().mockResolvedValue("org-1"),
-}));
-vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
-  createUserScopedClient: vi.fn(() => ({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: "user-1" } },
-        error: null,
-      }),
-    },
-  })),
+vi.mock("@/mastra/tools/crm/_shared", () => ({
+  getCrmUserClient: vi.fn(),
 }));
 vi.mock("@/app/api/_lib/process-draft-approval", () => ({
   PENDING_DRAFT_STATUS: "pending_approval",
@@ -41,7 +31,7 @@ vi.mock("@ai-sdk/google", () => ({
 import { createClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./edge";
 import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
-import { getCurrentOrgId } from "@/lib/crm/queries";
+import { getCrmUserClient } from "@/mastra/tools/crm/_shared";
 import {
   approveDraftTool,
   explainPillarTool,
@@ -144,7 +134,13 @@ function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = 
 }
 
 beforeEach(() => {
+  mockGetStore.mockReset();
   mockGetStore.mockReturnValue("tok");
+  vi.mocked(getCrmUserClient).mockResolvedValue({
+    client: makeMockClient(),
+    orgId: "org-1",
+    userId: "user-1",
+  });
   vi.mocked(createClient).mockReturnValue(makeMockClient() as never);
   vi.mocked(processBrandIntelligenceDraftApproval).mockResolvedValue({
     ok: true,
@@ -234,6 +230,21 @@ describe("explainPillarTool", () => {
 
 describe("searchSimilarBrands", () => {
   it("returns neighbors from search_brands RPC with asOf timestamp", async () => {
+    const brandsFrom = vi.fn();
+    const brandsSelect = vi.fn().mockReturnThis();
+    const brandsEq = vi.fn().mockReturnThis();
+    const brandsSingle = vi.fn().mockResolvedValue({
+      data: { ...MOCK_BRAND, embedding: "[0.1,0.2,0.3]" },
+      error: null,
+    });
+    vi.mocked(createClient).mockReturnValue({
+      from: (table: string) => {
+        if (table === "brands") return { select: brandsSelect, eq: brandsEq, single: brandsSingle };
+        return makeMockClient().from(table);
+      },
+      rpc: vi.fn().mockResolvedValue({ data: MOCK_SIMILAR, error: null }),
+    } as never);
+
     const result = await searchSimilarBrands.execute!(
       { brandId: BRAND_ID, limit: 5 },
       {} as never,
@@ -251,10 +262,13 @@ describe("searchSimilarBrands", () => {
     });
     expect(r!.neighbors[1].sharedNodes).toBeNull();
 
-    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
+    expect(brandsEq).toHaveBeenCalledWith("org_id", "org-1");
+    expect(brandsEq).toHaveBeenCalledWith("id", BRAND_ID);
+
+    const adminClient = vi.mocked(createClient).mock.results.at(-1)?.value as {
       rpc: ReturnType<typeof vi.fn>;
     };
-    expect(client.rpc).toHaveBeenCalledWith("search_brands", {
+    expect(adminClient.rpc).toHaveBeenCalledWith("search_brands", {
       p_embedding: "[0.1,0.2,0.3]",
       p_limit: 5,
       p_exclude_brand_id: BRAND_ID,
@@ -293,33 +307,47 @@ describe("searchSimilarBrands", () => {
   });
 
   it("fails closed when operator has no organization membership", async () => {
-    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
-      rpc: ReturnType<typeof vi.fn>;
-    };
-    const rpcCallsBefore = client.rpc.mock.calls.length;
-    vi.mocked(getCurrentOrgId).mockResolvedValueOnce(null);
+    const createClientCallsBefore = vi.mocked(createClient).mock.calls.length;
+    vi.mocked(getCrmUserClient).mockResolvedValueOnce({ client: null, error: "No organization membership for this operator" });
     await expect(
       searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
     ).rejects.toThrow(/No organization membership/);
-    expect(client.rpc.mock.calls.length).toBe(rpcCallsBefore);
+    expect(vi.mocked(createClient).mock.calls.length).toBe(createClientCallsBefore);
+  });
+
+  it("tenant deny: brand outside operator org is not found without calling RPC", async () => {
+    vi.mocked(getCrmUserClient).mockResolvedValueOnce({
+      client: makeMockClient(),
+      orgId: "org-1",
+      userId: "user-1",
+    });
+    const createClientCallsBefore = vi.mocked(createClient).mock.calls.length;
+    vi.mocked(createClient).mockReturnValueOnce({
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+      rpc: vi.fn(),
+    } as never);
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/Brand not found/);
+    expect(vi.mocked(createClient).mock.calls.length).toBe(createClientCallsBefore + 1);
+    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
+      rpc: ReturnType<typeof vi.fn>;
+    };
+    expect(client.rpc).not.toHaveBeenCalled();
   });
 });
 
 describe("approveDraftTool", () => {
   it("calls shared draft approval with workflow run id from pending draft", async () => {
-    vi.mocked(createClient).mockImplementation(((url: string, key: string) => {
-      if (key === "test-anon-key") {
-        return {
-          auth: {
-            getUser: vi.fn().mockResolvedValue({
-              data: { user: { id: "user-1" } },
-              error: null,
-            }),
-          },
-        };
-      }
-      return makeMockClient();
-    }) as never);
+    vi.mocked(getCrmUserClient).mockResolvedValueOnce({
+      client: makeMockClient(),
+      orgId: "org-1",
+      userId: "user-1",
+    });
 
     const result = await approveDraftTool.execute!(
       { brandId: BRAND_ID, approved: true },
@@ -338,6 +366,7 @@ describe("approveDraftTool", () => {
 
   it("throws when access token is missing", async () => {
     mockGetStore.mockReturnValueOnce(undefined as never);
+    vi.mocked(getCrmUserClient).mockResolvedValueOnce({ client: null, error: "Access token not available in request context" });
 
     await expect(
       approveDraftTool.execute!({ brandId: BRAND_ID, approved: true }, {} as never),
@@ -345,30 +374,23 @@ describe("approveDraftTool", () => {
   });
 
   it("throws when no pending draft exists", async () => {
-    vi.mocked(createClient).mockImplementation(((url: string, key: string) => {
-      if (key === "test-anon-key") {
-        return {
-          auth: {
-            getUser: vi.fn().mockResolvedValue({
-              data: { user: { id: "user-1" } },
-              error: null,
-            }),
-          },
-        };
-      }
-      return {
-        from: vi.fn((table: string) => {
-          if (table === "brand_intake_drafts") {
-            return {
-              select: vi.fn().mockReturnThis(),
-              eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-            };
-          }
-          return makeMockClient().from(table);
-        }),
-      };
-    }) as never);
+    vi.mocked(getCrmUserClient).mockResolvedValueOnce({
+      client: makeMockClient(),
+      orgId: "org-1",
+      userId: "user-1",
+    });
+    vi.mocked(createClient).mockReturnValueOnce({
+      from: vi.fn((table: string) => {
+        if (table === "brand_intake_drafts") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }
+        return makeMockClient().from(table);
+      }),
+    } as never);
 
     await expect(
       approveDraftTool.execute!({ brandId: BRAND_ID, approved: false }, {} as never),

@@ -8,8 +8,7 @@ import { parseScoreDetails } from "@/lib/brand-hub";
 import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/app/api/_lib/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
-import { getCurrentOrgId } from "@/lib/crm/queries";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { getCrmUserClient } from "./crm/_shared";
 import { callEdgeFunction } from "./edge";
 
 function adminClient() {
@@ -19,26 +18,10 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-async function resolveOperatorId(accessToken: string): Promise<string> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) throw new Error("Supabase client env vars not set");
-  const sb = createClient(url, anon, { auth: { persistSession: false } });
-  const { data: { user }, error } = await sb.auth.getUser(accessToken);
-  if (error || !user) throw new Error("Access token not available in request context");
-  return user.id;
-}
-
-/** Resolve the operator's org id from the per-request access token (ALS). */
 async function resolveOperatorOrgId(): Promise<string> {
-  const accessToken = requestToken.getStore();
-  if (!accessToken) throw new Error("Access token not available in request context");
-  const client = createUserScopedClient(accessToken);
-  const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) throw new Error("Could not resolve operator identity");
-  const orgId = await getCurrentOrgId(user.id, client);
-  if (!orgId) throw new Error("No organization membership for this operator");
-  return orgId;
+  const ctx = await getCrmUserClient();
+  if (ctx.client === null) throw new Error(ctx.error);
+  return ctx.orgId;
 }
 
 const PILLAR_ALIASES: Record<string, string> = {
@@ -245,10 +228,9 @@ export const approveDraftTool = createTool({
     message: z.string(),
   }),
   execute: async ({ brandId, approved }) => {
-    const accessToken = requestToken.getStore();
-    if (!accessToken) throw new Error("Access token not available in request context");
-
-    const operatorId = await resolveOperatorId(accessToken);
+    const ctx = await getCrmUserClient();
+    if (ctx.client === null) throw new Error(ctx.error);
+    const operatorId = ctx.userId;
 
     const sb = adminClient();
     const { data: draft, error: lookupErr } = await sb
