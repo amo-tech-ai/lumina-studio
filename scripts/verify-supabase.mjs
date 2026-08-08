@@ -3,35 +3,14 @@
  * Verify Supabase env + REST connectivity (run: node scripts/verify-supabase.mjs)
  * Loads .env.local if present.
  */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { loadRepoEnv, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
+loadRepoEnv();
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
-
-const url =
-  process.env.VITE_SUPABASE_URL ??
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.NEXT_SUPABASE_URL;
-const key =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
+const { url, anonKey: key } = resolveSupabaseEnv();
 
 if (!url || !key) {
-  console.error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY");
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY");
   process.exit(1);
 }
 

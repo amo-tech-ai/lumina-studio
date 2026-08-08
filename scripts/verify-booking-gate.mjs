@@ -6,25 +6,12 @@
  * Local without DB: SQL scripts skipped unless REQUIRE_BOOKING_SQL=1.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { BOOKING_SQL_TESTS as sqlTests } from "./booking-sql-tests.mjs";
+import { loadRepoEnv, repoRoot as root } from "./lib/script-env.mjs";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
-
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
+loadRepoEnv();
 
 function run(label, cmd, args, opts = {}) {
   console.log(`\n▶ ${label}`);

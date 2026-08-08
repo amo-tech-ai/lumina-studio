@@ -37,7 +37,8 @@
     "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs",
     "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs",
     "cloudinary:dry-run-audit": "node scripts/cloudinary-dry-run-audit.mjs",
-    "cloudinary:dry-run-audit:test": "node --test scripts/lib/cloudinary-dry-run-audit-lib.test.mjs"
+    "cloudinary:dry-run-audit:test": "node --test scripts/lib/cloudinary-dry-run-audit-lib.test.mjs",
+    "scripts:lib:test": "node --test scripts/lib/script-env.test.mjs scripts/lib/check-reporter.test.mjs scripts/lib/pg-ssl.test.mjs scripts/lib/fetch-json.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
