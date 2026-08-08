@@ -17,6 +17,13 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-07 — Brand Intelligence: similar-brand search ships org-safe (IPI-924)
+
+**AGENT-RAG-001 — "Find similar brands"**
+
+- **Org-scope the RPC (Task 1)** (`4aaa9075`, [#835](https://github.com/amo-tech-ai/lumina-studio/pull/835)) — `public.search_brands` is `security definer` with EXECUTE limited to `postgres` + `service_role`, so RLS never applied. It now takes a required `p_org_id` and returns only same-org matches; omitting it fails closed. The old unscoped overload is dropped.
+- **Similar brands card (Task 2)** (`efe80061`, [#853](https://github.com/amo-tech-ai/lumina-studio/pull/853)) — the UI caller, necessarily a server route: `GET /api/brands/[id]/similar` gates with `withOperatorAuth`, reads the brand's embedding + `org_id` via the service-role admin client, then calls the org-scoped RPC — raw vectors never reach the browser. A "Similar brands" card on the brand detail page renders matches with similarity % and shared-DNA chips. Since no brand has an embedding yet (0/5832 rows), the no-embedding path returns `200 { data: [], reason: "no_embedding" }` and the card shows a coming-soon message instead of an error.
+
 ### 2026-08-04 — Planner gate approvals ship end-to-end; PR-Agent restricted rollout lands; Cloudflare release records
 
 **17 commits across `e37a542a..db2b59d8`.** Written 2026-08-04 to clear `changelog-staleness`

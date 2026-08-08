@@ -78,6 +78,24 @@ async function parseSuccess(res: Response) {
   return json as { ok: true; data: Record<string, unknown> };
 }
 
+async function captureBiDiagnostics<T>(run: () => Promise<T>) {
+  const original = console.info;
+  const events: Array<Record<string, unknown>> = [];
+  console.info = (...args: unknown[]) => {
+    try {
+      const event = JSON.parse(String(args[0])) as Record<string, unknown>;
+      if (event.event === "brand_intelligence_diagnostic") events.push(event);
+    } catch {
+      original(...args);
+    }
+  };
+  try {
+    return { value: await run(), events };
+  } finally {
+    console.info = original;
+  }
+}
+
 Deno.test("brand-intelligence accepts service-role bearer for workflow calls", async () => {
   await withEnv({
     ...BASE_EDGE_ENV,
@@ -290,10 +308,13 @@ Deno.test("brand-intelligence Workers AI path calls shared LLM and returns 200 (
         });
       }) as typeof import("../_shared/llm/structured.ts").generateStructuredContent);
       try {
-        const res = await handleBrandIntelligenceRequest(biRequest({
-          brandId: BRAND_ID,
-          url: TEST_URL,
-        }));
+        const { value: res, events } = await captureBiDiagnostics(() =>
+          handleBrandIntelligenceRequest(biRequest({
+            brandId: BRAND_ID,
+            url: TEST_URL,
+            draft_mode: true,
+          }))
+        );
         assertEquals(res.status, 200);
         const body = await parseSuccess(res);
         assertEquals(body.data.provider, "workers-ai");
@@ -301,6 +322,51 @@ Deno.test("brand-intelligence Workers AI path calls shared LLM and returns 200 (
         assertEquals(body.data.brandId, BRAND_ID);
         assertEquals(llmCalls.length, 1);
         assertEquals(llmCalls[0]?.scope, "bi");
+        assertEquals(events.map((event) => event.checkpoint), [
+          "REQUEST_RECEIVED",
+          "PROVIDER_SELECTED",
+          "PROVIDER_STARTED",
+          "PROVIDER_COMPLETED",
+          "SCHEMA_VALID",
+          "DRAFT_WRITTEN",
+          "DRAFT_READY",
+        ]);
+        assertEquals(events[1]?.configurationSource, "BI_PROVIDER");
+        assertEquals(events[3]?.provider, "workers-ai");
+        assertEquals(typeof events[3]?.providerDurationMs, "number");
+      } finally {
+        __setLlmStructuredGenerateForTests(null);
+      }
+    });
+  });
+});
+
+Deno.test("brand-intelligence records a redacted provider failure checkpoint (IPI-969)", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    BI_PROVIDER: "cloudflare",
+    CLOUDFLARE_API_TOKEN: "cf-test-token",
+    CLOUDFLARE_ACCOUNT_ID: "cf-test-account",
+  }, async () => {
+    await withMockFetch({ crawl: crawlWithText }, async () => {
+      const { handleBrandIntelligenceRequest, __setLlmStructuredGenerateForTests } =
+        await import("./handler.ts");
+      __setLlmStructuredGenerateForTests((() =>
+        Promise.reject(new Error("raw provider response must not be logged"))) as typeof import("../_shared/llm/structured.ts").generateStructuredContent);
+      try {
+        const { value: res, events } = await captureBiDiagnostics(() =>
+          handleBrandIntelligenceRequest(biRequest({
+            brandId: BRAND_ID,
+            url: TEST_URL,
+            draft_mode: true,
+          }))
+        );
+        assertEquals(res.status, 500);
+        const failure = events.find((event) => event.checkpoint === "BI_FAILED");
+        assertEquals(failure?.category, "provider");
+        assertEquals(failure?.errorCode, "internal_error");
+        assertEquals(typeof failure?.providerDurationMs, "number");
+        assertEquals(JSON.stringify(failure).includes("raw provider response"), false);
       } finally {
         __setLlmStructuredGenerateForTests(null);
       }
