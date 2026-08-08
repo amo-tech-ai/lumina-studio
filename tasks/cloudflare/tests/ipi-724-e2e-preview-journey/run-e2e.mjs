@@ -593,7 +593,6 @@ async function main() {
     
     // IPI-967: Use classifier for network response classification
     const info503Count = countInfo503Responses(networkLog);
-    const info503ExceedsThreshold = info503ExceedsThreshold(info503Count);
     
     const criticalFailed = networkLog.filter((n) => {
       const classification = classifyNetworkResponse(n, info503Count, "auth");
