@@ -209,6 +209,8 @@ async function markIntakeFailedIfRunning(
 
 type LlmStructuredGenerate = typeof generateLlmStructuredContent;
 let llmStructuredGenerateForTests: LlmStructuredGenerate | null = null;
+type GeminiStructuredGenerate = typeof generateGeminiStructuredContent;
+let geminiStructuredGenerateForTests: GeminiStructuredGenerate | null = null;
 
 /** Test seam — override shared LLM call in handler tests only. */
 export function __setLlmStructuredGenerateForTests(
@@ -217,11 +219,36 @@ export function __setLlmStructuredGenerateForTests(
   llmStructuredGenerateForTests = fn;
 }
 
+/** Test seam — override the direct Gemini call in handler tests only. */
+export function __setGeminiStructuredGenerateForTests(
+  fn: GeminiStructuredGenerate | null,
+): void {
+  geminiStructuredGenerateForTests = fn;
+}
+
 function runLlmStructuredContent<T>(
   options: StructuredGenerationOptions,
 ): Promise<StructuredGenerationResult<T>> {
   const generate = llmStructuredGenerateForTests ?? generateLlmStructuredContent;
   return generate<T>(options);
+}
+
+function runGeminiStructuredContent(
+  options: Parameters<GeminiStructuredGenerate>[0],
+): ReturnType<GeminiStructuredGenerate> {
+  const generate = geminiStructuredGenerateForTests ??
+    generateGeminiStructuredContent;
+  return generate(options);
+}
+
+function parseGeminiProfile(text: string): BrandProfilePayload {
+  try {
+    return JSON.parse(text) as BrandProfilePayload;
+  } catch {
+    throw new StructuredOutputValidationError(
+      "Invalid structured JSON from Gemini",
+    );
+  }
 }
 
 type BiDiagnosticStage =
@@ -283,7 +310,13 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
   let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
   const logFailure = (
-    category: "configuration" | "orchestration/invocation" | "provider" | "schema" | "database write",
+    category:
+      | "configuration"
+      | "orchestration/invocation"
+      | "provider"
+      | "schema"
+      | "database read"
+      | "database write",
     errorCode: string,
     details: Record<string, unknown> = {},
   ) => logBiDiagnostic(correlationId, "BI_FAILED", {
@@ -415,7 +448,12 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       .eq("id", brandId)
       .maybeSingle();
 
-    if (fetchErr || !existing) {
+    if (fetchErr) {
+      logFailure("database read", "database_error");
+      return errorResponse("database_error", "Failed to load brand", 500);
+    }
+
+    if (!existing) {
       logFailure("orchestration/invocation", "not_found");
       return errorResponse("not_found", "Brand not found", 404);
     }
@@ -503,7 +541,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
           pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
         });
 
-        const result = await generateGeminiStructuredContent({
+        const result = await runGeminiStructuredContent({
           apiKey,
           model,
           contents: prompt,
@@ -514,7 +552,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
           timeoutMs: 45_000,
         });
         structuredResponse = result.response;
-        profile = JSON.parse(result.text) as BrandProfilePayload;
+        profile = parseGeminiProfile(result.text);
       } else {
         const urlList = buildUrlList(url);
         const contextPrompt = `
@@ -536,7 +574,7 @@ Use URL content AND web search for press, social, and competitor signals.
         contextResponse = contextPass.response;
 
         const structurePrompt = buildUrlFallbackPrompt(url, contextPass.text);
-        const result = await generateGeminiStructuredContent({
+        const result = await runGeminiStructuredContent({
           apiKey,
           model,
           contents: structurePrompt,
@@ -546,7 +584,7 @@ Use URL content AND web search for press, social, and competitor signals.
           timeoutMs: 50_000,
         });
         structuredResponse = result.response;
-        profile = JSON.parse(result.text) as BrandProfilePayload;
+        profile = parseGeminiProfile(result.text);
       }
     } else {
       const structured = await runLlmStructuredContent<BrandProfilePayload>({
