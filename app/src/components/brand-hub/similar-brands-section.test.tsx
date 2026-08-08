@@ -79,4 +79,26 @@ describe("SimilarBrandsSection", () => {
     render(<SimilarBrandsSection brandId="b1" />);
     expect(await screen.findByText(/Couldn't load similar brands/i)).toBeTruthy();
   });
+
+  it("clears the previous brand's results immediately when brandId changes", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{ brand_id: "b2", brand_name: "Acme Denim", similarity: 0.91, shared_nodes: [] }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const { rerender } = render(<SimilarBrandsSection brandId="b1" />);
+    expect(await screen.findByText("Acme Denim")).toBeTruthy();
+
+    // Next fetch (for the new brand) deliberately never resolves — old results must
+    // be gone before it completes, otherwise users see the wrong brand's matches.
+    fetchSpy.mockReturnValueOnce(new Promise(() => {}));
+    rerender(<SimilarBrandsSection brandId="b3" />);
+
+    expect(screen.queryByText("Acme Denim")).toBeNull();
+    expect(screen.getByText(/Finding similar brands/i)).toBeTruthy();
+  });
 });

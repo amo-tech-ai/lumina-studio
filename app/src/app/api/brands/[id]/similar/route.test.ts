@@ -1,26 +1,32 @@
 // IPI-924 · AGENT-RAG-001 — GET /api/brands/[id]/similar
 // Route keeps the service_role-only search_brands RPC off the client: auth gate,
-// brand lookup for embedding/org_id, then the org-scoped RPC via the admin client.
+// tenant check via isBrandAccessible (operator RLS), then org-scoped RPC via admin.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { withOperatorAuth, rpc, from, rpcCalls } = vi.hoisted(() => {
-  const rpcCalls: Array<Record<string, unknown>> = [];
-  return {
-    withOperatorAuth: vi.fn(),
-    rpc: vi.fn(async (fn: string, params: Record<string, unknown>) => {
-      rpcCalls.push({ fn, ...params });
-      return { data: [], error: null };
-    }),
-    from: vi.fn(),
-    rpcCalls,
-  };
+const { withOperatorAuth, rpc, from, isBrandAccessible } = vi.hoisted(() => ({
+  withOperatorAuth: vi.fn(),
+  rpc: vi.fn(async () => ({ data: [], error: null })),
+  from: vi.fn(),
+  isBrandAccessible: vi.fn(async () => ({
+    ok: true,
+    orgId: "7c41c1f4-1c1e-4d8f-bf27-4c0b0f5df1a1",
+  })),
+}));
+
+vi.mock("@/lib/operator-gate", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/operator-gate")>();
+  return { ...actual, withOperatorAuth };
 });
 
-vi.mock("@/lib/operator-gate", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
-    "@/lib/operator-gate",
-  );
-  return { ...actual, withOperatorAuth };
+vi.mock("@/lib/supabase/operator-client", () => ({
+  createOperatorSupabaseClient: vi.fn(async () => ({})),
+}));
+
+vi.mock("@/lib/assets/brand-access", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/assets/brand-access")>();
+  return { ...actual, isBrandAccessible };
 });
 
 vi.mock("@/app/api/_lib/supabase-admin", () => ({
@@ -30,9 +36,8 @@ vi.mock("@/app/api/_lib/supabase-admin", () => ({
 import { GET } from "./route";
 
 const BRAND_ID = "3f0aa0e2-6c54-4b3e-9c40-8ac8f2ca03ab";
-const ORG_ID = "7c41c1f4-1c1e-4d8f-bf27-4c0b0f5df1a1";
 const OTHER_BRAND_ID = "4b3b1a3e-6c54-4b3e-9c40-8ac8f2ca0555";
-const OTHER_ORG_ID = "8d52d25f-2d2f-4e9g-cg38-5d1c1g6eg2b2";
+const ORG_ID = "7c41c1f4-1c1e-4d8f-bf27-4c0b0f5df1a1";
 
 function makeRequest(path = `/api/brands/${BRAND_ID}/similar`) {
   return new Request(`http://localhost:3002${path}`);
@@ -53,8 +58,8 @@ const ctx = { params: Promise.resolve({ id: BRAND_ID }) };
 beforeEach(() => {
   withOperatorAuth.mockReset();
   from.mockReset();
-  rpc.mockClear();
-  rpcCalls.length = 0;
+  rpc.mockClear().mockResolvedValue({ data: [], error: null } as never);
+  isBrandAccessible.mockClear().mockResolvedValue({ ok: true, orgId: ORG_ID } as never);
 });
 
 describe("GET /api/brands/[id]/similar", () => {
@@ -72,50 +77,21 @@ describe("GET /api/brands/[id]/similar", () => {
     expect(res.status).toBe(401);
   });
 
-  it("404s when the brand does not exist (brand-access gate fails)", async () => {
+  it("404s on cross-tenant access (isBrandAccessible returns !ok, RPC never fires)", async () => {
     withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
-    // isBrandAccessible returns ok:false for foreign-org brands — here's the same-tenant
-    // refusal path (mock reflects brand not found under RLS, which the isBrandAccessible
-    // helper translates to a hard 404 before the RPC is even invoked).
-    vi.doMock("@/lib/assets/brand-access", async () => ({
-      isBrandAccessible: vi.fn().mockResolvedValue({ ok: false, status: 404, message: "Brand not accessible to caller" }),
-    }));
-    const res = await GET(makeRequest(), ctx);
-    expect(res.status).toBe(404);
-  });
+    isBrandAccessible.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      message: "Brand not accessible to caller",
+    } as never);
+    mockBrandRow({ embedding: "[0.1]", org_id: "foreign-org" });
 
-  it("200s on same-tenant request and search_brands is invoked with the operator's org context", async () => {
-    withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
-    mockBrandRow({ embedding: "[0.1,0.2]", org_id: ORG_ID });
-    rpc.mockResolvedValueOnce({
-      data: [{ brand_id: "b2", brand_name: "Acme Denim", similarity: 0.91, shared_nodes: [] }],
-      error: null,
-    });
-
-    const res = await GET(makeRequest(), ctx);
-    expect(res.status).toBe(200);
-    expect(rpc).toHaveBeenCalledWith(
-      "search_brands",
-      expect.objectContaining({
-        p_embedding: "[0.1,0.2]",
-        p_org_id: ORG_ID,
-        p_exclude_brand_id: BRAND_ID,
-      }),
-    );
-  });
-
-  it("cross-tenant access is blocked (RLS returns no row for foreign-org brand)", async () => {
-    withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
-    // Under RLS, a brand in a different org returns no row for this caller.
-    // brand-access translates that to { ok: false, status: 404 }.
-    vi.doMock("@/lib/assets/brand-access", async () => ({
-      isBrandAccessible: vi.fn().mockResolvedValue({ ok: false, status: 404, message: "Brand not accessible to caller" }),
-    }));
     const res = await GET(
       makeRequest(`/api/brands/${OTHER_BRAND_ID}/similar`),
       { params: Promise.resolve({ id: OTHER_BRAND_ID }) },
     );
     expect(res.status).toBe(404);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("returns empty with reason=no_embedding when the brand has no embedding", async () => {
@@ -127,14 +103,34 @@ describe("GET /api/brands/[id]/similar", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("passes a fractional limit through as the default (0.5 → 6, never 0)", async () => {
+  it("calls search_brands with org-scoped args on same-tenant request", async () => {
     withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
     mockBrandRow({ embedding: "[0.1,0.2]", org_id: ORG_ID });
-    rpc.mockResolvedValueOnce({ data: [], error: null });
+    rpc.mockResolvedValueOnce({
+      data: [{ brand_id: "b2", brand_name: "Acme Denim", similarity: 0.91, shared_nodes: [] }],
+      error: null,
+    } as never);
+
+    const res = await GET(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      "search_brands",
+      expect.objectContaining({
+        p_embedding: "[0.1,0.2]",
+        p_org_id: ORG_ID,
+        p_exclude_brand_id: BRAND_ID,
+      }),
+    );
+    expect(isBrandAccessible).toHaveBeenCalled();
+  });
+
+  it("fractional limit falls back to DEFAULT_LIMIT (never p_limit=0)", async () => {
+    withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
+    mockBrandRow({ embedding: "[0.1,0.2]", org_id: ORG_ID });
+    rpc.mockResolvedValueOnce({ data: [], error: null } as never);
 
     const res = await GET(makeRequest(`/api/brands/${BRAND_ID}/similar?limit=0.5`), ctx);
     expect(res.status).toBe(200);
-    // Fractional input must not floor to 0 — must fall back to DEFAULT_LIMIT 6.
     expect(rpc).toHaveBeenCalledWith(
       "search_brands",
       expect.objectContaining({ p_limit: 6 }),
@@ -144,7 +140,7 @@ describe("GET /api/brands/[id]/similar", () => {
   it("500s when the RPC errors", async () => {
     withOperatorAuth.mockResolvedValue({ id: "u1", name: "Op" });
     mockBrandRow({ embedding: "[0.1]", org_id: ORG_ID });
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } } as never);
     const res = await GET(makeRequest(), ctx);
     expect(res.status).toBe(500);
   });
