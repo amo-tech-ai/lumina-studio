@@ -34,6 +34,10 @@ export function SimilarBrandsSection({ brandId }: { brandId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // Reset to loading before each fetch so a brandId change (client-side
+    // navigation between brands) never leaves the previous brand's results on
+    // screen while the new request is in flight.
+    setState({ status: "loading" });
     fetch(`/api/brands/${brandId}/similar`)
       .then(async (res) => {
         if (cancelled) return;

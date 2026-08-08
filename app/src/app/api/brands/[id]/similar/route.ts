@@ -13,6 +13,8 @@
 
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
+import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
+import { isBrandAccessible } from "@/lib/assets/brand-access";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { apiErrorBody } from "@/lib/api/error-envelope";
 
@@ -46,8 +48,8 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const rawLimit = Number(searchParams.get("limit"));
   const limit =
-    Number.isFinite(rawLimit) && rawLimit > 0
-      ? Math.min(Math.floor(rawLimit), MAX_LIMIT)
+    Number.isInteger(rawLimit) && rawLimit >= 1 && Number.isFinite(rawLimit)
+      ? Math.min(rawLimit, MAX_LIMIT)
       : DEFAULT_LIMIT;
 
   let admin;
@@ -58,8 +60,18 @@ export async function GET(
     return NextResponse.json(apiErrorBody("INTERNAL_ERROR"), { status: 500 });
   }
 
-  // Brand row read via service role — RLS bypassed here, gated by withOperatorAuth
-  // above. Only embedding + org_id are read; raw vector never leaves the server.
+  // Cross-tenant gate: use the operator's RLS-scoped client (NOT the admin client)
+  // to prove the caller can see this brand. The RLS policy joins brands→org_members
+  // on the caller's session; a foreign-org brand returns nothing, so we 404 here.
+  const operator = await createOperatorSupabaseClient(request);
+  const access = await isBrandAccessible(operator, brandId);
+  if (!access.ok) {
+    return NextResponse.json(apiErrorBody("NOT_FOUND"), { status: 404 });
+  }
+
+  // Embedding + org_id read via service role. p_org_id below comes from this row,
+  // whose org membership in the caller's org was just proven above via RLS — a
+  // foreign-org brand request fails before search_brands is ever invoked.
   const { data: brand, error: brandError } = await admin
     .from("brands")
     .select("embedding, org_id")
