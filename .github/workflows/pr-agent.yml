@@ -3,7 +3,7 @@ name: PR Agent — Bedrock Qwen3 Coder Next (restricted)
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review,synchronize]
   issue_comment:                      # manual commands (stage 2 allowlist) — gated below
     types: [created]
 
