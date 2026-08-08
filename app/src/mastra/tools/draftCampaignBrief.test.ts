@@ -168,6 +168,37 @@ describe("draftCampaignBrief", () => {
     expect(generateObject).not.toHaveBeenCalled();
   });
 
+  it("rejects blank channel values", async () => {
+    const result = await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow", channels: ["instagram", "  "] },
+      {} as never,
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: true,
+        message: expect.stringMatching(/channels\.1.*at least 1 character/),
+      }),
+    );
+    expect(generateObject).not.toHaveBeenCalled();
+  });
+
+  it("rejects channels exceeding 200 characters", async () => {
+    const longChannel = "a".repeat(201);
+    const result = await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow", channels: ["instagram", longChannel] },
+      {} as never,
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: true,
+        message: expect.stringMatching(/channels.*200/),
+      }),
+    );
+    expect(generateObject).not.toHaveBeenCalled();
+  });
+
   it("strips fence-escape payloads from untrusted brand/operator text in the prompt", async () => {
     mockMaybeSingle.mockResolvedValue({
       data: {

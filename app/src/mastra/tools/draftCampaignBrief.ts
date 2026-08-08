@@ -127,7 +127,7 @@ export const draftCampaignBrief = createTool({
   inputSchema: z.object({
     brandId: z.string().uuid(),
     campaignName: z.string().min(1).max(200),
-    channels: z.array(z.string()).max(12).optional().default([]),
+    channels: z.array(z.string().trim().min(1).max(200)).max(12).optional().default([]),
     goal: z.string().max(2000).optional(),
     briefSeed: z.string().max(4000).optional(),
   }),
