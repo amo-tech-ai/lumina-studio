@@ -65,3 +65,12 @@ Only report findings supported by the changed code.
 
 [pr_code_suggestions]
 commitable_code_suggestions = false           # no write-like suggested commits (advisor, not boss)
+
+[ignore]
+glob = [
+    "**/package-lock.json",
+    "**/*.lock",
+    "**/src/types/**.generated.*",
+    "**/src/generated/**",
+]
+regex = []
