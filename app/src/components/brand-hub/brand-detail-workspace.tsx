@@ -11,6 +11,7 @@ import { BrandDetailDraftCard } from "@/components/brand-hub/brand-detail-draft-
 import { DraftBanner } from "@/components/brand-hub/draft-banner";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
 import { EvidenceDialog } from "@/components/intelligence-panel/evidence-dialog";
+import { SimilarBrandsSection } from "@/components/brand-hub/similar-brands-section";
 import type { EvidenceBlockProps } from "@/components/evidence-block/types";
 import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
 import { isAnalysingIntakeStatus } from "@/lib/brand-list-filters";
@@ -248,6 +249,8 @@ export function BrandDetailWorkspace({
             </div>
           </div>
         ) : null}
+
+        {hasDna && !analysing ? <SimilarBrandsSection brandId={brandId} /> : null}
 
         {hasDna ? (
           <section className={styles.assetSection} aria-label="Brand assets">
