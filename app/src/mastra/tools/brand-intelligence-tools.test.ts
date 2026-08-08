@@ -75,14 +75,30 @@ const MOCK_PILLAR = {
   source: "brand-intelligence",
 };
 
+const MOCK_USER_ID = "user-123";
+const MOCK_ORG_MEMBER = { org_id: "org-123" };
+
 function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = {}) {
   const client = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: MOCK_USER_ID } }, error: null }),
+    },
     from: vi.fn((table: string) => {
       if (table === "brands") {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }),
+        };
+      }
+      if (table === "org_members") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_ORG_MEMBER, error: null }),
         };
       }
       if (table === "brand_intake_drafts") {
@@ -141,14 +157,32 @@ describe("getBrandProfile", () => {
 
   it("sets hasDraft=true when intake_status=draft_ready", async () => {
     vi.mocked(createClient).mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...MOCK_BRAND, intake_status: "draft_ready" },
-          error: null,
-        }),
-      })),
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: MOCK_USER_ID } }, error: null }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "brands") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { ...MOCK_BRAND, intake_status: "draft_ready" },
+              error: null,
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }),
+          };
+        }
+        if (table === "org_members") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_ORG_MEMBER, error: null }),
+          };
+        }
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: null, error: null }), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+      }),
     } as never);
     const result = await getBrandProfile.execute!({ brandId: BRAND_ID }, {} as never);
     expect((result as { hasDraft: boolean }).hasDraft).toBe(true);
@@ -167,7 +201,7 @@ describe("getBrandScores", () => {
     vi.mocked(createClient).mockReturnValue(
       makeMockClient({
         from: vi.fn((table: string) => {
-          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
+          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
           if (table === "brand_scores") {
             return {
               select: vi.fn().mockReturnThis(),
@@ -180,6 +214,15 @@ describe("getBrandScores", () => {
                 error: null,
               }),
               maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_PILLAR, error: null }),
+            };
+          }
+          if (table === "org_members") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_ORG_MEMBER, error: null }),
             };
           }
           return {};
@@ -196,13 +239,22 @@ describe("getBrandScores", () => {
     vi.mocked(createClient).mockReturnValue(
       makeMockClient({
         from: vi.fn((table: string) => {
-          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
+          if (table === "brands") return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }) };
           if (table === "brand_scores") {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
               maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_PILLAR, error: null }),
+            };
+          }
+          if (table === "org_members") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_ORG_MEMBER, error: null }),
             };
           }
           return {};
@@ -234,12 +286,31 @@ describe("explainPillarTool", () => {
 
   it("throws when pillar score is missing", async () => {
     vi.mocked(createClient).mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: MOCK_USER_ID } }, error: null }),
+      },
       from: vi.fn((table: string) => {
         if (table === "brand_scores") {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }
+        if (table === "brands") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }),
+          };
+        }
+        if (table === "org_members") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: MOCK_ORG_MEMBER, error: null }),
           };
         }
         return makeMockClient().from(table);

@@ -28,6 +28,36 @@ async function resolveOperatorId(accessToken: string): Promise<string> {
   return user.id;
 }
 
+/** Resolve the operator's org from the per-request access token (ALS). */
+async function resolveOperatorOrgId(): Promise<string> {
+  const accessToken = requestToken.getStore();
+  if (!accessToken) throw new Error("Access token not available in request context");
+  const userId = await resolveOperatorId(accessToken);
+  const { data, error } = await adminClient()
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", userId)
+    .order("joined_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) throw new Error("No organization membership for this operator");
+  return data.org_id;
+}
+
+/** Verify the brand belongs to the operator's org; throws if mismatched or not found. */
+async function verifyBrandScope(brandId: string): Promise<void> {
+  const orgId = await resolveOperatorOrgId();
+  const sb = adminClient();
+  const { data, error } = await sb
+    .from("brands")
+    .select("id")
+    .eq("id", brandId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (error) throw new Error(`Brand scope check failed: ${error.message}`);
+  if (!data) throw new Error(`Brand not found in operator organization: ${brandId}`);
+}
+
 const PILLAR_ALIASES: Record<string, string> = {
   visual: "visual",
   "visual identity": "visual",
@@ -113,7 +143,8 @@ export const getBrandProfile = createTool({
     hasProfile: z.boolean(),
     profileSummary: z.string().nullable(),
   }),
-  execute: async ({ brandId }) => {
+   execute: async ({ brandId }) => {
+    await verifyBrandScope(brandId);
     const sb = adminClient();
     const { data, error } = await sb
       .from("brands")
@@ -149,6 +180,7 @@ export const getBrandScores = createTool({
     overallScore: z.number().nullable(),
   }),
   execute: async ({ brandId }) => {
+    await verifyBrandScope(brandId);
     const sb = adminClient();
     const { data, error } = await sb
       .from("brand_scores")
@@ -180,6 +212,7 @@ export const explainPillarTool = createTool({
   }),
   outputSchema: evidenceBlockSchema,
   execute: async ({ brandId, pillar }) => {
+    await verifyBrandScope(brandId);
     const scoreType = normalizePillar(pillar);
     const sb = adminClient();
     const { data, error } = await sb
