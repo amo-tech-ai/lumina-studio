@@ -27,6 +27,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(instructions).toMatch(/Do not send operators to the shoots list when they asked for the wizard/);
   });
 
+  it("production-planner enforces three HITL gates and lookupShotReferences before shot list (AGENT-PLAN-001)", () => {
+    const instructions = String(
+      productionPlannerAgent.getInstructions?.() ?? productionPlannerAgent.instructions ?? "",
+    );
+    expect(instructions).toMatch(/HITL gate 1/i);
+    expect(instructions).toMatch(/lookupShotReferences/);
+    expect(instructions).toMatch(/reference_shot_types/);
+    expect(instructions).toMatch(/Never invent shot angle names/);
+    expect(instructions).toMatch(/saveApprovedShootDraft/);
+    expect(instructions).toMatch(/estimated_budget_usd/);
+  });
+
   it("brand-intelligence teaches shoot-wizard vs shoots list (IPI-731)", () => {
     const instructions = String(
       brandIntelligenceAgent.getInstructions?.() ?? brandIntelligenceAgent.instructions ?? "",
@@ -55,6 +67,8 @@ describe("operator agents — structure (IPI2-121)", () => {
     // shoot-planning chat.
     expect(toolNames).toContain("recommendShootType");
     expect(toolNames).toContain("planDeliverables");
+    expect(toolNames).toContain("lookupShotReferences");
+    expect(toolNames).toContain("generateShotListDraft");
     expect(toolNames).not.toContain("checkTalentAvailability");
     expect(toolNames).not.toContain("draftBookingQuote");
     expect(toolNames).not.toContain("createBookingDraft");
@@ -70,6 +84,7 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("getAssetDnaEvidence");
     expect(toolNames).not.toContain("suggestAssetRetakes");
     expect(toolNames).not.toContain("draftBulkAssetApproval");
+    expect(toolNames).not.toContain("draftCampaignBrief");
   });
 
   it("production-planner does NOT inherit crm-assistant tools (IPI-369 review)", async () => {
@@ -84,12 +99,27 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("draftFollowUp");
   });
 
-  it("creative-director carries exactly its 3 asset-intelligence tools (IPI-261), not the full registry", async () => {
+  it("creative-director carries its asset-intelligence + campaign draft tools (IPI-261, IPI-156), not the full registry", async () => {
     const tools = await creativeDirectorAgent.listTools();
     const toolNames = Object.keys(tools ?? {});
     expect(toolNames.sort()).toEqual(
-      ["draftBulkAssetApproval", "getAssetDnaEvidence", "suggestAssetRetakes"].sort(),
+      [
+        "draftBulkAssetApproval",
+        "draftCampaignBrief",
+        "getCurrentPageContext",
+        "getAssetDnaEvidence",
+        "suggestAssetRetakes",
+      ].sort(),
     );
+  });
+
+  it("creative-director teaches draftCampaignBrief HITL on /app/campaigns (IPI-156)", () => {
+    const instructions = String(
+      creativeDirectorAgent.getInstructions?.() ?? creativeDirectorAgent.instructions ?? "",
+    );
+    expect(instructions).toMatch(/\/app\/campaigns/);
+    expect(instructions).toMatch(/draftCampaignBrief/);
+    expect(instructions).toMatch(/draft awaiting their explicit approval/i);
   });
 
   it("model-match id matches Mastra registry key (IPI-308)", () => {
