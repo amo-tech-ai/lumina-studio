@@ -34,6 +34,9 @@ vi.mock("@/components/brand-hub/brand-detail-draft-card", () => ({
 vi.mock("@/components/brand-hub/draft-banner", () => ({
   DraftBanner: () => <div data-testid="draft-banner-fallback">Draft banner</div>,
 }));
+vi.mock("@/components/brand-hub/similar-brands-section", () => ({
+  SimilarBrandsSection: () => <div data-testid="similar-brands-section" />,
+}));
 const mockUseAgentContext = vi.fn();
 vi.mock("@copilotkit/react-core/v2", () => ({
   useAgentContext: (...args: unknown[]) => mockUseAgentContext(...args),
