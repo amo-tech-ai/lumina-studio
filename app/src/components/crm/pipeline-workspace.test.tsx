@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 
 vi.mock("./pipeline-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./deal-stage-control.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -12,14 +12,13 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
-import { PipelineWorkspace } from "./pipeline-workspace";
+import { PipelineWorkspace, resolvePipelineAccordionStage } from "./pipeline-workspace";
 import type { DealRow } from "@/lib/crm/queries";
+import type { CrmDealStage } from "@/lib/crm/status-tokens";
 
 // Passed explicitly as the `now` prop (never Date.now() inside the
 // component) — see the hydration-mismatch fix in pipeline-workspace.tsx.
 const NOW = new Date("2026-07-08T12:00:00.000Z").getTime();
-
-afterEach(() => cleanup());
 
 function deal(overrides: Partial<DealRow> = {}): DealRow {
   return {
@@ -43,7 +42,29 @@ function deal(overrides: Partial<DealRow> = {}): DealRow {
 const COMPANY_NAMES = { c1: "Acme Athletic", c2: "Vega Studios" };
 const OWNER_NAMES = { u1: "Alex Owner" };
 
+function stubMatchMedia(matches: boolean) {
+  return vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+    matches,
+    media: String(query),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    onchange: null,
+  }) as unknown as MediaQueryList);
+}
+
 describe("PipelineWorkspace", () => {
+  beforeEach(() => {
+    stubMatchMedia(false);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
   it("renders all 6 stage columns with correct labels", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} ownerNames={OWNER_NAMES} fetchError={null} now={NOW} />);
     for (const label of ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"]) {
@@ -240,6 +261,151 @@ describe("PipelineWorkspace", () => {
       expect(orphanTotals).toHaveLength(0);
       expect(col.querySelector(".cards .columnTotal")).toBeNull();
     }
+  });
+
+  it("uses native details accordion with exclusive name on narrow viewports (IPI-572)", async () => {
+    stubMatchMedia(true);
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[deal({ stage: "proposal" }), deal({ id: "d2", stage: "lead", value: 1000 })]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll("details[name='crm-pipeline']")).toHaveLength(6);
+    });
+
+    expect(container.querySelector("[data-pipeline-layout='accordion']")).not.toBeNull();
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+
+    // Seed opens first stage with deals (Lead).
+    await waitFor(() => {
+      expect(lead.open).toBe(true);
+    });
+    expect(proposal.open).toBe(false);
+
+    for (const el of container.querySelectorAll("details[name='crm-pipeline']")) {
+      expect(el.getAttribute("name")).toBe("crm-pipeline");
+    }
+    expect(lead.querySelector("summary.columnHeader")).not.toBeNull();
+    expect(lead.querySelector(".cards")).not.toBeNull();
+  });
+
+  it("resolvePipelineAccordionStage keeps the newly opened stage when a stale close arrives last (IPI-572)", () => {
+    // Simulates React functional updates for open(proposal) then close(lead)
+    // in one batch — the bug path was close writing null from a stale closure.
+    let open: CrmDealStage | null = "lead";
+    open = resolvePipelineAccordionStage(open, "proposal", true);
+    open = resolvePipelineAccordionStage(open, "lead", false);
+    expect(open).toBe("proposal");
+
+    // Close-only still collapses the active stage.
+    open = resolvePipelineAccordionStage(open, "proposal", false);
+    expect(open).toBeNull();
+
+    // Close for a different stage is a no-op.
+    open = "qualified";
+    open = resolvePipelineAccordionStage(open, "lead", false);
+    expect(open).toBe("qualified");
+  });
+
+  it("opens the destination stage after a non-terminal move on narrow viewports (IPI-572)", async () => {
+    stubMatchMedia(true);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ stage: "qualified", updated_at: "2026-07-08T12:00:01.000Z" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[deal({ id: "d-move", stage: "lead", value: 1000 })]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const qualified = container.querySelector("details[data-stage='qualified']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    fireEvent.click(screen.getByRole("button", { name: "Qualified" }));
+    await waitFor(() => expect(qualified.open).toBe(true));
+    expect(lead.open).toBe(false);
+  });
+
+  it("retargets the accordion to the first filtered stage with deals (IPI-572)", async () => {
+    stubMatchMedia(true);
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[
+          deal({ id: "d-lead", stage: "lead", value: 1000, owner: "u2" }),
+          deal({ id: "d-prop", stage: "proposal", value: 8000, owner: "u1" }),
+        ]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={{ u1: "Alex Owner", u2: "Other Owner" }}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Owner" }), { target: { value: "u1" } });
+    await waitFor(() => expect(proposal.open).toBe(true));
+    expect(lead.open).toBe(false);
+  });
+
+  it("keeps destination open after move when at-risk filter hides the moved deal (IPI-572)", async () => {
+    stubMatchMedia(true);
+    const fresh = "2026-07-08T12:00:01.000Z";
+    const stale = "2026-06-01T00:00:00.000Z"; // ≥14d before NOW → at risk
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ stage: "qualified", updated_at: fresh }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[
+          deal({ id: "d-move", stage: "lead", value: 1000, updated_at: stale }),
+          deal({ id: "d-prop", stage: "proposal", value: 2000, updated_at: stale }),
+        ]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "At risk only" }));
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const qualified = container.querySelector("details[data-stage='qualified']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    const moveToQualified = within(lead).getByRole("button", { name: "Qualified" });
+    fireEvent.click(moveToQualified);
+    // Destination must stay open even though the fresh updated_at drops the card
+    // from the at-risk filter (byStage empty) — otherwise we jump to Proposal.
+    await waitFor(() => expect(qualified.open).toBe(true));
+    expect(proposal.open).toBe(false);
   });
 
   it("shows a locked badge on Won and Lost columns only", () => {
