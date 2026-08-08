@@ -15,6 +15,12 @@ import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
 import { assertNoSecrets } from "./assert-no-secrets.mjs";
 import { isPreviewSignoutSuccessRedirect } from "./signout-redirect.mjs";
+import {
+  classifyConsoleError,
+  classifyNetworkResponse,
+  countInfo503Responses,
+  info503ExceedsThreshold,
+} from "../../../copilotkit/classifiers/info-503-threshold.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
@@ -25,7 +31,7 @@ const DEFAULT_PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
 const PREVIEW = (process.env.BASE_URL || DEFAULT_PREVIEW).replace(/\/$/, "");
 const READONLY = process.env.VERIFY_READONLY === "1";
 const MAX_TRANSIENT_RETRIES = 2; // Page navigation retries (login, /app, settle, logout)
-const MAX_INFO_503_RETRIES = 1; // Documented /api/copilotkit/info 503 threshold (IPI-955)
+// IPI-967: MAX_INFO_503_RETRIES is now defined in info-503-threshold.mjs as the single source of truth
 const REPO_ROOT = process.cwd();
 const SECRET_HEADER_NAME_RE =
   /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
@@ -581,48 +587,15 @@ async function main() {
     await page.screenshot({ path: join(SHOTS, "03-chat.png"), fullPage: false });
 
     // 9. Console / network critical failures
-    // IPI-964: Filter out expected retryable 503 errors from blockingConsole
-    const blockingConsole = consoleLog.errors.filter((e) => {
-      const t = e.text || "";
-      // Ignore documented retryable /api/copilotkit/info 503 errors (IPI-955)
-      if (/Runtime info request failed with status 503/i.test(t)) return false;
-      if (/Failed to load resource.*503.*copilotkit\/info/i.test(t)) return false;
-      
-      if (/hydration|Hydration/i.test(t)) return true;
-      if (/Uncaught|uncaught/i.test(t)) return true;
-      if (/Worker|Miniflare|Cloudflare/i.test(t) && /error/i.test(t)) return true;
-      if (/ChunkLoadError|Script error/i.test(t)) return true;
-      // Ignore known noisy third-party
-      if (/favicon|Download the React DevTools/i.test(t)) return false;
-      if (/Failed to load resource.*favicon/i.test(t)) return false;
-      return e.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
-    });
-    // IPI-964: Track /api/copilotkit/info 503 retries per IPI-955 documented contract
-    // Count first, then decide tolerance — ensures evidence blob is accurate
-    const info503Responses = networkLog.filter(
-      (n) => (n.path || "") === "/api/copilotkit/info" && n.method === "GET" && n.status === 503
-    );
-    const info503Count = info503Responses.length;
-    const info503ExceedsThreshold = info503Count > MAX_INFO_503_RETRIES;
+    // IPI-967: Use classifier for console error classification
+    const blockingConsole = consoleLog.errors.filter((e) => classifyConsoleError(e));
+    
+    // IPI-967: Use classifier for network response classification
+    const info503Count = countInfo503Responses(networkLog);
     
     const criticalFailed = networkLog.filter((n) => {
-      const p = n.path || "";
-      if (!p.includes("/api/")) return false;
-      
-      // Documented retryable 503 on /api/copilotkit/info (IPI-955)
-      // Include all in evidence when threshold is exceeded
-      if (p === "/api/copilotkit/info" && n.method === "GET" && n.status === 503) {
-        return info503ExceedsThreshold;
-      }
-      
-      // Generic 5xx are critical
-      if (n.status >= 500) return true;
-      
-      // auth endpoints that should work while logged in
-      if (p.includes("/api/copilotkit") && n.method === "POST" && n.status >= 400)
-        return true;
-      if (p.includes("/api/ai/health") && n.status !== 200) return true;
-      return false;
+      const classification = classifyNetworkResponse(n, info503Count, "auth");
+      return classification === "critical";
     });
     mark(
       "09_console_network",
@@ -959,9 +932,13 @@ async function main() {
   writeEvidence(join(OUT, "network-summary.json"), {
     count: networkLog.length,
     entries: networkLog,
-    critical_failures: networkLog.filter(
-      (n) => (n.path || "").includes("/api/") && n.status >= 500,
-    ),
+    // IPI-966: Use classifier for network-summary.json critical failures
+    // This ensures consistency with the gate semantics in 09_console_network
+    info503Count: countInfo503Responses(networkLog),
+    critical_failures: networkLog.filter((n) => {
+      const classification = classifyNetworkResponse(n, countInfo503Responses(networkLog), "auth");
+      return classification === "critical";
+    }),
   });
 
   console.log("\n=== SUMMARY ===");
