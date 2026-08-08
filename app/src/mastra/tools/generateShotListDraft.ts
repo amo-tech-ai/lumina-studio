@@ -1,11 +1,23 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import {
+  buildShotListFromReferences,
+  type ReferenceShotType,
+} from "@/lib/shoot/shot-list-from-references";
 
 const ApprovedDeliverableSchema = z.object({
   id: z.string().uuid().optional(),
   channel: z.string(),
   format: z.string().optional(),
   quantity: z.number().int().positive(),
+});
+
+const ReferenceShotTypeSchema = z.object({
+  id: z.string(),
+  angle: z.string(),
+  description: z.string(),
+  channel_fit: z.array(z.string()),
+  background: z.string().nullable().optional(),
 });
 
 const ShotSchema = z.object({
@@ -15,17 +27,25 @@ const ShotSchema = z.object({
   lighting: z.string(),
   deliverable_ids: z.array(z.string()),
   notes: z.string().optional(),
+  reference_id: z.string(),
 });
 
 export const generateShotListDraft = createTool({
   id: "generateShotListDraft",
   description:
-    "Generate a shot list draft derived from approved deliverables. Requires at least one approved deliverable (HITL gate).",
+    "Generate a shot list draft from operator-approved deliverables and lookupShotReferences rows. " +
+    "Requires approved deliverables (HITL gate 1) and reference_shot_types from lookupShotReferences — " +
+    "never invent angle names.",
   inputSchema: z.object({
-    // ponytail: min(1) is the HITL invariant — shot list cannot exist without approved deliverables
     approved_deliverables: z
       .array(ApprovedDeliverableSchema)
       .min(1, "At least one approved deliverable is required before generating a shot list"),
+    reference_shot_types: z
+      .array(ReferenceShotTypeSchema)
+      .min(
+        1,
+        "reference_shot_types is required — call lookupShotReferences first and pass its shot_types",
+      ),
     shoot_type: z.string().optional(),
     brand_dna_summary: z.string().optional(),
     product_names: z.array(z.string()).optional(),
@@ -36,34 +56,18 @@ export const generateShotListDraft = createTool({
     uncovered_deliverable_warnings: z.array(z.string()),
   }),
   execute: async (context) => {
-    const { approved_deliverables, product_names = [] } = context;
+    const { approved_deliverables, reference_shot_types, product_names = [] } = context;
 
-    const coveredIds = new Set<string>();
-    let shotCounter = 0;
-    const shots = approved_deliverables.flatMap((deliverable, di) => {
-      const id = deliverable.id ?? `deliverable-${di}`;
-      coveredIds.add(id);
-      // Generate shots proportional to quantity (1 shot per 2-3 assets)
-      const shotCount = Math.max(1, Math.ceil(deliverable.quantity / 3));
-      return Array.from({ length: shotCount }, (_, si) => ({
-        shot_number: ++shotCounter,
-        description: `${deliverable.channel} ${deliverable.format ?? ""} — ${product_names[0] ?? "hero product"}`,
-        angle: si === 0 ? "front" : si === 1 ? "3/4 angle" : "detail",
-        lighting: deliverable.channel.includes("feed") ? "natural window light" : "studio strobe",
-        deliverable_ids: [id],
-        notes: undefined,
-      }));
-    });
-
-    // Flag any deliverable not mapped to a shot (shouldn't happen here, but defensive)
-    const uncovered = approved_deliverables
-      .filter((d, i) => !coveredIds.has(d.id ?? `deliverable-${i}`))
-      .map((d) => `Deliverable ${d.channel}/${d.format} has no shots`);
+    const { shots, uncovered_deliverable_warnings } = buildShotListFromReferences(
+      approved_deliverables,
+      reference_shot_types as ReferenceShotType[],
+      product_names,
+    );
 
     return {
       shots,
       total_shots: shots.length,
-      uncovered_deliverable_warnings: uncovered,
+      uncovered_deliverable_warnings,
     };
   },
 });

@@ -281,6 +281,28 @@ describe("verifyPageContextClaims — org verification of browser-supplied IDs",
     expect(client.from).not.toHaveBeenCalledWith("shoot_portfolio_view");
   });
 
+  it("strips an entry carrying both active_brand_id (owned) and brand_id (foreign)", async () => {
+    const dualEntry = {
+      description: "Campaigns workspace — operator has brand-1 open but claims brand-2.",
+      value: {
+        surface: "campaigns",
+        active_brand_id: "brand-1",
+        brand_id: "brand-999",
+      },
+    };
+    const client = mockSupabaseClient({
+      brands: [{ id: "brand-1", org_id: "org-1" }],
+    });
+    const result = await verifyPageContextClaims(
+      { available: true, contexts: [dualEntry] },
+      identity(client),
+    );
+    // The foreign brand_id claim must fail the entire entry, even though
+    // active_brand_id was valid.
+    expect(result.contexts[0].verified).toBe(false);
+    expect(result.contexts[0].value).toEqual({});
+  });
+
   it("fails closed when the verification query errors", async () => {
     const client = mockSupabaseClient({ error: { message: "boom" } });
     const result = await verifyPageContextClaims(
