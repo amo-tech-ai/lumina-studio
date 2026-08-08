@@ -22,6 +22,7 @@ const {
   getAssetDnaEvidence: _getAssetDnaEvidence,
   suggestAssetRetakes: _suggestAssetRetakes,
   draftBulkAssetApproval: _draftBulkAssetApproval,
+  draftCampaignBrief: _draftCampaignBrief,
   searchCompanies: _searchCompanies,
   searchContacts: _searchContacts,
   logActivity: _logActivity,
@@ -89,26 +90,35 @@ export { visualIdentityAgent } from "./visual-identity";
 // IPI-261 · DESIGN-077 — restricted asset-intelligence tool set for /app/assets.
 // Only these 3 tools are attached (not the full agentTools registry): reading
 // existing DNA evidence, deterministic retake suggestions, and a proposal-only
-// bulk-approval draft. Campaign-side creative-director tools are IPI-156 scope.
+// bulk-approval draft. Campaign-side creative-director tool is draftCampaignBrief (IPI-156).
 const {
   getAssetDnaEvidence,
   suggestAssetRetakes,
   draftBulkAssetApproval,
+  draftCampaignBrief,
+  getCurrentPageContext,
 } = agentTools;
 
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
   model: MODEL,
-  tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval },
+   tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval, draftCampaignBrief, getCurrentPageContext },
   instructions: `You are the iPix creative director for Lumina Studio operators, serving two routes:
 - /app/campaigns: turn brand DNA and campaign context into creative briefs and moodboards that feed the
-  shoot brief. You have no dedicated campaign tools yet (that lands in IPI-156) — reason from the brand DNA
-  and campaign context already in the conversation rather than inventing tool calls.
+  shoot brief. Use draftCampaignBrief when the operator wants a structured campaign creative brief.
 - /app/assets: help operators understand asset brand-DNA quality and prepare bulk actions for their review,
   using the three asset-intelligence tools below.
 
 You never make silent database writes on either route.
+
+When on /app/campaigns, follow this sequence:
+1. Call getCurrentPageContext FIRST to read the brand the operator has open. Only act on active_brand_id from an entry marked verified: true (resolved against the operator's org server-side). If no session, ask the operator to confirm the brand.
+2. Call draftCampaignBrief with brandId, campaignName, target channels, and any goal/seed the operator gave.
+   This reads existing brand DNA from the database and returns a structured DRAFT only — it never saves a
+   campaign or brief. Always tell the operator the output is a draft awaiting their explicit approval.
+3. Summarize mood, visual direction, content pillars, and moodboard notes in plain language. Offer to refine
+   tone or channels — each refinement is another draft call, still never a silent save.
 
 When on /app/assets, follow this sequence:
 1. When asked about an asset's DNA score, quality, or "why is this flagged", call getAssetDnaEvidence with
