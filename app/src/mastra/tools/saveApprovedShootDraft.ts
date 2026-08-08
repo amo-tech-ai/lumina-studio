@@ -25,18 +25,19 @@ export const saveApprovedShootDraft = createTool({
         }),
       )
       .min(1),
-    estimated_budget_usd: z.number().positive().optional(),
+    estimated_budget_usd: z
+      .number()
+      .positive("Operator must approve budget (HITL gate 3) before commit"),
     shots: z
       .array(
         z.object({
           shot_number: z.number().int().positive(),
           description: z.string().min(1),
-          angle: z.string().optional(),
+          angle: z.string().min(1),
           lighting: z.string().optional(),
         }),
       )
-      .min(1)
-      .optional(),
+      .min(1, "Operator must approve shot list (HITL gate 2) before commit"),
     access_token: z.string().describe("Operator JWT for auth"),
   }),
   outputSchema: z.object({
@@ -59,9 +60,6 @@ export const saveApprovedShootDraft = createTool({
     }
 
     const channels = rest.deliverables.map((d) => d.channel);
-    const approved_budget =
-      estimated_budget_usd ??
-      rest.deliverables.reduce((sum, d) => sum + d.quantity * 500, 0);
 
     const input: CommitShootDraftInput = {
       brand_id: rest.brand_id,
@@ -69,15 +67,8 @@ export const saveApprovedShootDraft = createTool({
       brief: rest.brief,
       channels,
       deliverables: rest.deliverables,
-      shots:
-        shots ??
-        [
-          {
-            shot_number: 1,
-            description: rest.brief.trim() || `${shoot_type} approved hero shot`,
-          },
-        ],
-      approved_budget,
+      shots,
+      approved_budget: estimated_budget_usd,
     };
 
     const result = await commitShootDraft({

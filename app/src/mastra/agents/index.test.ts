@@ -27,6 +27,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(instructions).toMatch(/Do not send operators to the shoots list when they asked for the wizard/);
   });
 
+  it("production-planner enforces three HITL gates and lookupShotReferences before shot list (AGENT-PLAN-001)", () => {
+    const instructions = String(
+      productionPlannerAgent.getInstructions?.() ?? productionPlannerAgent.instructions ?? "",
+    );
+    expect(instructions).toMatch(/HITL gate 1/i);
+    expect(instructions).toMatch(/lookupShotReferences/);
+    expect(instructions).toMatch(/reference_shot_types/);
+    expect(instructions).toMatch(/Never invent shot angle names/);
+    expect(instructions).toMatch(/saveApprovedShootDraft/);
+    expect(instructions).toMatch(/estimated_budget_usd/);
+  });
+
   it("brand-intelligence teaches shoot-wizard vs shoots list (IPI-731)", () => {
     const instructions = String(
       brandIntelligenceAgent.getInstructions?.() ?? brandIntelligenceAgent.instructions ?? "",
@@ -55,6 +67,8 @@ describe("operator agents — structure (IPI2-121)", () => {
     // shoot-planning chat.
     expect(toolNames).toContain("recommendShootType");
     expect(toolNames).toContain("planDeliverables");
+    expect(toolNames).toContain("lookupShotReferences");
+    expect(toolNames).toContain("generateShotListDraft");
     expect(toolNames).not.toContain("checkTalentAvailability");
     expect(toolNames).not.toContain("draftBookingQuote");
     expect(toolNames).not.toContain("createBookingDraft");
