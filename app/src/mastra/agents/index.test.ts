@@ -70,6 +70,7 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("getAssetDnaEvidence");
     expect(toolNames).not.toContain("suggestAssetRetakes");
     expect(toolNames).not.toContain("draftBulkAssetApproval");
+    expect(toolNames).not.toContain("draftCampaignBrief");
   });
 
   it("production-planner does NOT inherit crm-assistant tools (IPI-369 review)", async () => {
@@ -84,12 +85,27 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("draftFollowUp");
   });
 
-  it("creative-director carries exactly its 3 asset-intelligence tools (IPI-261), not the full registry", async () => {
+  it("creative-director carries its asset-intelligence + campaign draft tools (IPI-261, IPI-156), not the full registry", async () => {
     const tools = await creativeDirectorAgent.listTools();
     const toolNames = Object.keys(tools ?? {});
     expect(toolNames.sort()).toEqual(
-      ["draftBulkAssetApproval", "getAssetDnaEvidence", "suggestAssetRetakes"].sort(),
+      [
+        "draftBulkAssetApproval",
+        "draftCampaignBrief",
+        "getCurrentPageContext",
+        "getAssetDnaEvidence",
+        "suggestAssetRetakes",
+      ].sort(),
     );
+  });
+
+  it("creative-director teaches draftCampaignBrief HITL on /app/campaigns (IPI-156)", () => {
+    const instructions = String(
+      creativeDirectorAgent.getInstructions?.() ?? creativeDirectorAgent.instructions ?? "",
+    );
+    expect(instructions).toMatch(/\/app\/campaigns/);
+    expect(instructions).toMatch(/draftCampaignBrief/);
+    expect(instructions).toMatch(/draft awaiting their explicit approval/i);
   });
 
   it("model-match id matches Mastra registry key (IPI-308)", () => {
