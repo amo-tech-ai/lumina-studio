@@ -14,7 +14,7 @@ const POST_PER_ASSET = 45;
 export const estimateShootBudget = createTool({
   id: "estimateShootBudget",
   description:
-    "Generate a line-item budget estimate for a shoot. All figures are estimates pending operator HITL approval.",
+    "Generate a line-item budget estimate for a shoot after the operator approves the shot list (HITL gate 2). All figures are estimates pending operator HITL approval before commit.",
   inputSchema: z.object({
     crew_count: z.number().int().min(1),
     studio_type: z.enum(["rental", "owned", "location", "outdoor"]),

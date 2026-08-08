@@ -6,6 +6,8 @@
  */
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+import { buildShotListFromReferences } from "@/lib/shoot/shot-list-from-references";
+import { queryShotReferences } from "@/lib/shoot/query-shot-references";
 
 const DeliverableSchema = z.object({
   id: z.string().optional(),
@@ -21,6 +23,7 @@ const ShotSchema = z.object({
   lighting: z.string(),
   deliverable_ids: z.array(z.string()),
   notes: z.string().optional(),
+  reference_id: z.string(),
 });
 
 const BudgetSchema = z.object({
@@ -44,7 +47,7 @@ const CHANNEL_DEFAULTS: Record<string, { format: string; quantity: number }[]> =
   website: [{ format: "16:9 JPG hero", quantity: 3 }, { format: "1:1 JPG card", quantity: 6 }],
 };
 
-// ── Gate 1: plan deliverables → operator approves ─────────────────────────────
+const ProductCategoryEnum = z.enum(["clothing", "beauty", "accessories", "home_goods", "ai_services"]);
 
 const deliverableGateStep = createStep({
   id: "deliverable-gate",
@@ -53,6 +56,7 @@ const deliverableGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum.default("clothing"),
   }),
   suspendSchema: z.object({
     deliverables: z.array(DeliverableSchema),
@@ -68,6 +72,7 @@ const deliverableGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum,
     approved_deliverables: z.array(DeliverableSchema),
     total_assets: z.number(),
   }),
@@ -92,6 +97,7 @@ const deliverableGateStep = createStep({
       shoot_name: inputData.shoot_name,
       brief: inputData.brief,
       channels: inputData.channels,
+      product_category: inputData.product_category ?? "clothing",
       approved_deliverables: resumeData.approved_deliverables,
       total_assets: resumeData.approved_deliverables.reduce((s, d) => s + d.quantity, 0),
     };
@@ -107,6 +113,7 @@ const shotListGateStep = createStep({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    product_category: ProductCategoryEnum,
     approved_deliverables: z.array(DeliverableSchema),
     total_assets: z.number(),
   }),
@@ -114,12 +121,21 @@ const shotListGateStep = createStep({
     shots: z.array(ShotSchema),
     uncovered_warnings: z.array(z.string()),
     total_shots: z.number(),
+    trusted_reference_ids: z.array(z.string()),
     message: z.string(),
   }),
-  resumeSchema: z.object({
-    approved: z.boolean(),
-    approved_shots: z.array(ShotSchema).min(1),
-  }),
+  resumeSchema: z.discriminatedUnion("approved", [
+    z.object({
+      approved: z.literal(true),
+      approved_shots: z.array(ShotSchema).min(1),
+      trusted_reference_ids: z.array(z.string()),
+    }),
+    z.object({
+      approved: z.literal(false),
+      approved_shots: z.array(ShotSchema).optional(),
+      trusted_reference_ids: z.array(z.string()).optional(),
+    }),
+  ]),
   outputSchema: z.object({
     brand_id: z.string(),
     shoot_name: z.string(),
@@ -132,27 +148,42 @@ const shotListGateStep = createStep({
   }),
   execute: async ({ inputData, resumeData, suspend }) => {
     if (!resumeData?.approved) {
-      let shotCounter = 0;
-      const shots: z.infer<typeof ShotSchema>[] = inputData.approved_deliverables.flatMap((d) => {
-        const count = Math.max(1, Math.ceil(d.quantity / 3));
-        return Array.from({ length: count }, (_, si) => ({
-          shot_number: ++shotCounter,
-          description: `${d.channel} ${d.format ?? ""} — hero product`,
-          angle: si === 0 ? "front" : si === 1 ? "3/4 angle" : "detail",
-          lighting: d.channel.includes("feed") ? "natural window light" : "studio strobe",
-          deliverable_ids: [d.id ?? d.channel],
-        }));
-      });
-      const coveredIds = new Set(shots.flatMap((s) => s.deliverable_ids));
-      const uncovered = inputData.approved_deliverables
-        .filter((d) => !coveredIds.has(d.id ?? d.channel))
-        .map((d) => `Deliverable ${d.channel}/${d.format ?? ""} has no shots`);
+      const referenceShotTypes = await queryShotReferences(inputData.product_category, inputData.channels);
+      const trustedReferenceIds = referenceShotTypes.map((r) => r.id);
+      if (!referenceShotTypes.length) {
+        return await suspend({
+          shots: [],
+          uncovered_warnings: inputData.approved_deliverables.map(
+            (d) => `Deliverable ${d.channel}/${d.format ?? ""} has no matching reference angles`,
+          ),
+          total_shots: 0,
+          trusted_reference_ids: [],
+          message:
+            "No shot references found for these channels — please revise deliverables or channels to include coverage (e.g. shopify_pdp, instagram_feed, tiktok).",
+        });
+      }
+      const { shots, uncovered_deliverable_warnings } = buildShotListFromReferences(
+        inputData.approved_deliverables,
+        referenceShotTypes,
+      );
       return await suspend({
         shots,
-        uncovered_warnings: uncovered,
+        uncovered_warnings: uncovered_deliverable_warnings,
         total_shots: shots.length,
-        message: "Review shot list. All deliverables must be covered before approving.",
+        trusted_reference_ids: trustedReferenceIds,
+        message:
+          "Review shot list grounded in the reference library. Approve before budget — angles are from lookupShotReferences, not invented.",
       });
+    }
+    // Validate resumed shots against the trusted reference ids persisted at suspend time.
+    // This avoids re-querying the DB, which is non-deterministic (no ORDER BY, limit 20).
+    const trustedIds = new Set(resumeData.trusted_reference_ids);
+    for (const shot of resumeData.approved_shots) {
+      if (!trustedIds.has(shot.reference_id)) {
+        throw new Error(
+          `Invalid reference_id "${shot.reference_id}" in resumed shot ${shot.shot_number} — does not match lookupShotReferences`,
+        );
+      }
     }
     return {
       brand_id: inputData.brand_id,
