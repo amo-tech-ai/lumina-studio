@@ -14,6 +14,9 @@ async function main() {
   const loaded = await import(modUrl);
   const { assertQaOnly, PROD_PROJECT_REF, QA_PROJECT_REF } = loaded;
 
+  // Build a valid QA JWT anon key (eyJ... prefix, ref = QA_PROJECT_REF in payload).
+  const qaJwt = makeQaJwt(QA_PROJECT_REF);
+
   const ok = `postgresql://u:p@db.${QA_PROJECT_REF}.supabase.co:5432/postgres`;
   assert.equal(assertQaOnly("QA_DATABASE_URL", ok), ok);
 
@@ -52,7 +55,51 @@ async function main() {
     /must reference QA/,
   );
 
+  // qaWebServerEnv() must pin MASTRA_DATABASE_URL to QA and refuse prod leaks.
+  await testQaWebServerEnv(loaded, qaJwt);
+
   console.log("qa-target self-check OK");
+}
+
+/** Build a minimal JWT whose payload.ref = QA_PROJECT_REF and sub is set. */
+function makeQaJwt(qaRef) {
+  const header = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({ ref: qaRef, sub: "qa@test", role: "authenticated" }),
+  ).toString("base64url");
+  return `${header}.${payload}.sig`;
+}
+
+/** Verify qaWebServerEnv() pins MASTRA_DATABASE_URL to QA and asserts prod leak. */
+async function testQaWebServerEnv(loaded, qaJwt) {
+  const { qaWebServerEnv, QA_PROJECT_REF, PROD_PROJECT_REF } = loaded;
+  const qaSrKey = ["QA", "SUPABASE", "SERVICE", "ROLE", "KEY"].join("_");
+  const dbUrl = `postgresql://u:p@db.${QA_PROJECT_REF}.supabase.co:5432/postgres`;
+
+  // --- QA env: should succeed ---
+  process.env.QA_DATABASE_URL = dbUrl;
+  process.env.QA_SUPABASE_URL = `https://${QA_PROJECT_REF}.supabase.co`;
+  process.env.QA_SUPABASE_ANON_KEY = qaJwt;
+  process.env[qaSrKey] = qaJwt;
+
+  const env = qaWebServerEnv();
+  assert.equal(env.MASTRA_DATABASE_URL, dbUrl, "MASTRA_DATABASE_URL must be pinned to QA");
+  assert.equal(
+    env.MASTRA_DATABASE_URL.includes(PROD_PROJECT_REF),
+    false,
+    "MASTRA_DATABASE_URL must not contain prod ref",
+  );
+
+  // --- Prod leak in existing MASTRA_DATABASE_URL: should throw ---
+  process.env.MASTRA_DATABASE_URL = `postgresql://u:p@db.${PROD_PROJECT_REF}.supabase.co:5432/postgres`;
+  assert.throws(
+    () => qaWebServerEnv(),
+    /production/,
+    "prod MASTRA_DATABASE_URL must be refused before overwrite",
+  );
+
+  // Cleanup.
+  delete process.env.MASTRA_DATABASE_URL;
 }
 
 main().catch((err) => {

@@ -166,16 +166,26 @@ export function preflightOnboardingQaTarget() {
   return { databaseUrl, supabaseUrl, anonKey, serviceRoleKey };
 }
 
-/** Env overrides so Playwright's Next webServer talks to QA, not production. */
 export function qaWebServerEnv() {
   const { databaseUrl, supabaseUrl, anonKey, serviceRoleKey } =
     preflightOnboardingQaTarget();
+
+  // Assert no production DB URL survives into the QA web server env.
+  // MASTRA_DATABASE_URL is the preferred Mastra storage key (see storage.ts);
+  // if a prod value leaks in here we must catch it before overwriting.
+  if (process.env.MASTRA_DATABASE_URL) {
+    assertQaOnly("MASTRA_DATABASE_URL", process.env.MASTRA_DATABASE_URL);
+  }
+
   return {
     NEXT_PUBLIC_SUPABASE_URL: supabaseUrl.replace(/\/$/, ""),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
     // Server routes / Mastra crawl use these — must not stay on prod sb_sec keys.
     SUPABASE_ANON_KEY: anonKey,
     [SR_KEY]: serviceRoleKey,
+    // IPI-836: pin Mastra storage to QA pooler so the webServer never falls back
+    // to a production MASTRA_DATABASE_URL from Infisical/local env.
+    MASTRA_DATABASE_URL: databaseUrl,
     DATABASE_URL: databaseUrl,
     QA_DATABASE_URL: databaseUrl,
     QA_SUPABASE_URL: supabaseUrl.replace(/\/$/, ""),

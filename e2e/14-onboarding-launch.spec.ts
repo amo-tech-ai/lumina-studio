@@ -188,8 +188,11 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
         session: "resumed",
       }).catch(() => null);
       // Restore brand to draft_ready even if assertions fail, so the fixture
-      // can be reused by subsequent runs.
-      await resetBrandToDraftReady(draft.brandId);
+      // can be reused by subsequent runs. Cleanup failure must never mask the
+      // original test error — catch and log separately (Devin cycle-3 BUG).
+      await resetBrandToDraftReady(draft.brandId).catch((e) => {
+        console.error("[IPI-836 cleanup] failed to reset brand to draft_ready:", e);
+      });
       if (approved) {
         logProgress("post-approve", formatOnboardingProgress(approved));
       }

@@ -84,6 +84,8 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.QA_SUPABASE_ANON_KEY;
 // Force overwrite — loadEnv will not replace prod sb_sec / sb_pub already in process.env.
 process.env.SUPABASE_ANON_KEY = process.env.QA_SUPABASE_ANON_KEY;
 process.env[SR_KEY] = process.env[QA_SR_KEY];
+// IPI-836: pin Mastra storage to QA pooler — force-overwrite any inherited prod URL.
+process.env.MASTRA_DATABASE_URL = process.env.QA_DATABASE_URL;
 process.env.DATABASE_URL = process.env.QA_DATABASE_URL;
 process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH =
   process.env.QA_DATABASE_URL;
