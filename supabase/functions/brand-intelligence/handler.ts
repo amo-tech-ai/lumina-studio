@@ -18,13 +18,20 @@ import {
   generateStructuredContent as generateGeminiStructuredContent,
   resolveGeminiModel,
 } from "../_shared/gemini.ts";
-import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
+import {
+  resolveBiProvider,
+  resolveCloudflareModel,
+  resolveGroqModelId,
+} from "../_shared/llm/allowlist.ts";
 import {
   biUsedCrawlInRequest,
   groqEmptyCrawlError,
   missingBiProviderConfigError,
 } from "../_shared/bi-groq-guards.ts";
-import { generateStructuredContent as generateLlmStructuredContent } from "../_shared/llm/structured.ts";
+import {
+  generateStructuredContent as generateLlmStructuredContent,
+  StructuredOutputValidationError,
+} from "../_shared/llm/structured.ts";
 import type {
   StructuredGenerationLog,
   StructuredGenerationOptions,
@@ -202,12 +209,21 @@ async function markIntakeFailedIfRunning(
 
 type LlmStructuredGenerate = typeof generateLlmStructuredContent;
 let llmStructuredGenerateForTests: LlmStructuredGenerate | null = null;
+type GeminiStructuredGenerate = typeof generateGeminiStructuredContent;
+let geminiStructuredGenerateForTests: GeminiStructuredGenerate | null = null;
 
 /** Test seam — override shared LLM call in handler tests only. */
 export function __setLlmStructuredGenerateForTests(
   fn: LlmStructuredGenerate | null,
 ): void {
   llmStructuredGenerateForTests = fn;
+}
+
+/** Test seam — override the direct Gemini call in handler tests only. */
+export function __setGeminiStructuredGenerateForTests(
+  fn: GeminiStructuredGenerate | null,
+): void {
+  geminiStructuredGenerateForTests = fn;
 }
 
 function runLlmStructuredContent<T>(
@@ -217,24 +233,122 @@ function runLlmStructuredContent<T>(
   return generate<T>(options);
 }
 
+function runGeminiStructuredContent(
+  options: Parameters<GeminiStructuredGenerate>[0],
+): ReturnType<GeminiStructuredGenerate> {
+  const generate = geminiStructuredGenerateForTests ??
+    generateGeminiStructuredContent;
+  return generate(options);
+}
+
+function parseGeminiProfile(text: string): BrandProfilePayload {
+  try {
+    return JSON.parse(text) as BrandProfilePayload;
+  } catch {
+    throw new StructuredOutputValidationError(
+      "Invalid structured JSON from Gemini",
+    );
+  }
+}
+
+type BiDiagnosticStage =
+  | "REQUEST_RECEIVED"
+  | "PROVIDER_SELECTED"
+  | "PROVIDER_STARTED"
+  | "PROVIDER_COMPLETED"
+  | "SCHEMA_VALID"
+  | "DRAFT_WRITTEN"
+  | "DRAFT_READY";
+
+function logBiDiagnostic(
+  correlationId: string,
+  checkpoint: BiDiagnosticStage | "BI_FAILED",
+  details: Record<string, unknown> = {},
+) {
+  try {
+    console.info(JSON.stringify({
+      event: "brand_intelligence_diagnostic",
+      correlationId,
+      checkpoint,
+      ...details,
+    }));
+  } catch {
+    // Diagnostics must never change the request outcome.
+  }
+}
+
+function configuredModel(provider: "gemini" | "groq" | "workers-ai") {
+  if (provider === "gemini") return resolveGeminiModel();
+  if (provider === "workers-ai") return resolveCloudflareModel();
+  return resolveGroqModelId("structured");
+}
+
+function biConfigurationSource() {
+  if (getOptionalSecret("BI_PROVIDER")?.trim()) return "BI_PROVIDER";
+  const forceGemini = getOptionalSecret("BI_USE_GEMINI")?.trim().toLowerCase();
+  return forceGemini === "1" || forceGemini === "true" || forceGemini === "yes"
+    ? "BI_USE_GEMINI"
+    : "AI_PROVIDER";
+}
+
 export async function handleBrandIntelligenceRequest(req: Request): Promise<Response> {
   const cors = handleCors(req);
   if (cors) return cors;
 
   const started = performance.now();
+  const suppliedCorrelationId = req.headers.get("x-request-id")?.trim() ?? "";
+  const correlationId = /^[A-Za-z0-9._:-]{1,128}$/.test(suppliedCorrelationId)
+    ? suppliedCorrelationId
+    : crypto.randomUUID();
+  let diagnosticStage: BiDiagnosticStage = "REQUEST_RECEIVED";
+  let diagnosticProvider: "gemini" | "groq" | "workers-ai" | null = null;
+  let diagnosticModel: string | null = null;
+  let providerStarted = 0;
+  let providerDurationMs: number | null = null;
   let failureBrandId: string | null = null;
+  let failureCrawlResultId: string | null = null;
   let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
+  const logFailure = (
+    category:
+      | "configuration"
+      | "orchestration/invocation"
+      | "provider"
+      | "schema"
+      | "database read"
+      | "database write",
+    errorCode: string,
+    details: Record<string, unknown> = {},
+  ) => logBiDiagnostic(correlationId, "BI_FAILED", {
+    category,
+    provider: diagnosticProvider,
+    model: diagnosticModel,
+    brandId: failureBrandId,
+    crawlResultId: failureCrawlResultId,
+    errorCode,
+    totalDurationMs: Math.round(performance.now() - started),
+    ...details,
+  });
 
   try {
+    logBiDiagnostic(correlationId, diagnosticStage);
+
     if (req.method !== "POST") {
+      logFailure("orchestration/invocation", "method_not_allowed");
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
     const caller = await resolveCaller(req);
-    if (isCallerFailure(caller)) return caller.response;
+    if (isCallerFailure(caller)) {
+      logFailure("orchestration/invocation", "authentication_failed", {
+        httpStatus: caller.response.status,
+      });
+      return caller.response;
+    }
 
     const biProvider = resolveBiProvider();
+    diagnosticProvider = biProvider;
+    diagnosticModel = configuredModel(biProvider);
     // Same preference as resolveCloudflareCredentials; whitespace GATEWAY falls through to API.
     const configError = missingBiProviderConfigError(biProvider, {
       geminiApiKey: getOptionalSecret("GEMINI_API_KEY"),
@@ -245,6 +359,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       cloudflareAccountId: getOptionalSecret("CLOUDFLARE_ACCOUNT_ID"),
     });
     if (configError) {
+      logFailure("configuration", configError.code);
       return errorResponse(
         configError.code,
         configError.message,
@@ -252,8 +367,16 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       );
     }
 
+    diagnosticStage = "PROVIDER_SELECTED";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      provider: biProvider,
+      model: diagnosticModel,
+      configurationSource: biConfigurationSource(),
+    });
+
     const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
     if (contentLength > 16384) {
+      logFailure("orchestration/invocation", "payload_too_large");
       return errorResponse("payload_too_large", "Payload too large", 413);
     }
 
@@ -267,6 +390,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     try {
       const parsed: unknown = await req.json();
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        logFailure("orchestration/invocation", "invalid_json");
         return errorResponse(
           "invalid_json",
           "Request body must be a JSON object",
@@ -275,6 +399,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       }
       body = parsed as typeof body;
     } catch {
+      logFailure("orchestration/invocation", "invalid_json");
       return errorResponse("invalid_json", "Request body must be JSON", 422);
     }
 
@@ -284,6 +409,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
         : null;
 
     if (!brandId) {
+      logFailure("orchestration/invocation", "validation_error");
       return errorResponse(
         "validation_error",
         "brandId is required",
@@ -295,6 +421,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!url || normalizeBrandUrl(url) === null) {
+      logFailure("orchestration/invocation", "validation_error");
       return errorResponse(
         "validation_error",
         "A valid http(s) url is required",
@@ -306,6 +433,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       typeof body.crawlResultId === "string" && body.crawlResultId.length > 0
         ? body.crawlResultId
         : null;
+    failureCrawlResultId = crawlResultId;
 
     const brandName =
       typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
@@ -320,7 +448,13 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       .eq("id", brandId)
       .maybeSingle();
 
-    if (fetchErr || !existing) {
+    if (fetchErr) {
+      logFailure("database read", "database_error");
+      return errorResponse("database_error", "Failed to load brand", 500);
+    }
+
+    if (!existing) {
+      logFailure("orchestration/invocation", "not_found");
       return errorResponse("not_found", "Brand not found", 404);
     }
 
@@ -334,6 +468,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     await markIntakeStatus(client, brandId, "analysis_running");
 
     const crawlRow = await loadCrawlRow(client, brandId, crawlResultId, url);
+    failureCrawlResultId = crawlRow?.id ?? crawlResultId;
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
     // IPI-741 — provider-neutral budget: a full 10-page crawl easily exceeds
     // rate/cost limits on smaller-tier models (e.g. Groq's openai/gpt-oss-20b
@@ -363,7 +498,30 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       crawlText,
     );
 
+    if (biProvider !== "gemini") {
+      const crawlError = groqEmptyCrawlError(crawlText, rawData);
+      if (crawlError) {
+        await markIntakeFailedIfRunning(client, brandId);
+        logFailure("orchestration/invocation", crawlError.code);
+        return errorResponse(
+          crawlError.code,
+          crawlError.message,
+          crawlError.status,
+        );
+      }
+    }
+
     const llmStarted = performance.now();
+    providerStarted = llmStarted;
+    diagnosticStage = "PROVIDER_STARTED";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
+      provider: biProvider,
+      model: diagnosticModel,
+      usedCrawl: usedCrawlInRequest,
+      crawlPages: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+    });
     let profile: BrandProfilePayload;
     let model: string;
     let llmLog: StructuredGenerationLog | null = null;
@@ -383,7 +541,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
           pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
         });
 
-        const result = await generateGeminiStructuredContent({
+        const result = await runGeminiStructuredContent({
           apiKey,
           model,
           contents: prompt,
@@ -394,7 +552,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
           timeoutMs: 45_000,
         });
         structuredResponse = result.response;
-        profile = JSON.parse(result.text) as BrandProfilePayload;
+        profile = parseGeminiProfile(result.text);
       } else {
         const urlList = buildUrlList(url);
         const contextPrompt = `
@@ -416,7 +574,7 @@ Use URL content AND web search for press, social, and competitor signals.
         contextResponse = contextPass.response;
 
         const structurePrompt = buildUrlFallbackPrompt(url, contextPass.text);
-        const result = await generateGeminiStructuredContent({
+        const result = await runGeminiStructuredContent({
           apiKey,
           model,
           contents: structurePrompt,
@@ -426,19 +584,9 @@ Use URL content AND web search for press, social, and competitor signals.
           timeoutMs: 50_000,
         });
         structuredResponse = result.response;
-        profile = JSON.parse(result.text) as BrandProfilePayload;
+        profile = parseGeminiProfile(result.text);
       }
     } else {
-      const crawlError = groqEmptyCrawlError(crawlText, rawData);
-      if (crawlError) {
-        await markIntakeFailedIfRunning(client, brandId);
-        return errorResponse(
-          crawlError.code,
-          crawlError.message,
-          crawlError.status,
-        );
-      }
-
       const structured = await runLlmStructuredContent<BrandProfilePayload>({
         scope: "bi",
         systemPrompt: GROQ_BI_SYSTEM_PROMPT,
@@ -462,12 +610,34 @@ Use URL content AND web search for press, social, and competitor signals.
     }
 
     const geminiMs = Math.round(performance.now() - llmStarted);
+    providerDurationMs = geminiMs;
+    diagnosticStage = "PROVIDER_COMPLETED";
+    diagnosticModel = model;
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
+      provider: llmLog?.provider ?? biProvider,
+      model,
+      providerDurationMs: geminiMs,
+    });
 
     const validationError = validateBrandProfilePayload(profile);
     if (validationError) {
       await markIntakeStatus(client, brandId, "failed");
+      logFailure("schema", "validation_error", {
+        provider: llmLog?.provider ?? biProvider,
+        model,
+        providerDurationMs: geminiMs,
+      });
       return errorResponse("validation_error", validationError, 422);
     }
+    diagnosticStage = "SCHEMA_VALID";
+    logBiDiagnostic(correlationId, diagnosticStage, {
+      brandId,
+      crawlResultId: crawlRow?.id ?? crawlResultId,
+      provider: llmLog?.provider ?? biProvider,
+      model,
+    });
 
     const aiProfile = buildAiProfileFromPayload(profile, url);
 
@@ -539,7 +709,18 @@ Use URL content AND web search for press, social, and competitor signals.
         throw new Error(updateErr?.message ?? "Failed to update brand");
       }
       updated = draftUpdated;
+      diagnosticStage = "DRAFT_WRITTEN";
+      logBiDiagnostic(correlationId, diagnosticStage, {
+        brandId,
+        crawlResultId: crawlRow?.id ?? crawlResultId,
+      });
       draftPersisted = true;
+      diagnosticStage = "DRAFT_READY";
+      logBiDiagnostic(correlationId, diagnosticStage, {
+        brandId,
+        crawlResultId: crawlRow?.id ?? crawlResultId,
+        totalDurationMs: Math.round(performance.now() - started),
+      });
     } else {
       const liveScoreRows = scoreRows.map((r) => ({ ...r, brand_id: brandId }));
       const { data: scoresData, error: scoresErr } = await client
@@ -625,9 +806,29 @@ Use URL content AND web search for press, social, and competitor signals.
       provider: llmLog?.provider ?? biProvider,
       usedCrawl: usedCrawlInRequest,
       crawlResultId: crawlRow?.id ?? null,
+      correlationId,
     });
   } catch (err) {
-    console.error("brand-intelligence error:", err);
+    console.error("brand-intelligence error; correlationId:", correlationId);
+    const category = err instanceof StructuredOutputValidationError
+      ? "schema"
+      : diagnosticStage === "REQUEST_RECEIVED"
+      ? "configuration"
+      : diagnosticStage === "PROVIDER_SELECTED"
+      ? "orchestration/invocation"
+      : diagnosticStage === "PROVIDER_STARTED"
+      ? "provider"
+      : diagnosticStage === "PROVIDER_COMPLETED"
+      ? "schema"
+      : diagnosticStage === "DRAFT_READY"
+      ? "orchestration/invocation"
+      : "database write";
+    logFailure(category, "internal_error", {
+      ...(providerStarted > 0 && {
+        providerDurationMs: providerDurationMs ??
+          Math.round(performance.now() - providerStarted),
+      }),
+    });
     // If draft was already persisted successfully, don't overwrite draft_ready → failed.
     // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
     if (failureBrandId && failureClient && !draftPersisted) {

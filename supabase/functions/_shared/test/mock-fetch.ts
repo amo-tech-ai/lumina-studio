@@ -2,6 +2,7 @@ export type MockFetchOptions = {
   supabaseUrl?: string;
   user?: { id: string; email?: string };
   brand?: Record<string, unknown> | null;
+  brandFetchError?: { message: string; code?: string };
   brandId?: string;
   crawl?: Record<string, unknown> | null;
   intakeStatusUpdates?: string[];
@@ -45,6 +46,9 @@ export async function withMockFetch(
     }
 
     if (url.includes("/rest/v1/brands") && method === "GET") {
+      if (options.brandFetchError) {
+        return Promise.resolve(json(options.brandFetchError, 500));
+      }
       if (options.brand === null) {
         return Promise.resolve(json([]));
       }
