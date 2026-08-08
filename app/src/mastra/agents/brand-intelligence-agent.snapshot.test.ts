@@ -36,6 +36,20 @@ describe("brand-intelligence-agent snapshot (AGENT-DNA-001)", () => {
     expect(instructions).toMatch(/Do not pass "overall" to explainPillar/);
   });
 
+  it("instructions disclose incomplete base-score data when overallScore is null", async () => {
+    const instructions = await brandIntelligenceAgent.getInstructions();
+
+    expect(instructions).toMatch(/If overallScore is null/);
+    expect(instructions).toMatch(/required base-score data is incomplete/);
+    expect(instructions).not.toMatch(/explain the biggest driver/);
+  });
+
+  it("instructions restrict weakest-pillar selection to the four base pillars", async () => {
+    const instructions = await brandIntelligenceAgent.getInstructions();
+
+    expect(instructions).toMatch(/visual, audience, consistency, and commerce_readiness/);
+  });
+
   it("instructions forbid silent approveDraft", async () => {
     const instructions = await brandIntelligenceAgent.getInstructions();
 
