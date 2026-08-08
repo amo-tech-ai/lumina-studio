@@ -11,10 +11,11 @@ model = "bedrock/qwen.qwen3-coder-next"
 # (model/context capacity, NOT generated-output size). Not "max output tokens".
 custom_model_max_tokens = 250000
 
-# — repo-shared context: Phase A = contract + AGENTS.md only (measured before adding sheets) —
-repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md"]
+# — repo-shared context: contract + expert checklists + AGENTS.md (406 lines ≤ 500 budget) —
+repo_context_files = ["AGENTS.md", "docs/pr-review-guidelines.md", "docs/pr-review-experts.md"]
 # Context comes from the default branch (trusted) — a PR cannot edit the instructions
-# that review it. Sheets/budget changes land post-measurement (see tasks/pr-agent plan §5).
+# that review it. The experts sheet (PRAGENT-EXPERT) is one condensed 4-domain checklist;
+# keep total loaded lines ≤ 500 (currently 264+79+63) — re-measure before adding more.
 repo_context_from_default_branch = true
 repo_context_max_lines = 500
 
@@ -48,15 +49,17 @@ minimal_minutes_for_incremental_review = 0
 extra_instructions = """
 Respect AGENTS.md and the iPix one-concern-per-PR rule.
 The iPix review contract is docs/pr-review-guidelines.md (Phase A context file); follow it.
+Apply the domain checklists in docs/pr-review-experts.md based on the files changed.
 
 Prioritize:
 - correctness and regressions
 - authentication and authorization
-- Supabase RLS and organization isolation
+- Supabase RLS and organization isolation (policies AND grants; IPI-896)
 - migration and data-loss risk
 - exposed secrets
-- Next.js server/client boundaries
-- Cloudflare Workers and OpenNext compatibility
+- Mastra agent/tool contract and registry-key sync
+- CopilotKit runtime auth and server/client boundaries
+- Cloudflare Workers and OpenNext compatibility (nodejs_compat; stubs are not findings)
 - missing high-value tests
 
 Avoid formatting-only and low-value style comments.
