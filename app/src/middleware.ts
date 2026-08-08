@@ -23,18 +23,31 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // IPI-707 · CF-SMOKE-001 — Add Worker version header for verification.
-  // Defensive: only add header when metadata exists (Cloudflare runtime).
-  // Wrapped in try/catch to avoid breaking Node-based middleware tests.
-  try {
-    const cfContext = getCloudflareContext();
-    const versionMetadata = cfContext?.env?.WORKER_VERSION_METADATA;
-    if (versionMetadata?.id) {
-      sessionResponse.headers.set("X-Worker-Version", versionMetadata.id);
+  // IPI-707 — Worker version header for smoke verification. Emitted only on
+  // operator/API surfaces (no public leak) and on redirects out of /app, using
+  // the header name the verifier reads (x-ipix-worker-version). Defensive:
+  // getCloudflareContext() throws in Node runtime (tests / next dev) — skip.
+  const isOperatorSurface =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/") ||
+    pathname === "/api" ||
+    pathname.startsWith("/api/");
+
+  let versionId: string | null = null;
+  if (isOperatorSurface) {
+    try {
+      const cfContext = getCloudflareContext();
+      versionId = cfContext?.env?.WORKER_VERSION_METADATA?.id ?? null;
+    } catch {
+      // getCloudflareContext() throws in Node runtime; ignore silently.
     }
-  } catch {
-    // getCloudflareContext() throws in Node runtime; ignore silently.
   }
+  const tagVersion = (response: NextResponse): NextResponse => {
+    if (versionId) response.headers.set("X-iPix-Worker-Version", versionId);
+    return response;
+  };
 
   // IPI-945 · ONB2-ROUTE-001 — legacy operator-shell wizard → standalone v2.
   // Runs even when the auth gate is off in local `next dev`, so bookmarks never
@@ -48,11 +61,11 @@ export async function middleware(request: NextRequest) {
         : `/onboarding${pathname.slice("/app/onboarding".length)}`;
     const redirect = NextResponse.redirect(url);
     copyResponseCookies(sessionResponse, redirect);
-    return redirect;
+    return tagVersion(redirect);
   }
 
   if (!isOperatorAuthEnforced()) {
-    return sessionResponse;
+    return tagVersion(sessionResponse);
   }
 
   // IPI-833: /onboarding lives in its own (onboarding) route group — a sibling of
@@ -70,7 +83,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/onboarding/");
 
   if (!isProtectedRoute) {
-    return sessionResponse;
+    return tagVersion(sessionResponse);
   }
 
   const cookieString = request.cookies
@@ -89,10 +102,10 @@ export async function middleware(request: NextRequest) {
     );
     const redirect = NextResponse.redirect(url);
     copyResponseCookies(sessionResponse, redirect);
-    return redirect;
+    return tagVersion(redirect);
   }
 
-  return sessionResponse;
+  return tagVersion(sessionResponse);
 }
 
 export const config = {
