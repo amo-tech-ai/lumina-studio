@@ -9,8 +9,17 @@ describe("middleware wiring (IPI2-127 / CF-MIG-110)", () => {
 
   it("middleware config matches all non-static routes for session refresh", () => {
     expect(config.matcher).toEqual([
-      "/((?!monitoring|auth/signout|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+      "/((?!monitoring|auth/signout$|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ]);
+  });
+
+  it("excludes only the exact /auth/signout path, not near-matches (IPI-915)", () => {
+    // Mirror Next.js's path-to-regexp compilation: the matcher is anchored
+    // (^...$) before being tested against the pathname.
+    const re = new RegExp(`^${config.matcher[0]}$`);
+    expect(re.test("/auth/signout")).toBe(false);
+    expect(re.test("/auth/signout-other")).toBe(true);
+    expect(re.test("/auth/signout/nested")).toBe(true);
   });
 });
 
