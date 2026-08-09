@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   if (isOperatorSurface) {
     try {
       const cfContext = getCloudflareContext();
-      versionId = cfContext?.env?.WORKER_VERSION_METADATA?.id ?? null;
+      versionId = (cfContext?.env as { WORKER_VERSION_METADATA?: { id: string } }).WORKER_VERSION_METADATA?.id ?? null;
     } catch {
       // getCloudflareContext() throws in Node runtime; ignore silently.
     }
