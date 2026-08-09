@@ -212,6 +212,15 @@ export async function waitForPersistedDraftAnswers(opts: {
 }): Promise<void> {
   const { timeoutMs = 10_000, intervals = [200, 400, 800] } = opts;
   if (
+    timeoutMs === undefined
+      ? false
+      : !Number.isFinite(timeoutMs) || timeoutMs <= 0
+  ) {
+    throw new Error(
+      "timeoutMs must be a positive finite number",
+    );
+  }
+  if (
     intervals.length === 0 ||
     Array.from(intervals).some(
       (interval) => !Number.isFinite(interval) || interval <= 0,
@@ -275,8 +284,9 @@ export async function findDraftReadyOnboardingSession(opts?: {
   return withQaPg(async (client) => {
     let userId = opts?.userId?.trim() || "";
     if (!userId) {
-      const email =
-        opts?.email?.trim() || getQaCredentials().email?.trim() || "qa@ipix.test";
+       const email =
+         opts?.email?.trim() || getQaCredentials().email?.trim();
+       if (!email) return null;
       const u = await client.query<{ id: string }>(
         `select id::text as id from auth.users where email = $1 limit 1`,
         [email],

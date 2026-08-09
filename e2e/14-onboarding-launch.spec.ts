@@ -17,6 +17,7 @@ import {
   queryOnboardingUniqueness,
   resetBrandToDraftReady,
   snapshotOnboardingProgress,
+  waitForPersistedDraftAnswers,
   type DraftReadySession,
 } from "./helpers/onboarding-sql";
 import {
@@ -68,6 +69,44 @@ test.describe("IPI-836 — preflight", () => {
     expect(() => preflightOnboardingQaTarget()).not.toThrow();
     expect(process.env.QA_DATABASE_URL).toContain(QA_PROJECT_REF);
     expect(process.env.QA_DATABASE_URL).not.toContain(PROD_PROJECT_REF);
+  });
+});
+
+test.describe("IPI-836 — input validation regressions (no browser)", () => {
+  test("waitForPersistedDraftAnswers rejects NaN timeoutMs", async () => {
+    await expect(
+      waitForPersistedDraftAnswers({
+        userId: "00000000-0000-0000-0000-000000000000",
+        idempotencyKey: "regression-nan",
+        brandName: "TestBrand",
+        timeoutMs: NaN,
+        intervals: [100],
+      }),
+    ).rejects.toThrow(/timeoutMs must be a positive finite number/);
+  });
+
+  test("waitForPersistedDraftAnswers rejects Infinity timeoutMs", async () => {
+    await expect(
+      waitForPersistedDraftAnswers({
+        userId: "00000000-0000-0000-0000-000000000000",
+        idempotencyKey: "regression-inf",
+        brandName: "TestBrand",
+        timeoutMs: Infinity,
+        intervals: [100],
+      }),
+    ).rejects.toThrow(/timeoutMs must be a positive finite number/);
+  });
+
+  test("waitForPersistedDraftAnswers rejects non-positive timeoutMs", async () => {
+    await expect(
+      waitForPersistedDraftAnswers({
+        userId: "00000000-0000-0000-0000-000000000000",
+        idempotencyKey: "regression-zero",
+        brandName: "TestBrand",
+        timeoutMs: 0,
+        intervals: [100],
+      }),
+    ).rejects.toThrow(/timeoutMs must be a positive finite number/);
   });
 });
 
