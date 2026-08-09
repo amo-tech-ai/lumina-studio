@@ -198,6 +198,11 @@ test.describe("IPI-836 — resume from DNA (no new crawl)", () => {
       // original test error — catch and log separately (Devin cycle-3 BUG).
       await resetBrandToDraftReady(draft.brandId).catch((e) => {
         console.error("[IPI-836 cleanup] failed to reset brand to draft_ready:", e);
+        // Attach to Playwright report so the cause travels with the run.
+        void test.info().attach("fixture-reset-failure", {
+          body: `Failed to reset brand ${draft.brandId} to draft_ready: ${e instanceof Error ? e.message : String(e)}`,
+          contentType: "text/plain",
+        });
       });
       if (approved) {
         logProgress("post-approve", formatOnboardingProgress(approved));
@@ -351,6 +356,10 @@ test.describe("IPI-836 — fresh-user full crawl (only paid path)", () => {
       if (userId && idem) {
         await cleanupFreshCrawlRows({ userId, idempotencyKey: idem }).catch((e) => {
           console.error("[IPI-836 cleanup] failed to delete fresh-crawl rows:", e);
+          void test.info().attach("fresh-crawl-cleanup-failure", {
+            body: `Failed to delete rows for userId=${userId}, idem=${idem}: ${e instanceof Error ? e.message : String(e)}`,
+            contentType: "text/plain",
+          });
         });
       }
   });

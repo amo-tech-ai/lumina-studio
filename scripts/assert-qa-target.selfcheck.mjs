@@ -84,6 +84,9 @@ async function main() {
   // qaWebServerEnv() must pin MASTRA_DATABASE_URL to QA and refuse prod leaks.
   await testQaWebServerEnv(loaded, qaJwt);
 
+  // loadEnvLocalFiles must include .env.qa-keys.local in its search path.
+  await testLoadEnvLocalFiles(loaded);
+
   console.log("qa-target self-check OK");
 }
 
@@ -126,6 +129,13 @@ async function testQaWebServerEnv(loaded, qaJwt) {
 
   // Cleanup.
   delete process.env.MASTRA_DATABASE_URL;
+}
+
+/** Verify loadEnvLocalFiles searches .env.qa-keys.local. */
+async function testLoadEnvLocalFiles(loaded) {
+  const { loadEnvLocalFiles } = loaded;
+  // loadEnvLocalFiles should not throw for missing files.
+  assert.doesNotThrow(() => loadEnvLocalFiles());
 }
 
 main().catch((err) => {

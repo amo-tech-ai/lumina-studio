@@ -213,43 +213,34 @@ export async function waitForPersistedDraftAnswers(opts: {
   const { timeoutMs = 10_000, intervals = [200, 400, 800] } = opts;
   const deadline = Date.now() + timeoutMs;
   let i = 0;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const draft = await readPersistedDraftAnswers({
-      userId: opts.userId,
-      idempotencyKey: opts.idempotencyKey,
-    });
-    if (draft.brandName === opts.brandName) return;
-    if (Date.now() >= deadline) {
-      throw new Error(
-        `timed out waiting for draft answers to persist (brandName ${opts.brandName})`,
+  // Hold a single PG connection for the whole poll loop — avoids up to 15
+  // connect/disconnect cycles against the Supabase pooler per assertion.
+  await withQaPg(async (client) => {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const session = await client.query<{ draft_answers: unknown }>(
+        `select draft_answers
+           from public.onboarding_sessions
+          where user_id = $1::uuid
+            and idempotency_key = $2
+          limit 1`,
+        [opts.userId, opts.idempotencyKey],
       );
+      const row = session.rows[0];
+      const brandName =
+        row && typeof row.draft_answers === "object" && row.draft_answers !== null
+          ? String((row.draft_answers as Record<string, unknown>).brandName ?? "")
+          : "";
+      if (brandName === opts.brandName) return;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `timed out waiting for draft answers to persist (brandName ${opts.brandName})`,
+        );
+      }
+      const waitFor = intervals[Math.min(i, intervals.length - 1)];
+      i += 1;
+      await new Promise((r) => setTimeout(r, waitFor));
     }
-    const waitFor = intervals[Math.min(i, intervals.length - 1)];
-    i += 1;
-    await new Promise((r) => setTimeout(r, waitFor));
-  }
-}
-
-async function readPersistedDraftAnswers(opts: {
-  userId: string;
-  idempotencyKey: string;
-}): Promise<{ brandName: string | null }> {
-  return withQaPg(async (client) => {
-    const session = await client.query<{ draft_answers: unknown }>(
-      `select draft_answers
-         from public.onboarding_sessions
-        where user_id = $1::uuid
-          and idempotency_key = $2
-        limit 1`,
-      [opts.userId, opts.idempotencyKey],
-    );
-    const row = session.rows[0];
-    const brandName =
-      row && typeof row.draft_answers === "object" && row.draft_answers !== null
-        ? String((row.draft_answers as Record<string, unknown>).brandName ?? "")
-        : "";
-    return { brandName: brandName || null };
   });
 }
 
