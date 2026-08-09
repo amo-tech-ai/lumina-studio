@@ -351,10 +351,99 @@ export const startBrandAnalysis = createTool({
   },
 });
 
+const similarBrandSchema = z.object({
+  brandId: z.string().uuid(),
+  brandName: z.string(),
+  similarity: z.number(),
+  sharedNodes: z
+    .array(z.object({ node_type: z.string(), label: z.string() }))
+    .nullable(),
+});
+
+export const searchSimilarBrands = createTool({
+  id: "searchSimilarBrands",
+  description:
+    "Find brands semantically similar to the current brand via the org-scoped `search_brands` RPC (pgvector cosine similarity). " +
+    "Use when the operator asks for comparable brands, competitive peers, or who is similar. " +
+    "Only cite neighbors returned by this tool — never invent brand names or similarity scores.",
+  inputSchema: z.object({
+    brandId: z.string().uuid(),
+    limit: z.number().int().min(1).max(20).optional().default(5),
+  }),
+  outputSchema: z.object({
+    sourceBrandId: z.string().uuid(),
+    sourceBrandName: z.string(),
+    asOf: z.string(),
+    neighbors: z.array(similarBrandSchema),
+    message: z.string().optional(),
+  }),
+  execute: async ({ brandId, limit }) => {
+    const sb = userClient();
+    const orgId = await resolveOperatorOrgId(sb);
+
+    const { data: brand, error: brandErr } = await sb
+      .from("brands")
+      .select("id, name, embedding")
+      .eq("id", brandId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (brandErr || !brand) throw new Error(`Brand not found: ${brandId}`);
+
+     const asOf = new Date().toISOString();
+    if (!brand.embedding) {
+      return {
+        sourceBrandId: brand.id,
+        sourceBrandName: brand.name,
+        asOf,
+        neighbors: [],
+        message:
+          "This brand has no embedding, so no similar-brand matches can be computed. Embeddings are generated during crawl/analysis and persisted to brands.embedding; re-analysis of the brand profile does not populate this field.",
+      };
+    }
+
+    const admin = adminClient();
+    const { data, error } = await admin.rpc("search_brands", {
+      p_embedding: brand.embedding,
+      p_limit: Math.min(limit ?? 5, 20),
+      p_exclude_brand_id: brandId,
+      p_org_id: orgId,
+    });
+    if (error) throw new Error(`search_brands RPC failed: ${error.message}`);
+
+    const neighbors = (data ?? []).map(
+      (row: {
+        brand_id: string;
+        brand_name: string;
+        similarity: number;
+        shared_nodes: unknown;
+      }) => ({
+        brandId: row.brand_id,
+        brandName: row.brand_name,
+        similarity: Math.max(0, Math.min(1, Number(row.similarity))),
+        sharedNodes: Array.isArray(row.shared_nodes)
+          ? (row.shared_nodes as { node_type: string; label: string }[])
+          : null,
+      }),
+    );
+
+    return {
+      sourceBrandId: brand.id,
+      sourceBrandName: brand.name,
+      asOf,
+      neighbors,
+      message:
+        neighbors.length === 0
+          ? "No similar brands with embeddings were found in the current organization."
+          : undefined,
+    };
+  },
+});
+
 export const brandIntelligenceTools = {
   getBrandProfile,
   getBrandScores,
   explainPillar: explainPillarTool,
+  searchSimilarBrands,
   approveDraft: approveDraftTool,
   startBrandAnalysis,
 } as const;
