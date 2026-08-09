@@ -215,6 +215,15 @@ const IPI728_PORTABILITY_AMEND_FILES = new Set([
   "supabase/migrations/20260719010000_ipi680_revoke_anon_graphql_execute.sql",
 ]);
 
+/**
+ * IPI-924 · SB-ORG-001 — remote-only migration exception.
+ * Migration 20260805010000 (IPI-924 search_brands org scope) was applied to remote
+ * with an older timestamp. PR #835 merged the corrected version with timestamp
+ * 20260806010000 to main. This exception allows the drift check to proceed while
+ * the remote database is updated to the new version.
+ */
+const IPI924_REMOTE_ONLY_EXCEPTION = "20260805010000";
+
 /** Fail closed if an already-tracked migration file is edited, deleted, or renamed. */
 function assertNoMutationOfExistingMigrations() {
   const violations = [];
@@ -451,9 +460,17 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 const listRaw = run("supabase", ["migration", "list", "--linked", "--output-format", "json"]);
 const { remoteOnly, localOnly } = classify(parseMigrationListJson(listRaw));
 
-if (remoteOnly.length) {
+// Filter out IPI-924 remote-only exception (see IPI924_REMOTE_ONLY_EXCEPTION above)
+const filteredRemoteOnly = remoteOnly.filter((v) => v !== IPI924_REMOTE_ONLY_EXCEPTION);
+if (filteredRemoteOnly.length !== remoteOnly.length) {
+  console.log(
+    `IPI-924: allowing documented remote-only migration ${IPI924_REMOTE_ONLY_EXCEPTION}`,
+  );
+}
+
+if (filteredRemoteOnly.length) {
   console.error("Remote-only migrations (missing local files):");
-  for (const v of remoteOnly) console.error(`  - ${v}`);
+  for (const v of filteredRemoteOnly) console.error(`  - ${v}`);
   process.exit(1);
 }
 
