@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenFromCookieString } from "@/lib/auth";
 import { isOperatorAuthEnforced } from "@/lib/operator-gate";
 import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // IPI2-127 (AIOR-002b) — operator page gate. Blocks unauthenticated access to
 // /app/* by requiring a Supabase session cookie that DECODES to a JWT-shaped
@@ -22,6 +23,32 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // IPI-707 — Worker version header for smoke verification. Emitted only on
+  // operator/API surfaces (no public leak) and on redirects out of /app, using
+  // the header name the verifier reads (x-ipix-worker-version). Defensive:
+  // getCloudflareContext() throws in Node runtime (tests / next dev) — skip.
+  const isOperatorSurface =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/") ||
+    pathname === "/api" ||
+    pathname.startsWith("/api/");
+
+  let versionId: string | null = null;
+  if (isOperatorSurface) {
+    try {
+      const cfContext = getCloudflareContext();
+      versionId = cfContext?.env?.WORKER_VERSION_METADATA?.id ?? null;
+    } catch {
+      // getCloudflareContext() throws in Node runtime; ignore silently.
+    }
+  }
+  const tagVersion = (response: NextResponse): NextResponse => {
+    if (versionId) response.headers.set("X-iPix-Worker-Version", versionId);
+    return response;
+  };
+
   // IPI-945 · ONB2-ROUTE-001 — legacy operator-shell wizard → standalone v2.
   // Runs even when the auth gate is off in local `next dev`, so bookmarks never
   // render the dual UI (3-step form + Copilot chrome).
@@ -34,11 +61,11 @@ export async function middleware(request: NextRequest) {
         : `/onboarding${pathname.slice("/app/onboarding".length)}`;
     const redirect = NextResponse.redirect(url);
     copyResponseCookies(sessionResponse, redirect);
-    return redirect;
+    return tagVersion(redirect);
   }
 
   if (!isOperatorAuthEnforced()) {
-    return sessionResponse;
+    return tagVersion(sessionResponse);
   }
 
   // IPI-833: /onboarding lives in its own (onboarding) route group — a sibling of
@@ -56,7 +83,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/onboarding/");
 
   if (!isProtectedRoute) {
-    return sessionResponse;
+    return tagVersion(sessionResponse);
   }
 
   const cookieString = request.cookies
@@ -75,10 +102,10 @@ export async function middleware(request: NextRequest) {
     );
     const redirect = NextResponse.redirect(url);
     copyResponseCookies(sessionResponse, redirect);
-    return redirect;
+    return tagVersion(redirect);
   }
 
-  return sessionResponse;
+  return tagVersion(sessionResponse);
 }
 
 export const config = {
@@ -89,6 +116,7 @@ export const config = {
      * Keep in sync with tests in src/test/operator-middleware-contract.test.ts.
      */
     // Exclude Sentry tunnelRoute (/monitoring) so auth/session logic does not intercept it.
-    "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude /auth/signout so signOut response cookies are not overwritten by session refresh (IPI-915).
+    "/((?!monitoring|auth/signout|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

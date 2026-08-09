@@ -192,9 +192,10 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
     identity.identity_error = error.slice(0, 300);
     // IPI-964: If Wrangler auth is missing, treat as non-blocking metadata failure
     // The verification can still complete without Worker version identity
-    if (/CLOUDFLARE_API_TOKEN|authentication|auth/i.test(error)) {
+    // Require credential-specific wording, not just token name appearing in error text
+    if (/CLOUDFLARE_API_TOKEN.*(?:missing|required|not set|invalid)|not authenticated|authentication (?:error|required)/i.test(error)) {
       identity.identity_source = "wrangler_auth_unavailable";
-      identity.identity_error = "Wrangler auth not configured — identity metadata unavailable (non-blocking)";
+      identity.identity_error = `Wrangler auth not configured — identity metadata unavailable (non-blocking): ${error.slice(0, 200)}`;
     }
   }
   return identity;
