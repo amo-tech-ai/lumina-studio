@@ -228,14 +228,18 @@ function BrandDnaPayoffLive({
           setBrandName(confirm.brandName);
         }
       } else {
-        // Promotion didn't land ready — surface error, don't claim success.
-        if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
+        // Promotion didn't land ready — surface error only when the follow-up
+        // check itself succeeded (ok:true but not ready). When confirm.ok is
+        // false, the approval already succeeded server-side but the re-read
+        // failed transiently (network/auth/DB blip) — don't claim failure.
+        if (confirm.ok && brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
           setApproveError(SAFE_APPROVE_ERROR);
         }
       }
-    } catch {
+    } catch (e) {
       if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
         setApproveError(SAFE_APPROVE_ERROR);
+        console.error("[Onboarding] approve re-read failure:", e);
       }
     } finally {
       if (brandIdRef.current === currentBrandId && loadGenerationRef.current === currentGeneration) {
