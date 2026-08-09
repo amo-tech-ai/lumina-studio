@@ -2,11 +2,14 @@
 // READ tools query Supabase direct (service-role, server-only Mastra runtime).
 // WRITE tools: startBrandAnalysis → edge fn; approveDraft → HITL approve route.
 import { createTool } from "@mastra/core/tools";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 import { z } from "zod";
 import { parseScoreDetails } from "@/lib/brand-hub";
 import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/app/api/_lib/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
+import { BASE_SCORE_TYPES, computeDnaScore, type BrandScoreRow } from "@/lib/brand-scores";
+import { getCurrentOrgId, type Db } from "@/lib/crm/queries";
 import { requestToken } from "@/lib/request-token";
 import { callEdgeFunction } from "./edge";
 
@@ -17,6 +20,20 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+/** User-scoped client (RLS-enabled) for tenant-isolated reads. */
+function userClient(): SupabaseClient<Database> {
+  const accessToken = requestToken.getStore();
+  if (!accessToken) throw new Error("Access token not available in request context");
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    },
+  );
+}
+
 async function resolveOperatorId(accessToken: string): Promise<string> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -25,6 +42,40 @@ async function resolveOperatorId(accessToken: string): Promise<string> {
   const { data: { user }, error } = await sb.auth.getUser(accessToken);
   if (error || !user) throw new Error("Access token not available in request context");
   return user.id;
+}
+
+/**
+ * Resolve the operator's trusted active org from the request-context
+ * (authenticated JWT → user-scoped org_members query). Reuses the shared
+ * getCurrentOrgId rather than re-implementing earliest-membership lookup.
+ * Fails closed when no membership exists.
+ */
+async function resolveOperatorOrgId(sb: SupabaseClient<Database>): Promise<string> {
+  const accessToken = requestToken.getStore();
+  if (!accessToken) throw new Error("Access token not available in request context");
+  const userId = await resolveOperatorId(accessToken);
+  const orgId = await getCurrentOrgId(userId, sb as Db);
+  if (!orgId) throw new Error("No organization membership for this operator");
+  return orgId;
+}
+
+/**
+ * Atomic authorization-and-read: resolves the operator's org, then reads the
+ * brand scoped to that org in the SAME query chain. Because userClient() is
+ * RLS-enabled (brands_select_org policy on brands, brand_scores_select_via_brand
+ * policy on brand_scores), a cross-org or revoked brand returns no rows —
+ * no separate verify step needed, no TOCTOU window.
+ */
+async function getBrandScoped<T>(
+  brandId: string,
+  read: (sb: SupabaseClient<Database>) => Promise<{ data: T | null; error: Error | null }>,
+): Promise<T> {
+  const sb = userClient();
+  await resolveOperatorOrgId(sb);
+  const { data, error } = await read(sb);
+  if (error) throw new Error(`Brand scope check failed: ${error.message}`);
+  if (!data) throw new Error(`Brand not found in operator organization: ${brandId}`);
+  return data;
 }
 
 const PILLAR_ALIASES: Record<string, string> = {
@@ -112,14 +163,18 @@ export const getBrandProfile = createTool({
     hasProfile: z.boolean(),
     profileSummary: z.string().nullable(),
   }),
-  execute: async ({ brandId }) => {
-    const sb = adminClient();
-    const { data, error } = await sb
-      .from("brands")
-      .select("id, name, brand_url, intake_status, ai_profile, ai_profile_draft")
-      .eq("id", brandId)
-      .single();
-    if (error || !data) throw new Error(`Brand not found: ${brandId}`);
+   execute: async ({ brandId }) => {
+     const data = await getBrandScoped(
+       brandId,
+       async (sb) => {
+          const { data, error } = await sb
+            .from("brands")
+            .select("id, name, brand_url, intake_status, ai_profile")
+            .eq("id", brandId)
+            .maybeSingle();
+          return { data, error };
+        },
+    );
     const profile = data.ai_profile as Record<string, unknown> | null;
     const summary = profile?.overview as string | null ?? null;
     return {
@@ -147,22 +202,25 @@ export const getBrandScores = createTool({
     })),
     overallScore: z.number().nullable(),
   }),
-  execute: async ({ brandId }) => {
-    const sb = adminClient();
-    const { data, error } = await sb
+   execute: async ({ brandId }) => {
+     const sb = userClient();
+     await resolveOperatorOrgId(sb);
+     const { data, error } = await sb
       .from("brand_scores")
       .select("score_type, score, rationale")
       .eq("brand_id", brandId)
       .order("score_type");
     if (error) throw new Error(`Failed to fetch brand scores: ${error.message}`);
-    const scores = (data ?? []).map((s) => ({
+    const scores = (data as unknown as Array<{ score_type: string; score: number; rationale: string | null }> | null ?? []).map((s) => ({
       score_type: s.score_type,
       score: Number(s.score),
       rationale: (s.rationale as string | null) ?? null,
     }));
-    const overall = scores.length
-      ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
-      : null;
+    const byType = new Map(scores.map((s) => [s.score_type, s.score]));
+    const hasAllBaseScores = BASE_SCORE_TYPES.every(
+      (t) => typeof byType.get(t) === "number" && Number.isFinite(byType.get(t)),
+    );
+    const overall = hasAllBaseScores ? computeDnaScore(scores as BrandScoreRow[] | null) : null;
     return { scores, overallScore: overall };
   },
 });
@@ -176,10 +234,11 @@ export const explainPillarTool = createTool({
     pillar: z.string().min(1),
   }),
   outputSchema: evidenceBlockSchema,
-  execute: async ({ brandId, pillar }) => {
-    const scoreType = normalizePillar(pillar);
-    const sb = adminClient();
-    const { data, error } = await sb
+   execute: async ({ brandId, pillar }) => {
+     const sb = userClient();
+     await resolveOperatorOrgId(sb);
+     const scoreType = normalizePillar(pillar);
+     const { data, error } = await sb
       .from("brand_scores")
       .select("score_type, score, details, source")
       .eq("brand_id", brandId)

@@ -186,7 +186,9 @@ describe("extract-profile edge-fn failure", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 502, text: async () => "upstream boom" }),
     );
 
-    await expect(extractProfile.execute(ctx)).rejects.toThrow(/502/);
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(
+      /502 \(BI-[0-9a-f-]{36}\)/,
+    );
   });
 
   it("marks the brand failed before throwing, so the status survives", async () => {
@@ -263,13 +265,20 @@ describe("extract-profile edge-fn failure", () => {
   it("returns a validated profile on 2xx and leaves intake_status to the edge fn", async () => {
     const { client, updates } = makeRecordingClient();
     vi.mocked(createClient).mockReturnValue(client);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" }));
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => "",
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     const out = await extractProfile.execute(ctx);
     expect(out.profile.name).toBe("Example Brand");
     expect(out.profile.tagline.evidence[0]?.quote).toMatch(/Clean essentials/);
     // The edge fn sets draft_ready itself — this step must not overwrite it.
     expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running"]);
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers["x-request-id"]).toMatch(/^BI-[0-9a-f-]{36}$/);
   });
 
   it("throws and marks failed when the draft fails the DNA contract (draft untouched)", async () => {
