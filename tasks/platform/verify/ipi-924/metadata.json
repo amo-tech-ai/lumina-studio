@@ -1,0 +1,31 @@
+{
+  "task": "IPI-924 · AGENT-RAG-001 — Similar brands tenant isolation (post-merge verify)",
+  "base_url": "http://localhost:3002",
+  "merge_sha": "1215553dc944ffbdbe836f24435ab5e7c59238d7",
+  "same_org_brand": "f3d6681c-2847-43fd-bfa4-8fe659a62bd7",
+  "foreign_org_brand": "eec20e68-2adb-472d-8226-3da5d9f34fbe",
+  "playwright_version": "1.61.1",
+  "started_at": "2026-08-09T20:37:32.021Z",
+  "results": {
+    "login": {
+      "ok": true
+    },
+    "same_org_api": {
+      "status": 200,
+      "hasData": true,
+      "reason": "no_embedding",
+      "pass": true
+    },
+    "same_org_page": {
+      "status": 200,
+      "workspace": true
+    },
+    "foreign_org_api": {
+      "status": 404,
+      "pass": true
+    },
+    "foreign_org_page": {
+      "workspaceRendered": false
+    }
+  }
+}
