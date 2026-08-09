@@ -1,11 +1,20 @@
 {
   "task": "IPI-924 · AGENT-RAG-001 — Similar brands tenant isolation (post-merge verify)",
   "base_url": "http://localhost:3002",
-  "merge_sha": "1215553dc944ffbdbe836f24435ab5e7c59238d7",
+  "verified_sha": "c83274f43c36a3d23f8c9d5d6b4e9b65254ba058",
+  "sha_note": "Operator-provided revision the target is expected to serve; recorded at capture time.",
+  "foreign_fixture": {
+    "id": "eec20e68-2adb-472d-8226-3da5d9f34fbe",
+    "org_id": "org_a08e68f2",
+    "name": "Glossier"
+  },
+  "fixture_note": "Admin-verified at capture time: brand exists and is owned by the stated org_id (≠ QA orgs).",
   "same_org_brand": "f3d6681c-2847-43fd-bfa4-8fe659a62bd7",
   "foreign_org_brand": "eec20e68-2adb-472d-8226-3da5d9f34fbe",
   "playwright_version": "1.61.1",
-  "started_at": "2026-08-09T20:37:32.021Z",
+  "started_at": "2026-08-09T21:54:20.715Z",
+  "completed_at": "2026-08-09T21:54:33.753Z",
+  "error": null,
   "results": {
     "login": {
       "ok": true
