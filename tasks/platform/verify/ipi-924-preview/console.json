@@ -1,0 +1,42 @@
+[
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 503 ()"
+  },
+  {
+    "type": "warning",
+    "text": "Failed to load runtime info (/api/copilotkit/info): Runtime info request failed with status 503"
+  },
+  {
+    "type": "error",
+    "text": "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at sZ.fetchRuntimeInfo (https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/24azfybs20_-_.js:12:37221)\n    at async sZ.updateRuntimeConnection (https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/24azfybs20_-_.js:12:35138) {runtimeUrl: /api/copilotkit}"
+  },
+  {
+    "type": "warning",
+    "text": "Agent default not found"
+  },
+  {
+    "type": "warning",
+    "text": "Agent production-planner not found"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: the server responded with a status of 503 ()"
+  },
+  {
+    "type": "warning",
+    "text": "Failed to load runtime info (/api/copilotkit/info): Runtime info request failed with status 503"
+  },
+  {
+    "type": "error",
+    "text": "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at sZ.fetchRuntimeInfo (https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/24azfybs20_-_.js:12:37221)\n    at async sZ.updateRuntimeConnection (https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/24azfybs20_-_.js:12:35138) {runtimeUrl: /api/copilotkit}"
+  },
+  {
+    "type": "warning",
+    "text": "Agent default not found"
+  },
+  {
+    "type": "warning",
+    "text": "Agent brand-intelligence not found"
+  }
+]
