@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { after } from "next/server";
 import {
   DRAFT_ACTION_DOMAIN,
   DRAFT_ACTION_MESSAGES,
@@ -232,6 +233,10 @@ export async function processBrandIntelligenceDraftApproval(params: {
         error: sanitizeDraftActionError("promote", draft.brand_id, promoteResult.error),
       };
     }
+    // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
+    if (promoteResult.ok || promoteResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
+      scheduleDraftWorkflowResume(runId, true);
+    }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
     if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
@@ -241,20 +246,43 @@ export async function processBrandIntelligenceDraftApproval(params: {
         error: sanitizeDraftActionError("discard", draft.brand_id, discardResult.error),
       };
     }
-  }
-
-  try {
-    // Dynamic import (not a top-level one) breaks a real circular dependency:
-    // this file is imported by brand-intelligence-tools.ts, which is imported by
-    // brand-intelligence-agent.ts, which @/mastra's index.ts registers — a
-    // top-level import here would cycle straight back to @/mastra.
-    const { getMastra } = await import("@/mastra");
-    const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
-    await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
-  } catch (resumeErr) {
-    // Best-effort: profile already promoted/discarded — do not rollback draft row.
-    console.error("[process-draft-approval] resume failed (profile already applied):", resumeErr);
+    // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
+    if (discardResult.ok || discardResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
+      scheduleDraftWorkflowResume(runId, false);
+    }
   }
 
   return { ok: true, approved, brandId: draft.brand_id };
+}
+
+/**
+ * Schedule Mastra workflow resume via Next.js `after()` so it runs after the
+ * response is sent, without blocking the server-action flight on cold start.
+ * Logs failures but never throws — edge onboarding runIds are not suspended
+ * Mastra runs and will error "not suspended", which is expected.
+ */
+function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
+  const schedule = async () => {
+    try {
+      const { getMastra } = await import("@/mastra");
+      const mastra = getMastra();
+      const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
+      if (run) {
+        await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.toLowerCase().includes("not suspended")) {
+        console.error("[process-draft-approval] workflow resume failed", { runId, approved, error: msg });
+      }
+    }
+  };
+  try {
+    after(schedule);
+  } catch {
+    // `after()` is only available within a Next.js request scope (route handler,
+    // server action). Outside that context (e.g. test environments), it throws.
+    // Fall back to queueMicrotask to avoid blocking the response.
+    queueMicrotask(schedule);
+  }
 }
