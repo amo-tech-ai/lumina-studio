@@ -1,0 +1,21 @@
+{
+  "count": 2,
+  "entries": [
+    {
+      "probe": "same_org_api",
+      "url": "http://localhost:3002/api/brands/f3d6681c-2847-43fd-bfa4-8fe659a62bd7/similar",
+      "status": 200,
+      "resourceType": "xhr",
+      "dataPresent": true,
+      "reason": "no_embedding"
+    },
+    {
+      "probe": "foreign_org_api",
+      "url": "http://localhost:3002/api/brands/eec20e68-2adb-472d-8226-3da5d9f34fbe/similar",
+      "status": 404,
+      "resourceType": "xhr",
+      "dataPresent": false,
+      "reason": null
+    }
+  ]
+}
