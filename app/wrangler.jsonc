@@ -20,6 +20,11 @@
   "images": {
     "binding": "IMAGES"
   },
+  // IPI-707 · CF-SMOKE-001 — Worker version metadata binding for version verification.
+  // Official: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/
+  "version_metadata": {
+    "binding": "WORKER_VERSION_METADATA"
+  },
   // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true; that is local-dev only).
   // Official: https://developers.cloudflare.com/ai-gateway/integrations/aig-workers-ai-binding/
   "ai": {
@@ -103,6 +108,10 @@
         "enabled": true,
         "head_sampling_rate": 1
       },
+      // IPI-707 — Worker version metadata binding (per-env; not inherited from top level).
+      "version_metadata": {
+        "binding": "WORKER_VERSION_METADATA"
+      },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
@@ -147,6 +156,10 @@
       "observability": {
         "enabled": true,
         "head_sampling_rate": 1
+      },
+      // IPI-707 — Worker version metadata binding (per-env; not inherited from top level).
+      "version_metadata": {
+        "binding": "WORKER_VERSION_METADATA"
       },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",

@@ -96,6 +96,32 @@ async function captureBiDiagnostics<T>(run: () => Promise<T>) {
   }
 }
 
+Deno.test("brand-intelligence terminates unauthenticated requests with BI_FAILED", async () => {
+  await withEnv(BASE_EDGE_ENV, async () => {
+    await withMockFetch({}, async () => {
+      const { handleBrandIntelligenceRequest } = await import("./handler.ts");
+      const request = new Request(
+        "https://localhost/functions/v1/brand-intelligence",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brandId: BRAND_ID, url: TEST_URL }),
+        },
+      );
+      const { value: res, events } = await captureBiDiagnostics(() =>
+        handleBrandIntelligenceRequest(request)
+      );
+      assertEquals(res.status, 401);
+      assertEquals(events.map((event) => event.checkpoint), [
+        "REQUEST_RECEIVED",
+        "BI_FAILED",
+      ]);
+      assertEquals(events[1]?.category, "orchestration/invocation");
+      assertEquals(events[1]?.errorCode, "authentication_failed");
+    });
+  });
+});
+
 Deno.test("brand-intelligence accepts service-role bearer for workflow calls", async () => {
   await withEnv({
     ...BASE_EDGE_ENV,
@@ -125,6 +151,95 @@ Deno.test("brand-intelligence accepts service-role bearer for workflow calls", a
       assertEquals(res.status, 503);
       const body = await parseError(res);
       assertEquals(body.error.code, "config_error");
+    });
+  });
+});
+
+Deno.test("brand-intelligence classifies malformed Gemini JSON as schema failure", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    BI_USE_GEMINI: "1",
+    GEMINI_API_KEY: "gemini-test-key",
+  }, async () => {
+    await withMockFetch({ crawl: crawlWithText }, async () => {
+      const {
+        handleBrandIntelligenceRequest,
+        __setGeminiStructuredGenerateForTests,
+      } = await import("./handler.ts");
+      __setGeminiStructuredGenerateForTests((() =>
+        Promise.resolve({
+          response: {} as never,
+          text: "{malformed-json",
+          model: "gemini-3.1-flash-lite",
+        })) as typeof import("../_shared/gemini.ts").generateStructuredContent);
+      try {
+        const { value: res, events } = await captureBiDiagnostics(() =>
+          handleBrandIntelligenceRequest(biRequest({
+            brandId: BRAND_ID,
+            url: TEST_URL,
+            crawlResultId: crawlWithText.id,
+            draft_mode: true,
+          }))
+        );
+        assertEquals(res.status, 500);
+        const failure = events.find((event) => event.checkpoint === "BI_FAILED");
+        assertEquals(failure?.category, "schema");
+        assertEquals(failure?.errorCode, "internal_error");
+      } finally {
+        __setGeminiStructuredGenerateForTests(null);
+      }
+    });
+  });
+});
+
+Deno.test("brand-intelligence classifies brand lookup errors as database failure", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    BI_PROVIDER: "cloudflare",
+    CLOUDFLARE_API_TOKEN: "cf-test-token",
+    CLOUDFLARE_ACCOUNT_ID: "cf-test-account",
+  }, async () => {
+    await withMockFetch({
+      brandFetchError: { message: "database unavailable", code: "PGRST000" },
+    }, async () => {
+      const { handleBrandIntelligenceRequest } = await import("./handler.ts");
+      const { value: res, events } = await captureBiDiagnostics(() =>
+        handleBrandIntelligenceRequest(biRequest({
+          brandId: BRAND_ID,
+          url: TEST_URL,
+        }))
+      );
+      assertEquals(res.status, 500);
+      const body = await parseError(res);
+      assertEquals(body.error.code, "database_error");
+      const failure = events.find((event) => event.checkpoint === "BI_FAILED");
+      assertEquals(failure?.category, "database read");
+      assertEquals(failure?.errorCode, "database_error");
+    });
+  });
+});
+
+Deno.test("brand-intelligence keeps an empty successful lookup as not_found", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    BI_PROVIDER: "cloudflare",
+    CLOUDFLARE_API_TOKEN: "cf-test-token",
+    CLOUDFLARE_ACCOUNT_ID: "cf-test-account",
+  }, async () => {
+    await withMockFetch({ brand: null }, async () => {
+      const { handleBrandIntelligenceRequest } = await import("./handler.ts");
+      const { value: res, events } = await captureBiDiagnostics(() =>
+        handleBrandIntelligenceRequest(biRequest({
+          brandId: BRAND_ID,
+          url: TEST_URL,
+        }))
+      );
+      assertEquals(res.status, 404);
+      const body = await parseError(res);
+      assertEquals(body.error.code, "not_found");
+      const failure = events.find((event) => event.checkpoint === "BI_FAILED");
+      assertEquals(failure?.category, "orchestration/invocation");
+      assertEquals(failure?.errorCode, "not_found");
     });
   });
 });
@@ -229,6 +344,7 @@ Deno.test("brand-intelligence Groq path calls shared LLM and returns 200", async
         assertEquals(body.data.provider, "groq");
         assertEquals(body.data.usedCrawl, true);
         assertEquals(body.data.brandId, BRAND_ID);
+        assertEquals(typeof body.data.correlationId, "string");
         assertEquals(llmCalls.length, 1);
         assertEquals(llmCalls[0]?.scope, "bi");
         assertEquals(llmCalls[0]?.tier, "structured");
@@ -334,6 +450,8 @@ Deno.test("brand-intelligence Workers AI path calls shared LLM and returns 200 (
         assertEquals(events[1]?.configurationSource, "BI_PROVIDER");
         assertEquals(events[3]?.provider, "workers-ai");
         assertEquals(typeof events[3]?.providerDurationMs, "number");
+        assertEquals(events[3]?.brandId, BRAND_ID);
+        assertEquals(events[3]?.crawlResultId, crawlWithText.id);
       } finally {
         __setLlmStructuredGenerateForTests(null);
       }
@@ -366,7 +484,49 @@ Deno.test("brand-intelligence records a redacted provider failure checkpoint (IP
         assertEquals(failure?.category, "provider");
         assertEquals(failure?.errorCode, "internal_error");
         assertEquals(typeof failure?.providerDurationMs, "number");
+        assertEquals(failure?.brandId, BRAND_ID);
+        assertEquals(failure?.crawlResultId, crawlWithText.id);
         assertEquals(JSON.stringify(failure).includes("raw provider response"), false);
+      } finally {
+        __setLlmStructuredGenerateForTests(null);
+      }
+    });
+  });
+});
+
+Deno.test("brand-intelligence classifies exhausted structured output as schema failure", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    BI_PROVIDER: "cloudflare",
+    CLOUDFLARE_API_TOKEN: "cf-test-token",
+    CLOUDFLARE_ACCOUNT_ID: "cf-test-account",
+  }, async () => {
+    await withMockFetch({ crawl: crawlWithText }, async () => {
+      const {
+        handleBrandIntelligenceRequest,
+        __setLlmStructuredGenerateForTests,
+      } = await import("./handler.ts");
+      const { StructuredOutputValidationError } = await import(
+        "../_shared/llm/structured.ts"
+      );
+      __setLlmStructuredGenerateForTests((() =>
+        Promise.reject(
+          new StructuredOutputValidationError("invalid structured payload"),
+        )) as typeof import("../_shared/llm/structured.ts").generateStructuredContent);
+      try {
+        const { value: res, events } = await captureBiDiagnostics(() =>
+          handleBrandIntelligenceRequest(biRequest({
+            brandId: BRAND_ID,
+            url: TEST_URL,
+            crawlResultId: crawlWithText.id,
+            draft_mode: true,
+          }))
+        );
+        assertEquals(res.status, 500);
+        const failure = events.find((event) => event.checkpoint === "BI_FAILED");
+        assertEquals(failure?.category, "schema");
+        assertEquals(failure?.brandId, BRAND_ID);
+        assertEquals(failure?.crawlResultId, crawlWithText.id);
       } finally {
         __setLlmStructuredGenerateForTests(null);
       }
