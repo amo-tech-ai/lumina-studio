@@ -42,9 +42,9 @@ export function loadEnvLocal(filePath = resolve(process.cwd(), ".env.local")): v
 export function getQaCredentials(): QaCredentials {
   loadEnvLocal();
   const email =
-    process.env.QA_EMAIL?.trim() || process.env.Email?.trim() || "qa@ipix.test";
+    process.env.QA_EMAIL?.trim() || process.env.Email?.trim() || "";
   const password =
     process.env.QA_PASSWORD?.trim() || process.env.Password?.trim() || "";
-  if (!password) return { email: "", password: "" };
+  if (!email || !password) return { email: "", password: "" };
   return { email, password };
 }

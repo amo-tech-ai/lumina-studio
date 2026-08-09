@@ -274,22 +274,22 @@ test.describe("IPI-836 — fresh-user full crawl (only paid path)", () => {
 
     let userId: string | null = null;
     let idem: string | null = null;
-    const brandName = `IPI836 Aurelia ${Date.now()}`;
+    const brandName = `Aurelia ${Date.now()}`;
     const websiteUrl = "https://www.aesop.com";
 
     try {
       const started = await loginAndOpenFreshOnboarding(page);
       requireOrSkip(started, "QA_PASSWORD not set or login failed");
 
-      await fillQuestionnaireThroughGrowth(page, { brandName, websiteUrl });
-      await page.reload();
-      await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(/Step\s+\d+\s*\/\s*13/i)).toBeVisible({ timeout: 20_000 });
-
       userId = await readAuthUserId(page);
       idem = await readIdempotencyKey(page);
       expect(userId, "auth user id").toBeTruthy();
       expect(idem, "idempotency key").toBeTruthy();
+
+      await fillQuestionnaireThroughGrowth(page, { brandName, websiteUrl });
+      await page.reload();
+      await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(/Step\s+\d+\s*\/\s*13/i)).toBeVisible({ timeout: 20_000 });
 
       await advanceToAnalysis(page, { brandName, websiteUrl });
       await expect(
@@ -349,7 +349,6 @@ test.describe("IPI-836 — fresh-user full crawl (only paid path)", () => {
       assertUniqueMaterialized(after);
       expect(after.crawls).toBe(1);
       expect(after.intakeStatus, "brand must be promoted to ready after approve + Hub nav").toBe("ready");
-      console.log(`[IPI-836 timing] Fresh crawl ${Date.now() - startedAt}ms`);
     } finally {
       // Clean up fresh-crawl rows so they don't contaminate findDraftReadyOnboardingSession
       // (which orders by updated_at desc) in subsequent runs.

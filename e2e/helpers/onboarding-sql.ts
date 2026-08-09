@@ -211,6 +211,14 @@ export async function waitForPersistedDraftAnswers(opts: {
   intervals?: number[];
 }): Promise<void> {
   const { timeoutMs = 10_000, intervals = [200, 400, 800] } = opts;
+  if (
+    intervals.length === 0 ||
+    Array.from(intervals).some(
+      (interval) => !Number.isFinite(interval) || interval <= 0,
+    )
+  ) {
+    throw new Error("intervals must contain positive finite delays");
+  }
   const deadline = Date.now() + timeoutMs;
   let i = 0;
   // Hold a single PG connection for the whole poll loop — avoids up to 15
