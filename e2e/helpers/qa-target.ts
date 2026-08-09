@@ -8,6 +8,7 @@ export {
   refuseQaTarget,
   assertQaOnly,
   jwtProjectRef,
+  assertQaJwtKey,
   preflightOnboardingQaTarget,
   qaWebServerEnv,
 } from "./qa-target.mjs";

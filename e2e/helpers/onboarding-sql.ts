@@ -62,6 +62,12 @@ function sanitizePgConnectionString(raw: string): string {
   }
 }
 
+function isCi(): boolean {
+  const ci = process.env.CI;
+  const ciEnv = ci?.toLowerCase();
+  return ciEnv === "true" || ciEnv === "1" || !!process.env.CONTINUOUS_INTEGRATION;
+}
+
 function resolvePgSsl():
   | { rejectUnauthorized: false }
   | { rejectUnauthorized: true; ca: string } {
@@ -71,7 +77,7 @@ function resolvePgSsl():
   // The bypass is refused under CI (IPI-621 policy) so a shared CI env cannot
   // silently downgrade the QA connection carrying the DB password.
   if (process.env.VERIFY_RLS_PG_INSECURE_SSL === "1") {
-    if (process.env.CI === "true") {
+    if (isCi()) {
       throw new Error(
         "VERIFY_RLS_PG_INSECURE_SSL=1 is not allowed in CI (IPI-621). " +
           "Remove the variable or run this outside CI with a pinned CA.",
@@ -497,6 +503,26 @@ export async function resetBrandToDraftReady(brandId: string): Promise<void> {
               updated_at = now()
         where id = $1::uuid`,
       [brandId],
+    );
+  });
+}
+
+/**
+ * Delete a fresh-crawl test artifact (session rows) so they do not
+ * contaminate findDraftReadyOnboardingSession (which orders by updated_at desc)
+ * in subsequent runs. Targeted via idempotency key + user id; cascades
+ * brand_crawls via FK. Safe to call with .catch() in a finally block.
+ */
+export async function cleanupFreshCrawlRows(opts: {
+  userId: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  return withQaPg(async (client) => {
+    await client.query(
+      `delete from public.onboarding_sessions
+         where user_id = $1::uuid
+           and idempotency_key = $2`,
+      [opts.userId, opts.idempotencyKey],
     );
   });
 }

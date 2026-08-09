@@ -12,7 +12,33 @@ const modUrl = pathToFileURL(resolve(root, "e2e/helpers/qa-target.mjs")).href;
 
 async function main() {
   const loaded = await import(modUrl);
-  const { assertQaOnly, PROD_PROJECT_REF, QA_PROJECT_REF } = loaded;
+  const { assertQaOnly, assertQaJwtKey, PROD_PROJECT_REF, QA_PROJECT_REF } = loaded;
+  const jwtProjectRef = loaded.jwtProjectRef;
+
+  // --- Negative JWT self-checks ---
+  const prodJwt = makeQaJwt(PROD_PROJECT_REF);
+  assert.throws(
+    () => assertQaJwtKey("TEST_JWT", prodJwt),
+    /production/,
+    "prod-ref JWT must be refused",
+  );
+  assert.equal(jwtProjectRef(prodJwt), PROD_PROJECT_REF, "jwtProjectRef must decode prod ref");
+
+  const wrongQaJwt = makeQaJwt("someotherref123");
+  assert.throws(
+    () => assertQaJwtKey("TEST_JWT", wrongQaJwt),
+    /not QA/,
+    "non-QA JWT ref must be refused",
+  );
+  assert.equal(jwtProjectRef(wrongQaJwt), "someotherref123", "jwtProjectRef must decode wrong ref");
+
+  // Non-JWT key must be refused by assertQaJwtKey.
+  assert.throws(
+    () => assertQaJwtKey("TEST_JWT", "not-a-jwt"),
+    /QA JWT/,
+    "non-JWT key must be refused",
+  );
+  assert.equal(jwtProjectRef("not-a-jwt"), null, "jwtProjectRef must return null for non-JWT");
 
   // Build a valid QA JWT anon key (eyJ... prefix, ref = QA_PROJECT_REF in payload).
   const qaJwt = makeQaJwt(QA_PROJECT_REF);

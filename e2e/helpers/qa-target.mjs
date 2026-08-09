@@ -30,7 +30,7 @@ function unquote(value) {
 
 /** Load gitignored env without overwriting explicit process env. */
 export function loadEnvLocalFiles() {
-  for (const rel of ["app/.env.local", ".env.local"]) {
+  for (const rel of ["app/.env.local", ".env.local", ".env.qa-keys.local"]) {
     const filePath = resolve(process.cwd(), rel);
     if (!existsSync(filePath)) continue;
     for (const rawLine of readFileSync(filePath, "utf8").split(/\r?\n/)) {
@@ -121,7 +121,7 @@ export function jwtProjectRef(token) {
   }
 }
 
-function assertQaJwtKey(label, token) {
+export function assertQaJwtKey(label, token) {
   if (!token?.trim()) refuseQaTarget(`missing ${label}`);
   if (token.includes(PROD_PROJECT_REF)) {
     refuseQaTarget(`${label} embeds production project ref`);

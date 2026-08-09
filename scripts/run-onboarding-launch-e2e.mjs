@@ -9,38 +9,20 @@
  *   node scripts/run-onboarding-launch-e2e.mjs
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-function loadEnv(path) {
-  if (!existsSync(path)) return;
-  for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line || line.startsWith("#") || !line.includes("=")) continue;
-    const i = line.indexOf("=");
-    const k = line.slice(0, i).trim();
-    let v = line.slice(i + 1).trim();
-    if (
-      (v.startsWith('"') && v.endsWith('"')) ||
-      (v.startsWith("'") && v.endsWith("'"))
-    ) {
-      v = v.slice(1, -1);
-    }
-    if (!process.env[k]) process.env[k] = v;
-  }
-}
+const {
+  assertQaOnly,
+  jwtProjectRef,
+  QA_PROJECT_REF,
+  PROD_PROJECT_REF,
+  loadEnvLocalFiles,
+} = await import(pathToFileURL(resolve(root, "e2e/helpers/qa-target.mjs")).href);
 
-loadEnv(resolve(root, "app/.env.local"));
-loadEnv(resolve(root, ".env.local"));
-// Optional gitignored QA key pack (supabase projects api-keys) — never commit.
-loadEnv(resolve(root, ".env.qa-keys.local"));
-
-const { assertQaOnly, jwtProjectRef, QA_PROJECT_REF, PROD_PROJECT_REF } = await import(
-  pathToFileURL(resolve(root, "e2e/helpers/qa-target.mjs")).href
-);
+loadEnvLocalFiles();
 
 assertQaOnly("QA_DATABASE_URL", process.env.QA_DATABASE_URL);
 assertQaOnly("QA_SUPABASE_URL", process.env.QA_SUPABASE_URL);
@@ -108,5 +90,9 @@ const result = spawnSync("npx", args, {
   stdio: "inherit",
   env: process.env,
 });
+if (result.error) {
+  console.error(`FAIL: could not spawn Playwright: ${result.error.message}`);
+  process.exit(1);
+}
 const code = typeof result.status === "number" ? result.status : 1;
 process.exit(code);

@@ -13,7 +13,7 @@ function resolveAppEnv(): string {
 async function performQaLogin(page: Page): Promise<boolean> {
   loadEnvLocal(resolveAppEnv());
   const { email, password } = getQaCredentials();
-  if (!password) return false;
+  if (!email || !password) return false;
 
   await page.goto("/login");
   await page.getByRole("heading", { name: "Welcome" }).waitFor({ timeout: 30_000 });
@@ -85,7 +85,6 @@ export async function clickPrimaryCta(page: Page, name: string | RegExp) {
   // Fail fast — never spin for the full test timeout on a disabled CTA (screen 11
   // gates on brandName after resume).
   if (await cta.isDisabled()) {
-    await cta.waitFor({ state: "attached", timeout: 100 }).catch(() => undefined);
     const step = (await page.getByText(/Step\s+\d+\s*\/\s*13/i).textContent().catch(() => "")) ?? "";
     throw new Error(`Primary CTA disabled (${String(name)}); ${step.trim() || "unknown screen"}`);
   }
@@ -132,13 +131,16 @@ export async function fillQuestionnaireThroughGrowth(
   // containing brandName — the reload after this must not drop answers.
   const userId = await readAuthUserId(page);
   const idem = await readIdempotencyKey(page);
-  if (userId && idem) {
-    await waitForPersistedDraftAnswers({
-      userId,
-      idempotencyKey: idem,
-      brandName: opts.brandName,
-    });
+  if (!userId || !idem) {
+    throw new Error(
+      `persistence barrier skipped: userId=${userId ?? "null"}, idempotencyKey=${idem ?? "null"} — cannot guarantee draft answers round-tripped to DB`,
+    );
   }
+  await waitForPersistedDraftAnswers({
+    userId,
+    idempotencyKey: idem,
+    brandName: opts.brandName,
+  });
 }
 
 /**
