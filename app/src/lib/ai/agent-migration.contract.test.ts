@@ -20,7 +20,6 @@ import { resetAgentRoutingWarnState, AGENT_ROUTING_KEYS } from "./agent-routing"
 import { resolveAgentModelOutcome } from "./cloudflare-models";
 import type { CloudflareModelReason } from "./cloudflare-models";
 import type { RoutableAgentId } from "./agent-routing";
-import { WORKERS_AI_TIER_CAPABILITIES } from "./model-capabilities";
 
 function contextWithCfEnv(env: Record<string, unknown> | undefined): RequestContext {
   const requestContext = new RequestContext();
@@ -330,13 +329,9 @@ describe("IPI-769 agent-migration routing contract", () => {
         // Ensure model object exists (not undefined/null)
         expect(outcome.model).toBeDefined();
 
-        // Assert exact Workers AI model ID for native mode
-        // Note: This verifies the capability table mapping (tier → modelId) is correct.
-        // The actual Workers AI model object doesn't expose the modelId property directly,
-        // so we verify the capability entry instead.
+        // Assert exact Workers AI model ID for native mode via the LanguageModelV3 modelId
         if (expectedMode === "native" && expectedModelId) {
-          const capability = WORKERS_AI_TIER_CAPABILITIES[tier];
-          expect(capability?.modelId).toBe(expectedModelId);
+          expect((outcome.model as { modelId: string }).modelId).toBe(expectedModelId);
         }
 
         // Error messages include agent ID and requested mode when applicable
@@ -471,8 +466,7 @@ describe("request context isolation (not actual workerd integration)", () => {
     expect(outcome.mode).toBe("native");
     expect(outcome.reason).toBe("native");
     expect(outcome.model).toBeDefined();
-    // The model is a Workers AI model (has the expected structure)
-    expect(typeof outcome.model).toBe("object");
+    expect((outcome.model as { modelId: string }).modelId).toBe("@cf/moonshotai/kimi-k2.6");
   });
 
   it("request context is isolated per request (no global state leakage)", () => {
