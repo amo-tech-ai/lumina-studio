@@ -291,22 +291,36 @@ npx wrangler versions deploy <version-id>@100 --env preview
 | ⚪ | **Queues / Workflows / DO / Browser / Flagship** | **0** | — | Later |
 | 🔴 | **D1** as next step | **0** | Supabase is SSOT | **Avoid** |
 | ⚪ | **OpenNext `ipix-operator`** | **0** | Code ready; dashboard Builds project not yet created | Separate Worker |
-| 🟢 | **OpenNext `ipix-operator-preview`** | **100** | Live on `main`; Workers Builds accessible via API; v53 `b248a02f` serving 100% traffic | See section above |
+| 🟢 | **OpenNext `ipix-operator-preview`** | **100** | Live on `main` (verified 2026-08-10); Workers Builds accessible via API; see Token section for tag resolution | See section above |
 
-### Token — Workers Builds API
+### Token — Workers Builds API (verified 2026-08-10)
 
-The existing token in `~/.config/ipix/cloudflare.env` is a **user-scoped API token** (ID: `8c55756d...`), which is the **required type** for the Workers Builds API per [Cloudflare docs](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/). Account-scoped tokens return `{"code":12006,"message":"Invalid token"}`.
+Use a **user-scoped API token** stored in the managed team secret source (**Infisical** — `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`; see `AGENTS.md` Secrets) — the **required type** for the Workers Builds API per [Cloudflare docs](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/). Account-scoped tokens return `{"code":12006,"message":"Invalid token"}`. Required permissions: `Workers Builds Configuration: Edit` + `Workers Scripts: Read`.
 
-**Verified accessible endpoints (all HTTP 200):**
+Retrieve the token at runtime via the vault (e.g., `infisical run -- ...`), never from a personal path like `~/.config/ipix/cloudflare.env` and never commit token values or IDs.
+
+**Worker tag resolution — dynamic (do not hardcode):**
+
+```bash
+# 1. List Workers — find the script whose `id` is `ipix-operator-preview`, read its `tag`
+WORKER_TAG=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+  --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  | jq -r '.result[] | select(.id=="ipix-operator-preview") | .tag')
+echo "$WORKER_TAG" # UUID like 79e5ad03-...
+
+# 2. Use that tag with the Builds endpoint (by tag, not name)
+curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/builds/workers/$WORKER_TAG/builds" \
+  --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq
+```
+
+**Verified accessible endpoints (all HTTP 200, 2026-08-10):**
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /accounts/{id}/builds/account/limits` | Account build limits |
-| `GET /accounts/{id}/workers/scripts` | List Workers — get `tag` (UUID) via `external_script_id` |
-| `GET /accounts/{id}/builds/workers/{worker_tag}/builds` | List builds for a Worker (by tag, not name) |
+| `GET /accounts/{id}/workers/scripts` | List Workers — get `tag` where `id` == Worker name |
+| `GET /accounts/{id}/builds/workers/{worker_tag}/builds` | List builds for a Worker (by tag) |
 | `GET /accounts/{id}/builds/builds/{build_uuid}/logs` | Get build logs |
-
-**Worker tag for `ipix-operator-preview`:** `79e5ad0308134149a12786580b9c2eb9`
 
 No permission changes or dashboard edits are required.
 
