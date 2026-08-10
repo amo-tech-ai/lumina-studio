@@ -626,6 +626,28 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # IPI-707 · CF-SMOKE-001 — capture the live Worker's version ID before the
+      # journey, then fail the job if the browser traffic was not handled by that
+      # exact version. Prevents a false pass against an older healthy version.
+      - name: Capture Worker version ID (IPI-707)
+        id: capture_version
+        env:
+          # Optional override; default is the live OpenNext Worker preview host.
+          PREVIEW_WORKER_URL: ${{ vars.PREVIEW_WORKER_URL }}
+        run: |
+          set -euo pipefail
+          PREVIEW="${PREVIEW_WORKER_URL:-https://ipix-operator-preview.sk-498.workers.dev}"
+          HEADERS=$(curl -sS -D - -o /dev/null \
+            -H "Accept: application/json" \
+            "${PREVIEW%/}/api/copilotkit/info")
+          VERSION_ID=$(printf '%s' "$HEADERS" | tr -d '\r' | awk -F': ' 'tolower($1) == "x-ipix-worker-version" { print $2; exit }')
+          if [ -z "$VERSION_ID" ]; then
+            echo "::error::Worker did not return X-iPix-Worker-Version on /api/copilotkit/info — cannot assert exact-version smoke."
+            exit 1
+          fi
+          echo "Captured live Worker version: $VERSION_ID"
+          echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
+
       - name: verify:copilot on Worker preview (chromium, readonly)
         # One infra retry only (timeouts / 5xx / browser launch). Product assertion
         # failures (hard_ac_pass false) are not retried.
@@ -633,13 +655,15 @@ jobs:
           QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Exact-version gate: the captured header must survive the full journey.
+          EXPECT_VERSION: ${{ steps.capture_version.outputs.version_id }}
           # Optional override; default is the live OpenNext Worker preview host.
           PREVIEW_WORKER_URL: ${{ vars.PREVIEW_WORKER_URL }}
         run: |
           set -euo pipefail
           PREVIEW="${PREVIEW_WORKER_URL:-https://ipix-operator-preview.sk-498.workers.dev}"
           OUT="tasks/copilotkit/verify/evidence-ci"
-          echo "verify:copilot target=$PREVIEW out=$OUT sha=${GITHUB_SHA}"
+          echo "verify:copilot target=$PREVIEW out=$OUT sha=${GITHUB_SHA} expect-version=${EXPECT_VERSION}"
           echo "Mastra tool assert: deferred (IPI-850 soft gap — not a second suite)"
 
           run_verify() {
@@ -647,6 +671,7 @@ jobs:
               --base-url="$PREVIEW" \
               --readonly \
               --browser=chromium \
+              --expect-version="${EXPECT_VERSION}" \
               --out="$OUT" 2>&1 | tee /tmp/verify-copilot-ci.log
             return "${PIPESTATUS[0]}"
           }
