@@ -273,7 +273,6 @@ type AssetUpsertResult = {
 type MirrorRow = {
   id: string;
   asset_id: string;
-  brand_id: string | null;
   version: number | null;
   public_id: string | null;
   secure_url: string | null;
@@ -391,7 +390,6 @@ type CloudinaryMirrorRow = {
   width: number | null;
   height: number | null;
   folder: string | null;
-  brand_id: string | null;
   format: string | null;
   bytes: number | null;
   duration: number | null;
@@ -400,13 +398,12 @@ type CloudinaryMirrorRow = {
   version?: number;
 };
 
-const MIRROR_SELECT = "id, asset_id, brand_id, version, public_id, secure_url, cloudinary_asset_id";
+const MIRROR_SELECT = "id, asset_id, version, public_id, secure_url, cloudinary_asset_id";
 
 function toMirrorLookup(
   data: {
     id?: string;
     asset_id?: string;
-    brand_id?: string | null;
     version?: number | null;
     public_id?: string | null;
     secure_url?: string | null;
@@ -419,7 +416,6 @@ function toMirrorLookup(
     mirror: {
       id: data.id,
       asset_id: data.asset_id,
-      brand_id: data.brand_id ?? null,
       version: data.version ?? null,
       public_id: data.public_id ?? null,
       secure_url: data.secure_url ?? null,
@@ -537,7 +533,6 @@ async function upsertCloudinaryAssetRecord(
     width: payload.width ?? null,
     height: payload.height ?? null,
     folder: folder ?? null,
-    brand_id: brandId,
     format: payload.format ?? null,
     bytes: payload.bytes ?? null,
     duration: payload.duration ?? null,
@@ -595,18 +590,8 @@ async function upsertCloudinaryAssetRecord(
 
     // Never reassign the mirror FK — concurrent inserts must keep the canonical asset_id.
     row.asset_id = existing.mirror.asset_id;
-    // Prefer candidate brand, but fall back to the mirror's existing brand on FK failure.
-    row.brand_id = brandId ?? existing.mirror.brand_id;
 
-    let { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
-    if (error && brandId && isBrandFkViolation(error)) {
-      console.error(
-        "[cloudinary/webhook] brand_id rejected on mirror rename, preserving existing brand:",
-        error.message,
-      );
-      row.brand_id = existing.mirror.brand_id;
-      ({ error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id));
-    }
+    const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
     if (error) {
       console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
       return { ok: false };
@@ -627,12 +612,7 @@ async function upsertCloudinaryAssetRecord(
     } else {
       // Same provider, legacy null identity, or no incoming id — update that row in place.
       row.asset_id = byPublicId.mirror.asset_id;
-      row.brand_id = brandId ?? byPublicId.mirror.brand_id;
-      let { error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id);
-      if (error && brandId && isBrandFkViolation(error)) {
-        row.brand_id = byPublicId.mirror.brand_id;
-        ({ error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id));
-      }
+      const { error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id);
       if (error) {
         console.error("[cloudinary/webhook] cloudinary_assets update by public_id failed:", error.message);
         return { ok: false };
@@ -734,11 +714,11 @@ async function resolveAssetForUpload(
     // Direct inequality: null → value must sync assets (legacy mirrors).
     const publicIdChanged = storedPublicId !== publicId;
     // Always attempt brand push on same-public_id overwrites when a candidate exists —
-    // assets.brand_id may still be null after an earlier FK failure even if the mirror already has it.
+    // assets.brand_id may still be null after an earlier FK failure.
     const reconcileBrandOnly = !publicIdChanged && brandId != null;
     return {
       assetId: priorLookup.mirror.asset_id,
-      effectiveBrandId: brandId ?? priorLookup.mirror.brand_id,
+      effectiveBrandId: brandId ?? null,
       deferAssetPublicIdSync: publicIdChanged,
       reconcileBrandOnly,
     };
