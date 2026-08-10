@@ -7,7 +7,11 @@
 // CLOUDINARY_API_SECRET read — lib/cloudinary/url.ts stays importable from client
 // components and must never pull in the secret-reading `cloudinary` v2 SDK.
 import { v2 as cloudinary } from "cloudinary";
-import { CLOUDINARY_PRESETS, cropTransformString, type CloudinaryPresetName } from "@/lib/cloudinary/url";
+import {
+  cropTransformString,
+  deliveryTransformString,
+  type CloudinaryPresetName,
+} from "@/lib/cloudinary/url";
 
 export type CloudinaryResourceType = "image" | "video" | "raw";
 export type CloudinaryDeliveryType = "upload" | "authenticated" | "private";
@@ -63,7 +67,7 @@ export function cloudinarySignedPresetUrl(
   return signedUrl(publicId, {
     resourceType: "image",
     deliveryType,
-    raw_transformation: cropTransformString(CLOUDINARY_PRESETS[preset]),
+    raw_transformation: deliveryTransformString(preset),
   });
 }
 
