@@ -229,25 +229,40 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(mockStartBi.mock.calls[0][3]).toEqual({ crawlResultId: "crawl-deferred" });
   });
 
-  it("shows website recovery UI when URL is blank (no crawl or BI)", async () => {
-    const onEditWebsite = vi.fn();
+  it("proceeds with crawl when website URL is present (blank URL blocked at screen 4)", async () => {
     render(
       <AnalysisProgressScreen
         brandId="brand-1"
-        answers={{ ...answers, websiteUrl: "   " }}
+        answers={{ ...answers, websiteUrl: "https://maison.example.com" }}
         onComplete={vi.fn()}
-        onEditWebsite={onEditWebsite}
         quietGapMs={0}
       />,
     );
 
-    expect(await screen.findByText(/Website needed/i)).toBeTruthy();
-    expect(screen.getByTestId("analysis-status").textContent).toMatch(/website url/i);
-    expect(mockKickoff).not.toHaveBeenCalled();
-    expect(mockStartBi).not.toHaveBeenCalled();
+    // No needs_website dead-end — the contract is enforced at screen 4.
+    expect(screen.queryByText(/Website needed/i)).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /Add website/i }));
-    expect(onEditWebsite).toHaveBeenCalledTimes(1);
+    expect(mockKickoff).toHaveBeenCalledTimes(1);
+    expect(mockStartBi).not.toHaveBeenCalled();
+  });
+
+  it("shows fatal error if needs_website reaches analysis (pre-enforcement resume guard)", async () => {
+    mockKickoff.mockResolvedValue({ kind: "needs_website" });
+
+    render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={{ ...answers, websiteUrl: "" }}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    // Defensive guard: website is enforced at screen 4, but a resumed session
+    // from before the fix should surface an error, not a dead-end button.
+    expect(await screen.findByText(/Website URL is required.*Brand DNA/i)).toBeTruthy();
+    expect(mockKickoff).toHaveBeenCalledTimes(1);
+    expect(mockStartBi).not.toHaveBeenCalled();
   });
 
   it("shows fatal failure with Retry that re-runs kickoff", async () => {

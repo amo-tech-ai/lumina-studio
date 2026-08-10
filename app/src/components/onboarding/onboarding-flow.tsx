@@ -156,7 +156,9 @@ export function OnboardingFlow({
     setAnswers((current) => {
       switch (screen) {
         case 4:
-          return { ...current, brandName: "", websiteUrl: "" };
+          // Screen 4 Skip only clears the brand name placeholder. The website
+          // URL is required and must never be bypassed by Skip.
+          return { ...current, brandName: "" };
         case 5:
           return { ...current, listed: {} };
         case 7:
@@ -197,7 +199,6 @@ export function OnboardingFlow({
             brandId={brandId}
             answers={answers}
             onComplete={() => replaceScreen(LAST_SCREEN)}
-            onEditWebsite={() => goToScreen(4)}
           />
         );
       case LAST_SCREEN:
