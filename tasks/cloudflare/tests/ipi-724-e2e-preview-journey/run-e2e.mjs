@@ -371,17 +371,19 @@ async function main() {
     }
     await page.screenshot({ path: join(SHOTS, "01-login.png"), fullPage: false });
     const onApp = page.url().includes("/app");
-    timing.appResponseMs = Date.now() - timing.loginStart;
+    // IPI-968: Start app-response timing when form is submitted (ccStart)
+    timing.appResponseMs = Date.now() - ccStart;
     mark("01_login", onApp, onApp ? `landed ${page.url()}` : `stuck at ${page.url()}`);
 
     // 2–3. Command Center / widgets
     await withTransientRetry("command center settle", async () => {
-      // IPI-968: Replace networkidle with real user-ready signal
-      // Wait for main content, nav, and chat dock to be visible
+      // IPI-968: Wait for loading skeleton to disappear before marking user ready
+      // The skeleton has aria-busy, wait for it to be removed or for actual Command Center content
+      await page.locator('[aria-busy="true"]').waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
+      // Then wait for main content and nav to be visible (dock excluded for Copilot timing)
       await Promise.all([
         page.locator("main, [role='main']").first().waitFor({ state: "visible", timeout: 15000 }),
         page.locator("nav a, [class*='nav'] a, aside a").first().waitFor({ state: "visible", timeout: 15000 }),
-        page.getByTestId("operator-chat-dock").waitFor({ state: "visible", timeout: 15000 }),
       ]);
       const bodyText = await page.locator("body").innerText();
       if (!bodyText || bodyText.trim().length < 40) {
@@ -425,6 +427,7 @@ async function main() {
     );
 
     // 4. CopilotKit init
+    // IPI-968: Start Copilot clock before dock wait to include dynamic import/mount time
     const copilotStart = Date.now();
     await withTransientRetry("copilot init", async () => {
       await page.waitForSelector('[data-testid="operator-chat-dock"]', {
