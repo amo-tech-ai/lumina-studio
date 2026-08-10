@@ -107,14 +107,22 @@ export const ASSET_DELIVERY_PRESETS = {
 
 export type AssetDeliveryPresetName = keyof typeof ASSET_DELIVERY_PRESETS;
 
+export type AssetDeliveryPresetValue =
+  (typeof ASSET_DELIVERY_PRESETS)[keyof typeof ASSET_DELIVERY_PRESETS];
+
 /** Canonical delivery chain for a named transformation: `t_asset-masonry/f_auto/q_auto`. */
 export function namedTransformDeliveryString(transformName: string): string {
   return `t_${transformName}/f_auto/q_auto`;
 }
 
 /** True when a preset is backed by a Cloudinary named transformation (delivery presets). */
-export function isNamedTransformPreset(preset: CloudinaryPresetName): boolean {
-  return (Object.values(ASSET_DELIVERY_PRESETS) as readonly string[]).includes(preset);
+export function isNamedTransformPreset(
+  preset: CloudinaryPresetName,
+): preset is AssetDeliveryPresetValue {
+  const deliveryValues = Object.values(
+    ASSET_DELIVERY_PRESETS,
+  ) as readonly AssetDeliveryPresetValue[];
+  return deliveryValues.includes(preset as AssetDeliveryPresetValue);
 }
 
 /** Delivery transform chain for a preset: named transform for the three delivery
