@@ -48,7 +48,35 @@ join public.media_size_specs m
 where a.media_size_spec_id is not null
   and m.id = a.media_size_spec_id;
 
+-- ---------- 2b. Safety net: fail loudly instead of silently losing refs -----
+-- The slug mapping is not 1:1 for every use_case (e.g. product_main vs
+-- product_image); if any asset failed to map, abort before the column drop.
+do $$
+begin
+  if exists (
+    select 1 from public.assets
+    where media_size_spec_id is not null and image_spec_id is null
+  ) then
+    raise exception 'CLD-SPEC-001 backfill incomplete: % asset(s) still reference media_size_specs without an image_specs match', (
+      select count(*) from public.assets
+      where media_size_spec_id is not null and image_spec_id is null
+    );
+  end if;
+end $$;
+
 -- ---------- 3. Drop old FK columns (indexes drop with them) ----------------
+-- Zero-reference check on asset_variants before the drop (defensive; live
+-- state verified 0 refs, this guards fresh replays).
+do $$
+begin
+  if exists (
+    select 1 from public.asset_variants
+    where media_size_spec_id is not null
+  ) then
+    raise exception 'CLD-SPEC-001: asset_variants still reference media_size_specs';
+  end if;
+end $$;
+
 alter table public.assets
   drop column if exists media_size_spec_id;
 alter table public.asset_variants
@@ -63,6 +91,12 @@ comment on table public.media_size_specs is
 
 revoke insert, update, delete on public.media_size_specs from authenticated;
 revoke insert, update, delete on public.media_size_specs from anon;
+-- Freeze must block reads too: drop the legacy SELECT policies and revoke
+-- SELECT so PostgREST clients cannot keep reading conflicting dims.
+drop policy if exists anon_select_active_media_size_specs on public.media_size_specs;
+drop policy if exists authenticated_select_active_media_size_specs on public.media_size_specs;
+revoke select on public.media_size_specs from authenticated;
+revoke select on public.media_size_specs from anon;
 
 commit;
 
