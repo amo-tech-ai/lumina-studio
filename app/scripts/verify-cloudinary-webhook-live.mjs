@@ -382,9 +382,7 @@ async function main() {
       if (!asset) return null;
       const { data: ca } = await admin
         .from("cloudinary_assets")
-        .select(
-          "public_id, status, version, brand_id, resource_type, delivery_type, cloudinary_asset_id",
-        )
+        .select("public_id, status, version, resource_type, delivery_type, cloudinary_asset_id")
         .eq("public_id", publicId)
         .maybeSingle();
       if (!ca || ca.status !== "ready") return null;

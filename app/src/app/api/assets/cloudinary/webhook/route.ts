@@ -716,9 +716,20 @@ async function resolveAssetForUpload(
     // Always attempt brand push on same-public_id overwrites when a candidate exists —
     // assets.brand_id may still be null after an earlier FK failure.
     const reconcileBrandOnly = !publicIdChanged && brandId != null;
+    // P2: when no parseable ownership signal (e.g., rename of legacy public_id without context),
+    // fall back to authoritative parent assets.brand_id for ai_agent_logs scoping
+    let effectiveBrandId: string | null = brandId ?? null;
+    if (!effectiveBrandId) {
+      const { data: parent } = await db
+        .from("assets")
+        .select("brand_id")
+        .eq("id", priorLookup.mirror.asset_id)
+        .maybeSingle();
+      effectiveBrandId = parent?.brand_id ?? null;
+    }
     return {
       assetId: priorLookup.mirror.asset_id,
-      effectiveBrandId: brandId ?? null,
+      effectiveBrandId,
       deferAssetPublicIdSync: publicIdChanged,
       reconcileBrandOnly,
     };

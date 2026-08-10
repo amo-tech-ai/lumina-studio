@@ -47,14 +47,14 @@ async function assertFixtureRows(fixture: CloudinaryQaFixture): Promise<void> {
 
   const { data: cldRow, error: cldErr } = await admin
     .from("cloudinary_assets")
-    .select("public_id, status, brand_id, asset_id")
+    .select("public_id, status, asset_id")
     .eq("public_id", fixture.publicId)
     .maybeSingle();
   expect(cldErr).toBeNull();
   expect(cldRow?.public_id).toBe(fixture.publicId);
   expect(cldRow?.status).toBe("ready");
-  expect(cldRow?.brand_id).toBe(fixture.brandId);
   expect(cldRow?.asset_id).toBe(fixture.assetId);
+  // brand ownership verified via parent assets row above (cloudinary_assets.brand_id duplicate removed in IPI-962)
 }
 
 async function assertFixtureOnAssetsPage(page: Page, fixture: CloudinaryQaFixture): Promise<void> {
