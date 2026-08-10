@@ -104,12 +104,12 @@ describe("AssetCard", () => {
     const { container } = render(
       <AssetCard
         asset={asset({
-          displayUrl: "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/real-upload-01",
+          displayUrl: "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/t_asset-masonry/f_auto/q_auto/real-upload-01",
         })}
       />,
     );
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
-      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/real-upload-01",
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/t_asset-masonry/f_auto/q_auto/real-upload-01",
     );
   });
 
@@ -118,7 +118,7 @@ describe("AssetCard", () => {
       <AssetCard
         asset={asset({
           displayUrl:
-            "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload",
+            "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/t_asset-masonry/f_auto/q_auto/missing-upload",
         })}
       />,
     );
@@ -131,9 +131,9 @@ describe("AssetCard", () => {
 
   it("retries the thumb when displayUrl changes after a prior load failure (same asset.id)", () => {
     const broken =
-      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload";
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/t_asset-masonry/f_auto/q_auto/missing-upload";
     const recovered =
-      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/recovered-upload";
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/t_asset-masonry/f_auto/q_auto/recovered-upload";
     const { container, rerender } = render(<AssetCard asset={asset({ displayUrl: broken })} />);
     fireEvent.error(container.querySelector("img")!);
     expect(container.querySelector("img")).toBeNull();

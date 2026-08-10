@@ -12,7 +12,7 @@ import {
   TEST_PUBLIC_ID_PREFIX,
   testScopeForBrand,
   shouldKeepFixture,
-  ASSET_MASONRY_TRANSFORM,
+  ASSET_MASONRY_DELIVERY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
 
 // --- helpers ------------------------------------------------------------------
@@ -329,7 +329,7 @@ describe("pollForDnaState", () => {
 });
 
 describe("buildSignedDeliveryUrl", () => {
-  it("calls cloudinary.url with authenticated + sign_url + the asset-masonry transform", () => {
+  it("calls cloudinary.url with authenticated + sign_url + the asset-masonry named transform", () => {
     const cld = fakeCloudinary();
     const url = buildSignedDeliveryUrl(cld, "pid");
     expect(url).toMatch(/res.cloudinary.com\/fake/);
@@ -338,7 +338,9 @@ describe("buildSignedDeliveryUrl", () => {
     expect(opts.type).toBe("authenticated");
     expect(opts.sign_url).toBe(true);
     expect(opts.secure).toBe(true);
-    expect(opts.raw_transformation).toBe(ASSET_MASONRY_TRANSFORM);
+    expect(opts.raw_transformation).toBe(ASSET_MASONRY_DELIVERY_TRANSFORM);
+    expect(opts.raw_transformation).toBe("t_asset-masonry/f_auto/q_auto");
+    expect(opts.raw_transformation).not.toContain("c_limit");
   });
 });
 

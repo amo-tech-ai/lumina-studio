@@ -196,9 +196,10 @@ describe("buildUploadParamsToSign", () => {
       orgId: VALID_ORG_ID,
     });
 
-    expect(params.eager).toContain("c_limit,w_600");
-    expect(params.eager).toContain("c_limit,w_1200");
-    expect(params.eager).toContain("c_limit,w_1600");
+    expect(params.eager).toContain("t_asset-masonry/f_auto/q_auto");
+    expect(params.eager).toContain("t_asset-review/f_auto/q_auto");
+    expect(params.eager).toContain("t_asset-detail/f_auto/q_auto");
+    expect(params.eager).not.toContain("c_limit");
   });
 });
 

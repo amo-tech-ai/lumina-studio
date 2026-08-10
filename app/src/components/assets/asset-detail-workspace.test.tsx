@@ -40,7 +40,7 @@ function detail(overrides: Partial<AssetDetail> = {}): AssetDetail {
     thumbnail_url: null,
     cloudinary_public_id: "brand/look-01",
     displayUrl:
-      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc--/c_limit,w_1600,f_auto,q_auto/brand/look-01",
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc--/t_asset-detail/f_auto/q_auto/brand/look-01",
     status: "ready",
     dna_score: 88,
     dna_pillars: {},

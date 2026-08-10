@@ -150,8 +150,17 @@ export {
   CLOUDINARY_EAGER_PRESETS,
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_METADATA_SCHEMA_VERSION,
+  ASSET_DELIVERY_PRESETS,
   cropTransformString,
   presetTransformString,
+  namedTransformDeliveryString,
+  isNamedTransformPreset,
+  deliveryTransformString,
 } from "@/lib/cloudinary/url";
 
-export type { CloudinaryPresetName, CropTransform } from "@/lib/cloudinary/url";
+export type {
+  CloudinaryPresetName,
+  CropTransform,
+  AssetDeliveryPresetName,
+  AssetDeliveryPresetValue,
+} from "@/lib/cloudinary/url";

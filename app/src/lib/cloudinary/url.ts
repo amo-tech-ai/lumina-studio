@@ -93,6 +93,47 @@ export const CLOUDINARY_EAGER_PRESETS = ["asset-masonry", "asset-review", "asset
 
 export type CloudinaryPresetName = keyof typeof CLOUDINARY_PRESETS;
 
+// IPI-960 CLD-DELIVERY-001 — UI delivery surface → Cloudinary named transformation.
+// Single source of truth for delivery presets: the app only selects the preset per
+// surface; crop/size rules live in the Cloudinary Console (asset-masonry/review/detail).
+// f_auto/q_auto are chained OUTSIDE the named transform (Cloudinary rule: f_auto must
+// not be hidden inside a named transformation, and q_auto outside preserves CDN-level
+// Save-Data behavior) — canonical chain: t_asset-masonry/f_auto/q_auto.
+export const ASSET_DELIVERY_PRESETS = {
+  masonry: "asset-masonry",
+  review: "asset-review",
+  detail: "asset-detail",
+} as const;
+
+export type AssetDeliveryPresetName = keyof typeof ASSET_DELIVERY_PRESETS;
+
+export type AssetDeliveryPresetValue =
+  (typeof ASSET_DELIVERY_PRESETS)[keyof typeof ASSET_DELIVERY_PRESETS];
+
+/** Canonical delivery chain for a named transformation: `t_asset-masonry/f_auto/q_auto`. */
+export function namedTransformDeliveryString(transformName: string): string {
+  return `t_${transformName}/f_auto/q_auto`;
+}
+
+/** True when a preset is backed by a Cloudinary named transformation (delivery presets). */
+export function isNamedTransformPreset(
+  preset: CloudinaryPresetName,
+): preset is AssetDeliveryPresetValue {
+  const deliveryValues = Object.values(
+    ASSET_DELIVERY_PRESETS,
+  ) as readonly AssetDeliveryPresetValue[];
+  return deliveryValues.includes(preset as AssetDeliveryPresetValue);
+}
+
+/** Delivery transform chain for a preset: named transform for the three delivery
+ *  presets, inline heuristic for the remaining presets (brand-cover/asset-tile have
+ *  no named transformation). */
+export function deliveryTransformString(preset: CloudinaryPresetName): string {
+  return isNamedTransformPreset(preset)
+    ? namedTransformDeliveryString(preset)
+    : presetTransformString(preset);
+}
+
 /**
  * Raw Cloudinary transformation string (e.g. "c_thumb,w_120,h_120,g_auto,f_auto,q_auto").
  * Single source of truth for both eager upload pregeneration (upload-sign/route.ts) and
@@ -122,5 +163,5 @@ export function withCloudinaryPreset(url: string, preset: CloudinaryPresetName):
   const idx = url.indexOf(marker);
   if (idx === -1) return url;
   const insertAt = idx + marker.length;
-  return `${url.slice(0, insertAt)}${presetTransformString(preset)}/${url.slice(insertAt)}`;
+  return `${url.slice(0, insertAt)}${deliveryTransformString(preset)}/${url.slice(insertAt)}`;
 }

@@ -67,15 +67,55 @@ describe("presetTransformString / cropTransformString", () => {
   });
 });
 
+describe("ASSET_DELIVERY_PRESETS / namedTransformDeliveryString", () => {
+  it("maps each delivery surface to its Cloudinary named transformation", async () => {
+    const { ASSET_DELIVERY_PRESETS } = await importUrl();
+    expect(ASSET_DELIVERY_PRESETS).toEqual({
+      masonry: "asset-masonry",
+      review: "asset-review",
+      detail: "asset-detail",
+    });
+  });
+
+  it("builds the canonical named-transform delivery chain with f_auto/q_auto outside", async () => {
+    const { namedTransformDeliveryString } = await importUrl();
+    expect(namedTransformDeliveryString("asset-masonry")).toBe("t_asset-masonry/f_auto/q_auto");
+    expect(namedTransformDeliveryString("asset-review")).toBe("t_asset-review/f_auto/q_auto");
+    expect(namedTransformDeliveryString("asset-detail")).toBe("t_asset-detail/f_auto/q_auto");
+  });
+
+  it("deliveryTransformString uses the named chain for delivery presets and inline for the rest", async () => {
+    const { deliveryTransformString, isNamedTransformPreset } = await importUrl();
+    expect(deliveryTransformString("asset-masonry")).toBe("t_asset-masonry/f_auto/q_auto");
+    expect(deliveryTransformString("asset-review")).toBe("t_asset-review/f_auto/q_auto");
+    expect(deliveryTransformString("asset-detail")).toBe("t_asset-detail/f_auto/q_auto");
+    expect(deliveryTransformString("asset-tile")).toBe("c_thumb,w_120,h_120,g_auto,f_auto,q_auto");
+    expect(deliveryTransformString("brand-cover")).toBe("c_fill,w_400,h_300,g_auto,f_auto,q_auto");
+    expect(isNamedTransformPreset("asset-masonry")).toBe(true);
+    expect(isNamedTransformPreset("asset-tile")).toBe(false);
+  });
+});
+
 describe("withCloudinaryPreset", () => {
-  it("inserts the preset transform right after /image/upload/", async () => {
+  it("inserts the named-transform delivery chain right after /image/upload/", async () => {
     const { withCloudinaryPreset } = await importUrl();
     const url = withCloudinaryPreset(
       "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1700000000/brand/asset_01.jpg",
       "asset-masonry",
     );
     expect(url).toBe(
-      "https://res.cloudinary.com/dzqy2ixl0/image/upload/c_limit,w_600,f_auto,q_auto/v1700000000/brand/asset_01.jpg",
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/t_asset-masonry/f_auto/q_auto/v1700000000/brand/asset_01.jpg",
+    );
+  });
+
+  it("keeps the version segment after the transform (cache-busting preserved)", async () => {
+    const { withCloudinaryPreset } = await importUrl();
+    const url = withCloudinaryPreset(
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1786337355/brand/asset_01.jpg",
+      "asset-detail",
+    );
+    expect(url).toBe(
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/t_asset-detail/f_auto/q_auto/v1786337355/brand/asset_01.jpg",
     );
   });
 
