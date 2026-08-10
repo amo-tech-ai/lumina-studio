@@ -80,10 +80,11 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-// The asset-masonry preset from lib/cloudinary/url.ts — kept here as a literal
-// (not imported) so the script has zero TypeScript loader deps and this is the
-// single non-TS surface that must be kept in sync if the preset changes.
-export const ASSET_MASONRY_TRANSFORM = "c_limit,w_600,f_auto,q_auto";
+// The asset-masonry delivery transform from lib/cloudinary/url.ts — mirrored
+// here as a literal (not imported) so the script has zero TypeScript loader deps.
+// IPI-960 CLD-DELIVERY-001: uses the Cloudinary named transform t_asset-masonry
+// with f_auto/q_auto chained outside, matching deliveryTransformString("asset-masonry").
+export const ASSET_MASONRY_DELIVERY_TRANSFORM = "t_asset-masonry/f_auto/q_auto";
 
 // All HTTP requests (signing, upload, delivery) abort after this duration.
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -357,14 +358,15 @@ export function interpretDnaState(asset) {
 
 /**
  * Build a signed authenticated delivery URL for the asset-masonry preset.
- * Mirrors app/src/app/api/_lib/cloudinary-signed-url.ts exactly.
+ * Mirrors app/src/app/api/_lib/cloudinary-signed-url.ts exactly — uses the
+ * Cloudinary named transformation chain via deliveryTransformString("asset-masonry").
  */
 export function buildSignedDeliveryUrl(cloudinary, publicId) {
   return cloudinary.url(publicId, {
     type: "authenticated",
     sign_url: true,
     secure: true,
-    raw_transformation: ASSET_MASONRY_TRANSFORM,
+    raw_transformation: ASSET_MASONRY_DELIVERY_TRANSFORM,
   });
 }
 

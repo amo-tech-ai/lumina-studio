@@ -12,7 +12,7 @@ import {
   TEST_PUBLIC_ID_PREFIX,
   testScopeForBrand,
   shouldKeepFixture,
-  ASSET_MASONRY_TRANSFORM,
+  ASSET_MASONRY_DELIVERY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
 
 // --- helpers ------------------------------------------------------------------
@@ -338,7 +338,7 @@ describe("buildSignedDeliveryUrl", () => {
     expect(opts.type).toBe("authenticated");
     expect(opts.sign_url).toBe(true);
     expect(opts.secure).toBe(true);
-    expect(opts.raw_transformation).toBe(ASSET_MASONRY_TRANSFORM);
+    expect(opts.raw_transformation).toBe(ASSET_MASONRY_DELIVERY_TRANSFORM);
   });
 });
 
