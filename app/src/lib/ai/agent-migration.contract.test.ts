@@ -275,7 +275,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
   // ─── Default surface resolution (marketing → public-marketing) ─────────────
   // Note: resolveAgentModelOutcome doesn't take surface directly - surface is used
   // by agent-routing.ts to resolve "default" to canonical IDs. Test the canonical ID directly.
-  // (Duplicate of lines 123-131 removed - tests identical behavior)
+  // (Duplicate of lines 125-135 removed - tests identical behavior)
 ];
 
 describe("IPI-769 agent-migration routing contract", () => {
@@ -331,6 +331,9 @@ describe("IPI-769 agent-migration routing contract", () => {
         expect(outcome.model).toBeDefined();
 
         // Assert exact Workers AI model ID for native mode
+        // Note: This verifies the capability table mapping (tier → modelId) is correct.
+        // The actual Workers AI model object doesn't expose the modelId property directly,
+        // so we verify the capability entry instead.
         if (expectedMode === "native" && expectedModelId) {
           const capability = WORKERS_AI_TIER_CAPABILITIES[tier];
           expect(capability?.modelId).toBe(expectedModelId);
