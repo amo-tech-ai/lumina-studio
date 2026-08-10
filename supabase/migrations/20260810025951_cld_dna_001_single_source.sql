@@ -34,13 +34,14 @@ drop trigger if exists trg_recalc_shoot_dna_score on shoot.shoot_assets;
 drop function if exists shoot.recalc_shoot_dna_score();
 
 -- ---------- 3. RPC contract preservation (no reference to dropped cols) ---
--- get_shoot_detail: shoot-asset dna_score now constant NULL (column dropped).
+-- get_shoot_detail: canonical body = IPI-721 org-aware version
+-- (20260720050758); shoot-asset dna_score now constant NULL (column dropped).
 create or replace function public.get_shoot_detail(p_shoot_id uuid)
-returns json
-language plpgsql
-security definer
-set search_path = shoot, public
-as $$
+ returns json
+ language plpgsql
+ security definer
+ set search_path to 'shoot', 'public'
+as $function$
 declare
   v_result json;
   v_brand_id uuid;
@@ -54,7 +55,7 @@ begin
   from shoot.shoots s
   inner join public.brands b on b.id = s.brand_id
   where s.id = p_shoot_id
-    and b.user_id = auth.uid();
+    and public.is_org_member(b.org_id);
 
   if v_brand_id is null then
     raise exception 'not_found' using errcode = 'P0002';
@@ -125,8 +126,7 @@ begin
         'resource_type', a.resource_type,
         'width', a.width,
         'height', a.height,
-        -- CLD-DNA-001: column dropped; key kept as NULL to preserve JSON contract
-        'dna_score', null::integer,
+        'dna_score', null::integer,  -- CLD-DNA-001: column dropped; key kept as NULL to preserve JSON contract
         'status', a.status::text,
         'created_at', a.created_at
       ) order by a.created_at desc)
@@ -186,9 +186,12 @@ begin
 
   return v_result;
 end;
-$$;
+$function$;
 
-revoke all on function public.get_shoot_detail(uuid) from public;
+comment on function public.get_shoot_detail(uuid) is
+  'IPI-721 — org-membership authorization (public.is_org_member), replacing the prior personal-brand-ownership check. Approvals sub-object stays submitter-scoped (shoot_intake_drafts is a personal HITL workspace, unaffected by this ticket).';
+
+revoke all on function public.get_shoot_detail(uuid) from public, anon, authenticated;
 grant execute on function public.get_shoot_detail(uuid) to authenticated;
 
 -- get_brand_assets (latest body from 20260703240000_shoot_data_contract_nits):
