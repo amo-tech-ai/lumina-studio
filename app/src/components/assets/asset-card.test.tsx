@@ -58,7 +58,7 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
     facebook_published: null,
     instagram_published: null,
     shopify_exported: null,
-    image_spec_id: null,
+    media_size_spec_id: null,
     size_compliance: null,
     metadata: null,
     ...overrides,

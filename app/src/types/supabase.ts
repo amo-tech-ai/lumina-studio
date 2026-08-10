@@ -949,6 +949,7 @@ export type Database = {
           height: number
           id: string
           is_primary: boolean | null
+          media_size_spec_id: string | null
           quality: number | null
           status: string
           updated_at: string
@@ -964,6 +965,7 @@ export type Database = {
           height: number
           id?: string
           is_primary?: boolean | null
+          media_size_spec_id?: string | null
           quality?: number | null
           status?: string
           updated_at?: string
@@ -979,6 +981,7 @@ export type Database = {
           height?: number
           id?: string
           is_primary?: boolean | null
+          media_size_spec_id?: string | null
           quality?: number | null
           status?: string
           updated_at?: string
@@ -991,6 +994,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_variants_media_size_spec_id_fkey"
+            columns: ["media_size_spec_id"]
+            isOneToOne: false
+            referencedRelation: "media_size_specs"
             referencedColumns: ["id"]
           },
         ]
@@ -1009,8 +1019,8 @@ export type Database = {
           file_size: number | null
           height: number | null
           id: string
-          image_spec_id: string | null
           instagram_published: boolean | null
+          media_size_spec_id: string | null
           metadata: Json | null
           mime_type: string | null
           shoot_id: string | null
@@ -1036,8 +1046,8 @@ export type Database = {
           file_size?: number | null
           height?: number | null
           id?: string
-          image_spec_id?: string | null
           instagram_published?: boolean | null
+          media_size_spec_id?: string | null
           metadata?: Json | null
           mime_type?: string | null
           shoot_id?: string | null
@@ -1063,8 +1073,8 @@ export type Database = {
           file_size?: number | null
           height?: number | null
           id?: string
-          image_spec_id?: string | null
           instagram_published?: boolean | null
+          media_size_spec_id?: string | null
           metadata?: Json | null
           mime_type?: string | null
           shoot_id?: string | null
@@ -1086,10 +1096,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "assets_image_spec_id_fkey"
-            columns: ["image_spec_id"]
+            foreignKeyName: "assets_media_size_spec_id_fkey"
+            columns: ["media_size_spec_id"]
             isOneToOne: false
-            referencedRelation: "image_specs"
+            referencedRelation: "media_size_specs"
             referencedColumns: ["id"]
           },
           {
@@ -2005,6 +2015,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_type: string
+          dna_score: number | null
+          dna_status: string | null
           duration: number | null
           folder: string | null
           format: string | null
@@ -2029,6 +2041,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_type?: string
+          dna_score?: number | null
+          dna_status?: string | null
           duration?: number | null
           folder?: string | null
           format?: string | null
@@ -2053,6 +2067,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_type?: string
+          dna_score?: number | null
+          dna_status?: string | null
           duration?: number | null
           folder?: string | null
           format?: string | null
