@@ -395,6 +395,90 @@ describe("POST /api/assets/upload-sign — ownership", () => {
   });
 });
 
+describe("POST /api/assets/upload-sign — ownership deduplication (IPI-768)", () => {
+  it("same shoot workId and context.shootId => exactly one ownership lookup", async () => {
+    const sharedShootId = VALID_SHOOT_WORK_ID;
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: sharedShootId }, error: null });
+    const res = await post(
+      uploadBody({
+        workType: "shoots",
+        workId: sharedShootId,
+        context: { shootId: sharedShootId },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
+    expect(mockIsBrandAccessible).toHaveBeenCalledTimes(1);
+  });
+
+  it("same campaign workId and context.campaignId => exactly one ownership lookup", async () => {
+    const sharedCampaignId = VALID_CAMPAIGN_WORK_ID;
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: sharedCampaignId }, error: null });
+    const res = await post(
+      uploadBody({
+        workType: "campaigns",
+        workId: sharedCampaignId,
+        context: { campaignId: sharedCampaignId },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
+  });
+
+  it("mismatched shoot workId and context.shootId => two lookups and 403 on second", async () => {
+    const otherShootId = "66666666-6666-6666-6666-666666666666";
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: VALID_SHOOT_WORK_ID }, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const res = await post(
+      uploadBody({
+        workType: "shoots",
+        workId: VALID_SHOOT_WORK_ID,
+        context: { shootId: otherShootId },
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it("mismatched campaign workId and context.campaignId => two lookups", async () => {
+    const otherCampaignId = "55555555-5555-5555-5555-555555555555";
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: VALID_CAMPAIGN_WORK_ID }, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const res = await post(
+      uploadBody({
+        workType: "campaigns",
+        workId: VALID_CAMPAIGN_WORK_ID,
+        context: { campaignId: otherCampaignId },
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it("context shootId alone => one lookup, valid still 200", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: VALID_SHOOT_WORK_ID }, error: null });
+    const res = await post(uploadBody({ context: { shootId: VALID_SHOOT_WORK_ID } }));
+    expect(res.status).toBe(200);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalid request still 400 without extra DB lookup", async () => {
+    const res = await post(uploadBody({ workType: "shoots", workId: "not-a-uuid" }));
+    expect(res.status).toBe(400);
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+    expect(mockIsBrandAccessible).not.toHaveBeenCalled();
+  });
+
+  it("cross-org still 403 with one lookup per distinct ID", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    const res = await post(uploadBody({ workType: "shoots", workId: VALID_SHOOT_WORK_ID }));
+    expect(res.status).toBe(403);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("POST /api/assets/upload-sign — folder override rejection", () => {
   it("ignores client-supplied folder and computes from taxonomy", async () => {
     const res = await post(
