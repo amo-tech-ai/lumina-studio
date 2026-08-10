@@ -250,7 +250,25 @@ Do **not** rename or reuse the `ai-gateway` Worker for this. Do **not** point [i
 | ⚪ | **R2 / KV / Vectorize / AI Search** | **0** | No resources | Later |
 | ⚪ | **Queues / Workflows / DO / Browser / Flagship** | **0** | — | Later |
 | 🔴 | **D1** as next step | **0** | Supabase is SSOT | **Avoid** |
-| ⚪ | **OpenNext `ipix-operator`** | **0** | Code ready; no Builds project yet | Separate Worker |
+| ⚪ | **OpenNext `ipix-operator`** | **0** | Code ready; dashboard Builds project not yet created | Separate Worker |
+| 🟢 | **OpenNext `ipix-operator-preview`** | **100** | Live on `main`; Workers Builds accessible via API; v53 `b248a02f` serving 100% traffic | See section above |
+
+### Token — Workers Builds API
+
+The existing token in `~/.config/ipix/cloudflare.env` is a **user-scoped API token** (ID: `8c55756d...`), which is the **required type** for the Workers Builds API per [Cloudflare docs](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/). Account-scoped tokens return `{"code":12006,"message":"Invalid token"}`.
+
+**Verified accessible endpoints (all HTTP 200):**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /accounts/{id}/builds/account/limits` | Account build limits |
+| `GET /accounts/{id}/workers/scripts` | List Workers — get `tag` (UUID) via `external_script_id` |
+| `GET /accounts/{id}/builds/workers/{worker_tag}/builds` | List builds for a Worker (by tag, not name) |
+| `GET /accounts/{id}/builds/builds/{build_uuid}/logs` | Get build logs |
+
+**Worker tag for `ipix-operator-preview`:** `79e5ad0308134149a12786580b9c2eb9`
+
+No permission changes or dashboard edits are required.
 
 ---
 
