@@ -192,8 +192,8 @@ export const draftCampaignBrief = createTool({
       if (requestContext) {
         try {
           return resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext });
-        } catch {
-          // fall through to legacy MODEL
+        } catch (err) {
+          console.warn("[draftCampaignBrief] resolveAgentModel threw:", err);
         }
       }
       return MODEL;
