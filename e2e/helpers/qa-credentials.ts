@@ -38,11 +38,13 @@ export function loadEnvLocal(filePath = resolve(process.cwd(), ".env.local")): v
   }
 }
 
-/** Resolve credentials only when a password is configured; callers skip otherwise. */
+/** Resolve credentials; both email and password must be configured or returns empty. */
 export function getQaCredentials(): QaCredentials {
   loadEnvLocal();
-  return {
-    email: process.env.QA_EMAIL?.trim() || process.env.Email?.trim() || "qa@ipix.test",
-    password: process.env.QA_PASSWORD?.trim() || process.env.Password?.trim() || "",
-  };
+  const email =
+    process.env.QA_EMAIL?.trim() || process.env.Email?.trim() || "";
+  const password =
+    process.env.QA_PASSWORD?.trim() || process.env.Password?.trim() || "";
+  if (!email || !password) return { email: "", password: "" };
+  return { email, password };
 }
