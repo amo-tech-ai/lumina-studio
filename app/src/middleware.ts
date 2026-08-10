@@ -116,7 +116,9 @@ export const config = {
      * Keep in sync with tests in src/test/operator-middleware-contract.test.ts.
      */
     // Exclude Sentry tunnelRoute (/monitoring) so auth/session logic does not intercept it.
-    // Exclude /auth/signout so signOut response cookies are not overwritten by session refresh (IPI-915).
-    "/((?!monitoring|auth/signout|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude only the exact /auth/signout path so signOut response cookies are not
+    // overwritten by session refresh (IPI-915). Bound with $ so near-match paths
+    // (/auth/signout-other, /auth/signout/nested) still get session refresh.
+    "/((?!monitoring|auth/signout$|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
