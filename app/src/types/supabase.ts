@@ -2015,8 +2015,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_type: string
-          dna_score: number | null
-          dna_status: string | null
           duration: number | null
           folder: string | null
           format: string | null
@@ -2041,8 +2039,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_type?: string
-          dna_score?: number | null
-          dna_status?: string | null
           duration?: number | null
           folder?: string | null
           format?: string | null
@@ -2067,8 +2063,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_type?: string
-          dna_score?: number | null
-          dna_status?: string | null
           duration?: number | null
           folder?: string | null
           format?: string | null
