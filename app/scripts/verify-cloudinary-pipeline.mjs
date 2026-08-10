@@ -280,7 +280,7 @@ export async function pollForWebhookRow({
     }
     const { data: cloudinaryAsset, error: caError } = await supabase
       .from("cloudinary_assets")
-      .select("id, asset_id, status, brand_id, secure_url, public_id, cloudinary_asset_id, version")
+      .select("id, asset_id, status, secure_url, public_id, cloudinary_asset_id, version")
       .eq("public_id", publicId)
       .maybeSingle();
     if (caError) throw caError;
@@ -768,14 +768,7 @@ async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder
     push("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`);
     throw new Error("brand_id mismatch on assets row");
   }
-  if (rows.cloudinaryAsset.brand_id !== brandId) {
-    push(
-      "supabase-row",
-      false,
-      `cloudinary_assets.brand_id=${rows.cloudinaryAsset.brand_id} does not match test brand ${brandId}`,
-    );
-    throw new Error("brand_id mismatch on cloudinary_assets row");
-  }
+  // cloudinary_assets.brand_id is duplicate (removed in IPI-962 PR1) — brand ownership is via assets.brand_id
   // IPI-641: fresh-upload path requires identity (validateUploadResponse already enforces upJson).
   if (rows.cloudinaryAsset.cloudinary_asset_id !== upJson.asset_id) {
     push(

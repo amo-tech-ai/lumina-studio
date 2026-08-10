@@ -64,16 +64,21 @@ describe("GET /api/assets/status", () => {
   });
 
   it("returns 404 when caller lacks brand access (org-aware gate)", async () => {
-    mockMaybeSingle.mockResolvedValueOnce({
-      data: {
-        status: "ready",
-        version: 123,
-        public_id: "ipix/brands/x/file",
-        cloudinary_asset_id: ASSET_ID,
-        brand_id: BRAND_ID,
-      },
-      error: null,
-    });
+    mockMaybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          status: "ready",
+          version: 123,
+          public_id: "ipix/brands/x/file",
+          cloudinary_asset_id: ASSET_ID,
+          asset_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { brand_id: BRAND_ID },
+        error: null,
+      });
     mockIsBrandAccessible.mockResolvedValueOnce({
       ok: false,
       status: 403,
@@ -88,16 +93,21 @@ describe("GET /api/assets/status", () => {
   });
 
   it("returns normalized ready status when brand is accessible", async () => {
-    mockMaybeSingle.mockResolvedValueOnce({
-      data: {
-        status: "ready",
-        version: 123,
-        public_id: "ipix/brands/x/file",
-        cloudinary_asset_id: ASSET_ID,
-        brand_id: BRAND_ID,
-      },
-      error: null,
-    });
+    mockMaybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          status: "ready",
+          version: 123,
+          public_id: "ipix/brands/x/file",
+          cloudinary_asset_id: ASSET_ID,
+          asset_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { brand_id: BRAND_ID },
+        error: null,
+      });
     const { GET } = await importRoute();
     const res = await GET(
       new Request(`http://localhost/api/assets/status?cloudinaryAssetId=${ASSET_ID}`),
