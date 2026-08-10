@@ -33,6 +33,13 @@ export const WORKERS_AI_TIER_CAPABILITIES: Partial<
     supportsTools: true,
     supportsStreaming: true,
   },
+  // IPI-751 P1 — campaign-brief structured generation must follow the same
+  // per-request flag as the outer creative-director turn; reuse default's model.
+  structured: {
+    modelId: "@cf/moonshotai/kimi-k2.6",
+    supportsTools: true,
+    supportsStreaming: true,
+  },
 };
 
 export function resolveWorkersAiTierCapability(
