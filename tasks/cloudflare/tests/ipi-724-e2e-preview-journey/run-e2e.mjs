@@ -332,9 +332,17 @@ async function main() {
   let healthCfRay = null;
   let healthBody = null;
 
+  // IPI-968: Granular timing measurements
+  const timing = {
+    loginStart: 0,
+    appResponseMs: 0,
+    userReadyMs: 0,
+    copilotInitMs: 0,
+  };
+
   try {
     // 1. Login
-    const loginStart = Date.now();
+    timing.loginStart = Date.now();
     await withTransientRetry("goto login", () =>
       page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
     );
@@ -345,6 +353,10 @@ async function main() {
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await page.fill("#email", email);
     await page.fill("#password", password);
+    
+    // IPI-968: Start user-ready timer before navigation to measure actual DOM readiness
+    const ccStart = Date.now();
+    
     await Promise.all([
       page.waitForURL(/\/app/, { timeout: 45000 }).catch(() => null),
       // Mode tab + submit both say "Sign in" — click the form submit only.
@@ -359,20 +371,29 @@ async function main() {
     }
     await page.screenshot({ path: join(SHOTS, "01-login.png"), fullPage: false });
     const onApp = page.url().includes("/app");
+    // IPI-968: Start app-response timing when form is submitted (ccStart)
+    timing.appResponseMs = Date.now() - ccStart;
     mark("01_login", onApp, onApp ? `landed ${page.url()}` : `stuck at ${page.url()}`);
 
     // 2–3. Command Center / widgets
-    const ccStart = Date.now();
     await withTransientRetry("command center settle", async () => {
-      await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+      // IPI-968: Wait for loading skeleton to disappear before marking user ready
+      // The skeleton has aria-busy, wait for it to be removed or for actual Command Center content
+      await page.locator('[aria-busy="true"]').waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
+      // Then wait for main content and nav to be visible (dock excluded for Copilot timing)
+      await Promise.all([
+        page.locator("main, [role='main']").first().waitFor({ state: "visible", timeout: 15000 }),
+        page.locator("nav a, [class*='nav'] a, aside a").first().waitFor({ state: "visible", timeout: 15000 }),
+      ]);
       const bodyText = await page.locator("body").innerText();
       if (!bodyText || bodyText.trim().length < 40) {
         throw new Error("503-like empty body / blank page");
       }
     });
-    perf.commandCenterMs = Date.now() - ccStart;
+    timing.userReadyMs = Date.now() - ccStart;
+    perf.commandCenterMs = timing.userReadyMs;
     // Prefer measuring from login→interactive; also record wall from ccStart
-    perf.commandCenterFromLoginMs = Date.now() - loginStart;
+    perf.commandCenterFromLoginMs = Date.now() - timing.loginStart;
 
     await page.screenshot({ path: join(SHOTS, "02-dashboard.png"), fullPage: false });
 
@@ -406,6 +427,7 @@ async function main() {
     );
 
     // 4. CopilotKit init
+    // IPI-968: Start Copilot clock before dock wait to include dynamic import/mount time
     const copilotStart = Date.now();
     await withTransientRetry("copilot init", async () => {
       await page.waitForSelector('[data-testid="operator-chat-dock"]', {
@@ -418,7 +440,8 @@ async function main() {
       .getByRole("textbox")
       .first();
     await composer.waitFor({ state: "visible", timeout: 20000 }).catch(() => null);
-    perf.copilotInitMs = Date.now() - copilotStart;
+    timing.copilotInitMs = Date.now() - copilotStart;
+    perf.copilotInitMs = timing.copilotInitMs;
     const composerVisible = await composer.isVisible().catch(() => false);
     mark(
       "04_copilot_init",
@@ -893,6 +916,9 @@ async function main() {
       copilot_init_budget_ms: 3000,
       first_stream_token_ms: perf.firstStreamTokenMs ?? null,
       first_stream_token_budget_ms: 5000,
+      // IPI-968: Granular timing breakdown
+      app_response_ms: timing.appResponseMs ?? null,
+      user_ready_ms: timing.userReadyMs ?? null,
     },
     ai_health: healthBody,
     adapterAvailable_note:
