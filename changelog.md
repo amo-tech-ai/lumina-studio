@@ -17,6 +17,16 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-09 — App quality: test coverage + OAuth preview host trust
+
+**APP QUALITY — Add tests for notifications, uploads, AI routing, and dashboard data**
+
+- **Unit tests for six previously-untested modules** (`5bb3b1c0`, [#828](https://github.com/amo-tech-ai/lumina-studio/pull/828)) — new Vitest coverage for notification delivery/status handling, asset-upload progress/failure/timeout/cancellation, intelligence-panel helper calculations, AI Gateway error responses, AI model-registry configuration safety, and Command Center dashboard data loading with fallback. No production code changed.
+
+**IPI-XXX · CF-OAUTH-PREVIEW — Keep Google sign-in on the Cloudflare preview URL**
+
+- **Trust preview Worker hostname for OAuth redirects** (`c434393d`, [#830](https://github.com/amo-tech-ai/lumina-studio/pull/830)) — `TRUSTED_OAUTH_FORWARDED_HOSTS` in `app/src/lib/operator-auth-env.ts` now includes the Cloudflare preview Worker host pattern, so the Google OAuth callback builds the correct post-login redirect instead of falling back to the wrong host on preview deployments.
+
 ### 2026-08-07 — Brand Intelligence: similar-brand search ships org-safe (IPI-924)
 
 **AGENT-RAG-001 — "Find similar brands"**
