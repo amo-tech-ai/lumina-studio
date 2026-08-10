@@ -19,9 +19,8 @@ describe("creativeDirectorAgent — IPI-751 W2 routing (fail-closed, reuse harne
 
   it("has correct id and uses dynamic model", () => {
     expect(creativeDirectorAgent.id).toBe("creative-director");
-    // model is now a function, not static LanguageModel
-    // @ts-expect-error internal
-    expect(typeof creativeDirectorAgent.model).toBe("function");
+    // dynamic model via getModel, not static LanguageModel
+    expect(typeof (creativeDirectorAgent as any).getModel).toBe("function");
   });
 
   it("getModel with native cfEnv calls resolveAgentModel with correct args", async () => {
