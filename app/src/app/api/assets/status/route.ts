@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await admin
     .from("cloudinary_assets")
-    .select("status, version, public_id, cloudinary_asset_id, brand_id")
+    .select("status, version, public_id, cloudinary_asset_id, asset_id")
     .eq("cloudinary_asset_id", cloudinaryAssetId)
     .maybeSingle();
 
@@ -57,22 +57,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (data.brand_id && !UUID_RE.test(data.brand_id)) {
+  if (!data.asset_id || !UUID_RE.test(data.asset_id)) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  // Org-aware access: RLS ca_select_via_brand joins assets→brands and can deny org
-  // members or rows still linking. Mirror lookup is service-role; gate on brands RLS.
-  if (data.brand_id) {
-    const operator = await createOperatorSupabaseClient(request);
-    const access = await isBrandAccessible(operator, data.brand_id);
-    if (!access.ok) {
-      if (access.status === 500) {
-        return NextResponse.json({ error: "Internal error" }, { status: 500 });
-      }
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Org-aware access: fetch brand_id via parent assets (cloudinary_assets.brand_id is duplicate, removed in PR1)
+  const { data: asset, error: assetError } = await admin
+    .from("assets")
+    .select("brand_id")
+    .eq("id", data.asset_id)
+    .maybeSingle();
+
+  if (assetError) {
+    console.error("[assets/status] asset brand lookup failed:", assetError.message);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  if (!asset?.brand_id || !UUID_RE.test(asset.brand_id)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // RLS ca_select_via_brand joins assets→brands; gate on brands RLS via parent brand_id
+  const operator = await createOperatorSupabaseClient(request);
+  const access = await isBrandAccessible(operator, asset.brand_id);
+  if (!access.ok) {
+    if (access.status === 500) {
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
-  } else {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

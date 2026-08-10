@@ -230,11 +230,9 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect.objectContaining({
         asset_id: "asset-1",
         public_id: UPLOAD_PAYLOAD.public_id,
-        brand_id: BRAND_ID,
         status: "ready",
         cloudinary_asset_id: PROVIDER_ASSET_ID,
-        version: 1,
-      }),
+        version: 1}),
       { onConflict: "public_id" },
     );
     expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -738,8 +736,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect.objectContaining({
         cloudinary_asset_id: PROVIDER_ASSET_ID,
         public_id: UPLOAD_PAYLOAD.public_id,
-        asset_id: "asset-1",
-      }),
+        asset_id: "asset-1"}),
       { onConflict: "public_id" },
     );
   });
@@ -803,7 +800,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
     expect(res.status).toBe(200);
     expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ brand_id: null }),
+      expect.objectContaining({}),
       { onConflict: "public_id" },
     );
   });
@@ -892,7 +889,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(assetsInsertSingle).toHaveBeenCalled();
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: CAMPAIGN_BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
     });
@@ -903,7 +900,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const res = await POST(makeRequest(CAMPAIGN_PAYLOAD));
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: null }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
     });
@@ -915,7 +912,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       );
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: null }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -935,7 +932,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(assetsInsertSingle).toHaveBeenCalledTimes(2);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ asset_id: "asset-retried", brand_id: null }),
+        expect.objectContaining({ asset_id: "asset-retried"}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(expect.objectContaining({ brand_id: null }));
@@ -955,7 +952,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(assetsUpdateEq).toHaveBeenCalledTimes(2);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ asset_id: "asset-existing", brand_id: EXISTING_GOOD_BRAND }),
+        expect.objectContaining({ asset_id: "asset-existing"}),
         { onConflict: "public_id" },
       );
     });
@@ -975,7 +972,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(assetsUpdateEq).toHaveBeenCalledTimes(1);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: EXISTING_GOOD_BRAND }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
     });
@@ -1015,7 +1012,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id, folder: `ipix/dev/${ORG_ID}/${BRAND_ID}/products` }));
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -1032,7 +1029,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(campaignsSelectMaybeSingle).not.toHaveBeenCalled();
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
     });
@@ -1043,7 +1040,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id }));
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -1065,7 +1062,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(res.status).toBe(200);
       expect(brandsSelectMaybeSingle).toHaveBeenCalled();
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -1086,7 +1083,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       );
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
     });
@@ -1096,7 +1093,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const res = await POST(makeRequest(UPLOAD_PAYLOAD));
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: BRAND_ID }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -1118,7 +1115,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       );
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: null }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
@@ -1135,7 +1132,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       );
       expect(res.status).toBe(200);
       expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({ brand_id: null }),
+        expect.objectContaining({}),
         { onConflict: "public_id" },
       );
       expect(aiAgentLogsInsert).toHaveBeenCalledWith(
