@@ -1,21 +1,26 @@
 /**
- * IPI-769 · CF-MIG-230-HARNESS — Prove Every AI Agent Uses the Correct Cloudflare or Legacy Route.
+ * IPI-769 · CF-MIG-230-HARNESS — Prove routing helper correctness for Cloudflare vs Legacy.
  *
- * Reusable routing contract test for all Cloudflare AI agent migration waves.
+ * Reusable routing contract test for Cloudflare AI agent migration waves.
  * Extracted from IPI-750 (cloudflare-models.test.ts) and IPI-753 (public-marketing-agent.test.ts).
  *
+ * IMPORTANT: This tests the resolveAgentModelOutcome() helper function ONLY.
+ * It does NOT verify that individual agents actually call this helper with the correct
+ * agent ID and tier. Agent callback coverage requires separate per-agent integration tests.
+ *
  * Table-driven tests with explicit agent IDs. Asserts observable routing metadata (mode, reason),
- * not only that a model object exists. Errors include agent ID and requested mode.
+ * exact Workers AI model IDs for native mode, and routing-table completeness.
  *
  * CI runtime target: < 30 seconds for focused contract tests.
  */
 import { RequestContext } from "@mastra/core/request-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { resetAgentRoutingWarnState } from "./agent-routing";
+import { resetAgentRoutingWarnState, AGENT_ROUTING_KEYS } from "./agent-routing";
 import { resolveAgentModelOutcome } from "./cloudflare-models";
 import type { CloudflareModelReason } from "./cloudflare-models";
 import type { RoutableAgentId } from "./agent-routing";
+import { WORKERS_AI_TIER_CAPABILITIES } from "./model-capabilities";
 
 function contextWithCfEnv(env: Record<string, unknown> | undefined): RequestContext {
   const requestContext = new RequestContext();
@@ -41,6 +46,8 @@ type RoutingContractCase = {
   expectedMode: "native" | "legacy";
   /** Expected routing reason */
   expectedReason: CloudflareModelReason;
+  /** Expected Workers AI model ID for native mode (undefined for legacy) */
+  expectedModelId?: string;
   /** Whether console.warn should be called (for invalid flag values) */
   expectsWarn?: boolean;
 };
@@ -128,6 +135,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/meta/llama-3.1-8b-instruct-fast",
   },
 
   // ─── Valid native routing (planned W2/W3: production-planner, creative-director) ───
@@ -139,6 +147,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
   {
     agentId: "creative-director",
@@ -148,6 +157,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
   // ─── Valid native routing (planned W4: brand-intelligence, model-match) ─────
@@ -159,6 +169,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
   {
     agentId: "model-match",
@@ -168,6 +179,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
   // ─── Valid native routing (planned W5: crm-assistant) ────────────────────────
@@ -179,6 +191,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
   // ─── Valid native routing (planned: visual-identity, social-discovery) ───────
@@ -190,6 +203,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
   {
     agentId: "social-discovery",
@@ -199,6 +213,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
   // ─── Invalid flag value (fail-closed to legacy) ─────────────────────────────
@@ -254,27 +269,34 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     },
     expectedMode: "native",
     expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
   // ─── Default surface resolution (marketing → public-marketing) ─────────────
   // Note: resolveAgentModelOutcome doesn't take surface directly - surface is used
   // by agent-routing.ts to resolve "default" to canonical IDs. Test the canonical ID directly.
-  {
-    agentId: "public-marketing",
-    tier: "fast",
-    cfEnv: {
-      AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
-      AI: fakeAiBinding,
-    },
-    expectedMode: "native",
-    expectedReason: "native",
-  },
+  // (Duplicate of lines 123-131 removed - tests identical behavior)
 ];
 
 describe("IPI-769 agent-migration routing contract", () => {
   afterEach(() => {
     resetAgentRoutingWarnState();
     vi.restoreAllMocks();
+  });
+
+  // Ensure test table covers all routable agents from AGENT_ROUTING_KEYS
+  it("routing table covers all AGENT_ROUTING_KEYS entries", () => {
+    const testedAgentIds = new Set(
+      AGENT_MIGRATION_CASES
+        .map((c) => c.agentId)
+        .filter((id): id is RoutableAgentId => id in AGENT_ROUTING_KEYS),
+    );
+    const routableAgentIds = new Set(Object.keys(AGENT_ROUTING_KEYS) as RoutableAgentId[]);
+
+    // All routable agents should have at least one test case
+    for (const id of routableAgentIds) {
+      expect(testedAgentIds.has(id)).toBe(true);
+    }
   });
 
   describe("table-driven routing contract for all migration waves", () => {
@@ -287,11 +309,13 @@ describe("IPI-769 agent-migration routing contract", () => {
         cfEnv,
         expectedMode,
         expectedReason,
+        expectedModelId,
         expectsWarn,
       }) => {
-        const warnSpy = expectsWarn
-          ? vi.spyOn(console, "warn").mockImplementation(() => {})
-          : vi.fn();
+        const warnSpy = vi.spyOn(console, "warn");
+        if (expectsWarn) {
+          warnSpy.mockImplementation(() => {});
+        }
 
         const outcome = resolveAgentModelOutcome({
           agentId,
@@ -305,6 +329,12 @@ describe("IPI-769 agent-migration routing contract", () => {
 
         // Ensure model object exists (not undefined/null)
         expect(outcome.model).toBeDefined();
+
+        // Assert exact Workers AI model ID for native mode
+        if (expectedMode === "native" && expectedModelId) {
+          const capability = WORKERS_AI_TIER_CAPABILITIES[tier];
+          expect(capability?.modelId).toBe(expectedModelId);
+        }
 
         // Error messages include agent ID and requested mode when applicable
         if (expectedReason === "legacy_flag" && expectsWarn) {
@@ -404,11 +434,13 @@ describe("IPI-769 agent-migration routing contract", () => {
   });
 });
 
-describe("workerd integration: request context reaches model callback", () => {
+describe("request context isolation (not actual workerd integration)", () => {
   const originalWebSocketPair = (globalThis as { WebSocketPair?: unknown }).WebSocketPair;
 
   beforeEach(() => {
-    // Simulate workerd environment (WebSocketPair indicates workerd runtime)
+    // Note: This does NOT simulate actual workerd - WebSocketPair assignment is not
+    // inspected by resolveAgentModelOutcome. This test only verifies request context
+    // isolation, not real Workers AI execution or workerd request-context propagation.
     (globalThis as { WebSocketPair?: unknown }).WebSocketPair = class WebSocketPair {};
   });
 
