@@ -107,5 +107,6 @@
         "@ai-sdk/provider-utils": "2.2.8"
       }
     }
-  }
+  },
+  "packageManager": "npm@11.5.0"
 }
