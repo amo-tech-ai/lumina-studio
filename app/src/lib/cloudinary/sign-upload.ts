@@ -3,7 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import {
   CLOUDINARY_EAGER_PRESETS,
   CLOUDINARY_UPLOAD_PRESET,
-  presetTransformString,
+  namedTransformDeliveryString,
 } from "@/lib/cloudinary/url";
 import { parseBrandIdFromCloudinaryContext } from "@/lib/assets/brand-access";
 import {
@@ -78,7 +78,7 @@ export function buildUploadParamsToSign(input: {
   };
 
   if (input.resourceType === "image") {
-    params.eager = CLOUDINARY_EAGER_PRESETS.map(presetTransformString).join("|");
+    params.eager = CLOUDINARY_EAGER_PRESETS.map(namedTransformDeliveryString).join("|");
   }
   if (input.notificationUrl) {
     params.notification_url = input.notificationUrl;

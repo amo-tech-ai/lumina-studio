@@ -173,7 +173,7 @@ describe("listAssets", () => {
     const client = mockClient({ data: rows, error: null });
     const [result] = (await listAssets(client)).items;
     expect(result.displayUrl).toBe(
-      "https://res.cloudinary.com/dzqy2ixl0/image/upload/c_limit,w_600,f_auto,q_auto/v1/a1.jpg",
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/t_asset-masonry/f_auto/q_auto/v1/a1.jpg",
     );
   });
 
@@ -336,9 +336,9 @@ describe("getAssetDetail", () => {
     expect(result.data.mirror?.cloudinary_asset_id).toBeNull();
     expect(result.data.mirror?.version).toBeNull();
     expect(result.data.displayUrl).toContain("brand/look-01");
-    expect(result.data.displayUrl).toContain("w_1600");
+    expect(result.data.displayUrl).toContain("t_asset-detail/f_auto/q_auto");
     expect(result.data.downloadUrl).toBeTruthy();
-    expect(result.data.downloadUrl).not.toContain("w_1600");
+    expect(result.data.downloadUrl).not.toContain("t_asset-detail");
     expect(result.data.consoleUrl).toContain("media_library/search");
     expect(result.data.consoleUrl).toContain(encodeURIComponent("public_id=brand/look-01"));
     expect(result.data.whereUsed).toEqual([

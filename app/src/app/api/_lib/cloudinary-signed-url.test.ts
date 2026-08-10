@@ -26,6 +26,13 @@ describe("cloudinarySignedPresetUrl", () => {
     expect(url).toContain("some-public-id");
   });
 
+  it("uses the named-transform delivery chain for delivery presets", async () => {
+    const { cloudinarySignedPresetUrl } = await importSignedUrl();
+    const url = cloudinarySignedPresetUrl("some-public-id", "asset-detail");
+    expect(url).toContain("t_asset-detail/f_auto/q_auto");
+    expect(url).not.toContain("c_limit");
+  });
+
   it("produces a different signature for a different preset (no cross-preset collision)", async () => {
     const { cloudinarySignedPresetUrl } = await importSignedUrl();
     const tile = cloudinarySignedPresetUrl("some-public-id", "asset-tile");
