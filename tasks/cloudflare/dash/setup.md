@@ -233,6 +233,46 @@ Do **not** rename or reuse the `ai-gateway` Worker for this. Do **not** point [i
 
 ---
 
+## Worker — `ipix-operator-preview` (OpenNext, live)
+
+The **preview Worker** `ipix-operator-preview` is live on `main`. Dashboard build config:
+
+| Field | Value |
+|-------|--------|
+| Name | `ipix-operator-preview` |
+| Repo | `amo-tech-ai/lumina-studio` |
+| Root directory | `app` |
+| Build command | *(empty — OpenNext build handled via `npm run build:cf` in deploy step)* |
+| Deploy command | `npx wrangler deploy --env preview` |
+| Production branch | `main` |
+| Build env vars | `IPIX_CF_BUNDLE_STUBS=1`, `MASTRA_STORAGE_MODE=noop` |
+| Secrets | Gemini, Supabase, Cloudinary, CopilotKit, and infra secrets (see `app/.dev.vars` references) |
+| Plain vars | `DAM_ENV=staging`, `OPERATOR_AUTH_ENABLED=true`, `ENABLE_CF_AI_SMOKE=false`, `ENABLE_HYPERDRIVE_PG_SMOKE=false`, `ENABLE_HYPERDRIVE_THREAD_CANARY=false`, `TRUSTED_OAUTH_FORWARDED_HOSTS=ipix-operator-preview.sk-498.workers.dev` |
+
+**Verified working build** via `npx wrangler versions deploy`:
+
+- `npm ci` ✅
+- `npm run build:cf` ✅ (runs `check-build-env.mjs` → `opennextjs-cloudflare build` → `check:worker-bundle`)
+- Bundle size gate ✅ (7921 KiB gzip)
+- `npx wrangler versions upload --env preview` ✅
+- Runtime smoke ✅ (`/ → 200`, `/app → 307`, `/api/copilotkit/info → 401`)
+
+Deploy new versions from CLI:
+
+```bash
+cd app
+npm ci
+npm run build:cf
+npx wrangler versions upload --env preview --message "message"
+npx wrangler versions deploy <version-id>@100 --env preview
+```
+
+**Workers Builds check** (GitHub integration triggered by push to `main`):
+- Build `95bff53a` — success (verified on commit `519d9c185`)
+- Latest live Worker version: `b248a02f-774b-4211-ad48-f40c253c8004`
+
+---
+
 ## Status by service (detail)
 
 **Examined against:** live gateway URL + Worker Settings + this doc.
