@@ -163,9 +163,6 @@ describe("mixed in-page and browser navigation", () => {
     fireEvent.change(screen.getByLabelText(/brand name/i), {
       target: { value: "Maison Noir" },
     });
-    fireEvent.change(screen.getByLabelText(/website/i), {
-      target: { value: "https://maisonnoir.com" },
-    });
 
     clickContinue();
     expect(currentScreen()).toBe("5");

@@ -47,6 +47,8 @@ export type AnalysisProgressScreenProps = {
   brandId: string | null;
   answers: OnboardingAnswers;
   onComplete: () => void;
+  /** Navigate back to Brand Details so the user can enter a website URL. */
+  onEditWebsite?: () => void;
   /** Forwarded to the shared hook; `0` disables still-working (tests). */
   quietGapMs?: number;
 };
@@ -59,6 +61,7 @@ export function AnalysisProgressScreen({
   brandId,
   answers,
   onComplete,
+  onEditWebsite,
   quietGapMs,
 }: AnalysisProgressScreenProps) {
   if (!brandId) {
@@ -84,6 +87,7 @@ export function AnalysisProgressScreen({
       brandId={brandId}
       answers={answers}
       onComplete={onComplete}
+      onEditWebsite={onEditWebsite}
       quietGapMs={quietGapMs}
     />
   );
@@ -93,11 +97,13 @@ function AnalysisProgressLive({
   brandId,
   answers,
   onComplete,
+  onEditWebsite,
   quietGapMs,
 }: {
   brandId: string;
   answers: OnboardingAnswers;
   onComplete: () => void;
+  onEditWebsite?: () => void;
   quietGapMs?: number;
 }) {
   const onCompleteRef = useRef(onComplete);
@@ -109,6 +115,7 @@ function AnalysisProgressLive({
   const [crawlWarning, setCrawlWarning] = useState<string | null>(null);
   /** Fatal kickoff / BI start — analysis will not continue without retry. */
   const [fatalError, setFatalError] = useState<string | null>(null);
+  const [needsWebsite, setNeedsWebsite] = useState(false);
   /** Bumped by Retry to re-run the brandId-gated kickoff effect. */
   const [kickoffAttempt, setKickoffAttempt] = useState(0);
   /** True after kickoff effect settles (success or failure) — gates deferred BI. */
@@ -135,19 +142,26 @@ function AnalysisProgressLive({
     setKickoffSettled(false);
     setCrawlWarning(null);
     setFatalError(null);
+    setNeedsWebsite(false);
     biStartedRef.current = false;
     crawlIdRef.current = undefined;
 
     (async () => {
       try {
+        // Blank website: BI also requires http(s) — do not dead-end; ask for a URL.
+        if (!websiteUrl) {
+          if (!cancelled) {
+            setNeedsWebsite(true);
+            setKickoffSettled(true);
+          }
+          return;
+        }
+
         const result = await kickoffOnboardingCrawl(supabase, brandId, websiteUrl);
         if (cancelled) return;
 
-        // Defensive: website is enforced at screen 4, so this should never
-        // happen in normal flow. If it does (e.g. resumed session from before
-        // the fix), surface a fatal error so Retry can recover.
         if (result.kind === "needs_website") {
-          setFatalError("Website URL is required for Brand DNA analysis. Please go back and add it.");
+          setNeedsWebsite(true);
           setKickoffSettled(true);
           return;
         }
@@ -248,6 +262,33 @@ function AnalysisProgressLive({
     setCrawlWarning(null);
     setKickoffAttempt((n) => n + 1);
   };
+
+  if (needsWebsite) {
+    return (
+      <OnboardingCard>
+        <h1 className="m-0 text-[1.75rem] font-extrabold leading-tight tracking-tight">
+          Website needed
+        </h1>
+        <p
+          role="alert"
+          data-testid="analysis-status"
+          aria-live="assertive"
+          className="mt-2.5 text-sm leading-snug text-destructive"
+        >
+          Analysis needs a website URL. Add one on Brand Details, then continue again.
+        </p>
+        {onEditWebsite ? (
+          <button
+            type="button"
+            onClick={onEditWebsite}
+            className="mt-5 rounded-full bg-[var(--onboarding-cta)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)]"
+          >
+            Add website
+          </button>
+        ) : null}
+      </OnboardingCard>
+    );
+  }
 
   // Client kickoff/BI start failed — Retry re-runs idempotent kickoff.
   if (fatalError) {

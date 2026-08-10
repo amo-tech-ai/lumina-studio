@@ -68,7 +68,7 @@ vi.mock("./brand-dna-payoff-screen", async () => {
 });
 
 import { OnboardingFlow } from "./onboarding-flow";
-import { EMPTY_ANSWERS, LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";
+import { LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";
 import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
 
 // IPI-833 · ONB2-UI-001 — standalone onboarding UI.
@@ -161,14 +161,10 @@ describe("Continue is really disabled, not just styled", () => {
       { screen: 2, answer: () => fireEvent.click(screen.getByTestId("build-option-fashion")) },
       {
         screen: 4,
-        answer: () => {
+        answer: () =>
           fireEvent.change(screen.getByLabelText(/brand name/i), {
             target: { value: "Maison Noir" },
-          });
-          fireEvent.change(screen.getByLabelText(/website/i), {
-            target: { value: "https://maisonnoir.com" },
-          });
-        },
+          }),
       },
       { screen: 5, answer: () => fireEvent.click(screen.getByTestId("channel-shopify")) },
       { screen: 7, answer: () => fireEvent.click(screen.getByTestId("grow-option-social")) },
@@ -193,26 +189,22 @@ describe("Continue is really disabled, not just styled", () => {
     }
   });
 
-  it("does not offer Skip on screen 4 (website is required)", () => {
+  it("clears invalid question values when Skip advances", () => {
     renderAt(<OnboardingFlow initialScreen={4} />);
-    expect(screen.queryByRole("button", { name: /skip/i })).toBeNull();
-  });
+    fireEvent.change(screen.getByLabelText(/brand name/i), {
+      target: { value: "Maison Noir" },
+    });
+    fireEvent.change(screen.getByLabelText(/website/i), {
+      target: { value: "not-a-url" },
+    });
 
-  it("Skip on screen 5 does not affect website state from screen 4", () => {
-    const initialAnswers = { ...EMPTY_ANSWERS, brandName: "Maison Noir", websiteUrl: "https://maisonnoir.com" };
-    renderAt(<OnboardingFlow initialScreen={5} initialAnswers={initialAnswers} />);
-
-    // Verify website is preserved via initialAnswers.
-    fireEvent.click(screen.getByRole("button", { name: /go back/i }));
-    expect((screen.getByLabelText(/website/i) as HTMLInputElement).value).toBe("https://maisonnoir.com");
-
-    // Now on screen 4 — Continue should be enabled (both fields filled)
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(screen.getByTestId("onboarding-screen-5")).toBeTruthy();
 
-    // Skip on screen 5 clears channels and advances to screen 6
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
-    expect(screen.getByTestId("onboarding-screen-6")).toBeTruthy();
+    fireEvent.popState(window, { state: historyState(4, 0) });
+    expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/website/i) as HTMLInputElement).value).toBe("");
   });
 });
 
@@ -246,11 +238,8 @@ describe("browser history", () => {
 
   it("moves back on popstate and preserves typed answers", () => {
     render(<OnboardingFlow initialScreen={4} />);
-    fireEvent.change(screen.getByLabelText(/brand name/i, { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/brand name/i), {
       target: { value: "Maison Noir" },
-    });
-    fireEvent.change(screen.getByLabelText(/website/i), {
-      target: { value: "https://maisonnoir.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByTestId("onboarding-screen-5")).toBeTruthy();
@@ -263,14 +252,11 @@ describe("browser history", () => {
 
   it("moves forward on popstate and still preserves answers", () => {
     render(<OnboardingFlow initialScreen={4} />);
-    fireEvent.change(screen.getByLabelText(/brand name/i, { exact: false }), {
+    fireEvent.change(screen.getByLabelText(/brand name/i), {
       target: { value: "Atelier Sud" },
     });
-    fireEvent.change(screen.getByLabelText(/website/i), {
-      target: { value: "https://atelier-sud.com" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByTestId("onboarding-screen-5")).toBeTruthy();
+    fireEvent.popState(window, { state: historyState(6, 1) });
+    expect(screen.getByTestId("onboarding-screen-6")).toBeTruthy();
 
     fireEvent.popState(window, { state: historyState(4, 0) });
     expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("Atelier Sud");
