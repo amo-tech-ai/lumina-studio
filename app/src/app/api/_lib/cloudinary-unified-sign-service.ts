@@ -92,7 +92,7 @@ async function resolveOrgIdAndValidateOwnership(
     };
   }
 
-  // Validate shoot/campaign ownership
+  // Validate shoot/campaign ownership — deduplicate when workId and context refer to same item
   const checkOwnership = async (table: string, id: string, errorMsg: string): Promise<SignError | null> => {
     const { data, error } = await supabase
       .from(table)
@@ -110,23 +110,32 @@ async function resolveOrgIdAndValidateOwnership(
     return null;
   };
 
+  // ponytail: same work/context ID must not trigger two DB round-trips — cache per request
+  const seen = new Set<string>();
+  const checkOnce = async (table: string, id: string, errorMsg: string): Promise<SignError | null> => {
+    const key = `${table}:${id}`;
+    if (seen.has(key)) return null;
+    seen.add(key);
+    return checkOwnership(table, id, errorMsg);
+  };
+
   if (workType === "shoots" && workId) {
-    const ownershipError = await checkOwnership("shoot_portfolio_view", workId, "Shoot does not belong to the requested brand");
+    const ownershipError = await checkOnce("shoot_portfolio_view", workId, "Shoot does not belong to the requested brand");
     if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (workType === "campaigns" && workId) {
-    const ownershipError = await checkOwnership("campaigns", workId, "Campaign does not belong to the requested brand");
+    const ownershipError = await checkOnce("campaigns", workId, "Campaign does not belong to the requested brand");
     if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (shootId) {
-    const ownershipError = await checkOwnership("shoot_portfolio_view", shootId, "Context shoot does not belong to the requested brand");
+    const ownershipError = await checkOnce("shoot_portfolio_view", shootId, "Context shoot does not belong to the requested brand");
     if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
   if (campaignId) {
-    const ownershipError = await checkOwnership("campaigns", campaignId, "Context campaign does not belong to the requested brand");
+    const ownershipError = await checkOnce("campaigns", campaignId, "Context campaign does not belong to the requested brand");
     if (ownershipError) return { orgId: "", error: ownershipError };
   }
 
