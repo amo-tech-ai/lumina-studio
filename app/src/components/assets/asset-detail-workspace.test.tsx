@@ -57,7 +57,7 @@ function detail(overrides: Partial<AssetDetail> = {}): AssetDetail {
     facebook_published: null,
     instagram_published: null,
     shopify_exported: null,
-    media_size_spec_id: null,
+    image_spec_id: null,
     size_compliance: null,
     metadata: null,
     mirror: {
