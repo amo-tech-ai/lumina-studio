@@ -20,7 +20,7 @@ Edge:    695 ✅ → 697 ✅ → 699 ✅ → 742 ✅ · 698 parked
 
 - 🟢 **IPI-788 fixed** — the `main`-branch Vercel `npm ci` lockfile drift (PR #620, merged, production deployment confirmed `Ready`). This was blocking every Vercel deploy including the rollback target the DNS cutover plan depends on.
 - 🟡 **IPI-706 (bundle size) In Progress** — gzip bundle hit **8.985 MiB**, 0.015 MiB from the 9.0 MiB hard-fail CI gate (was 8.799 MiB hours earlier, 8.25 MiB at last full audit). Root cause traced to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` plus `@copilotkit/web-inspector`, none of which are directly used anywhere in `src` — being fixed via `next/dynamic(..., {ssr:false})` to move them out of the server SSR bundle.
-- 🔴 **Still untouched, 6 days stale:** IPI-708 (rollback rehearsal), IPI-709 (observability baseline + Sentry CI token), IPI-707 (automated Playwright preview smoke), IPI-763's branch-protection residual (zero protection on `main`, confirmed via `gh api .../branches/main/protection` → 404). These four block IPI-631 (DNS cutover) — do not start 631 before they're Done.
+- 🔴 **Still untouched, 6 days stale:** IPI-708 (rollback rehearsal), IPI-709 (observability baseline + Sentry CI token), IPI-763's branch-protection residual (zero protection on `main`, confirmed via `gh api .../branches/main/protection` → 404). These three block IPI-631 (DNS cutover) — do not start 631 before they're Done. **IPI-707 is no longer stale**: version-header building blocks merged (#870), focused tests + exact-version CI gate in review (#877); remaining gap is the real-Worker exact-version smoke proof artifact.
 - 🟡 **IPI-595 (AI Gateway auth)** — both acceptance criteria have live evidence (PR #616, Cloudflare Gateway logs) but Linear still shows `In Progress`. Needs a status flip, not more work.
 
 ---
@@ -73,7 +73,7 @@ Keep `BI_PROVIDER` **ABSENT** until product flips Brand Hub.
 | — | [IPI-706 · CF-BUNDLE-220](https://linear.app/amo100/issue/IPI-706) | Reduce Worker bundle ≤7.5 MiB | 🟡 | In progress | 8.985 MiB, 0.015 MiB from the 9.0 MiB hard-fail gate — fixing `streamdown`/mermaid/katex/cytoscape/web-inspector leaking into the server SSR bundle |
 | — | [IPI-708 · CF-ROLLBACK-001](https://linear.app/amo100/issue/IPI-708) | Rollback rehearsal | 🔴 | 0 | Blocks IPI-631 — never run once, Backlog since 2026-07-18 |
 | — | [IPI-709 · CF-OBS-001](https://linear.app/amo100/issue/IPI-709) | Observability baseline | 🔴 | 0 | Blocks IPI-631 — Sentry CI auth token still missing from `ci.yml`, confirmed 2026-07-24 |
-| — | [IPI-707 · CF-SMOKE-001](https://linear.app/amo100/issue/IPI-707) | Automated Playwright preview smoke | 🔴 | 0 | Backlog since 2026-07-18, zero activity |
+| — | [IPI-707 · CF-SMOKE-001](https://linear.app/amo100/issue/IPI-707) | Exact-version Worker smoke before customers | 🟡 | In progress | Building blocks merged #870 (header + binding + IPI-915 matcher fix); focused tests + `--expect-version` CI gate in #877; remaining: real-Worker exact-version proof artifact (capture ID → journey → confirm match) |
 | — | [IPI-631](https://linear.app/amo100/issue/IPI-631) DNS | Production hostname | 🔴 | 0 | Blocked on IPI-708 + IPI-709 above — do not start early |
 | — | [IPI-763 · CF-CI-001](https://linear.app/amo100/issue/IPI-763) | Run `services/cloudflare-worker` tests in CI | 🟡 | 90 | CI job Done (PR #577/#583) — branch-protection residual still open: `main` has zero protection rules (`gh api .../branches/main/protection` → 404, confirmed 2026-07-24), needs a repo-admin action |
 
