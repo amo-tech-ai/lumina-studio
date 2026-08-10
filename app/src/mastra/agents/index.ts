@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { agentTools } from "@/mastra/tools";
 import { getMastraMemory, getPlannerMemory, PlannerWorkingMemory } from "@/mastra/memory";
@@ -110,7 +111,14 @@ const {
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
-  model: MODEL,
+  // IPI-751 · CF-MIG-230-W2 — dynamic model via resolveAgentModel (reuse IPI-769 harness).
+  // Flag AI_ROUTING_AGENT_CREATIVE_DIRECTOR stays legacy/unset until canary; missing cfEnv → legacy.
+  model: ({ requestContext }) =>
+    resolveAgentModel({
+      agentId: "creative-director",
+      tier: "default",
+      requestContext,
+    }),
    tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval, draftCampaignBrief, getCurrentPageContext },
   instructions: `You are the iPix creative director for Lumina Studio operators, serving two routes:
 - /app/campaigns: turn brand DNA and campaign context into creative briefs and moodboards that feed the
