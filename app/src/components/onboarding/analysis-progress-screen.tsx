@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
+import { RestartAnalysisButton } from "@/components/brand-hub/restart-analysis-button";
 import { Progress } from "@/components/ui/progress";
 import { formatCrawlProgressLabel } from "@/lib/brand-hub/format-crawl-progress";
 import { useBrandAnalysisProgress } from "@/lib/brand-hub/use-brand-analysis-progress";
@@ -275,7 +276,10 @@ function AnalysisProgressLive({
     );
   }
 
-  // Server terminal failed — kickoff is listen-only; Brand Hub owns explicit retry.
+  // Server terminal failed — listen-only kickoff is done; offer the shared
+  // IPI-905/918 recovery action so users retry without leaving onboarding.
+  // The restart API is stage-aware (reuse active crawl, restart failed crawl,
+  // or re-run BI only) and idempotent — no duplicate crawl is started.
   if (phase === "failed") {
     return (
       <OnboardingCard>
@@ -288,8 +292,9 @@ function AnalysisProgressLive({
           aria-live="assertive"
           className="mt-2.5 text-sm leading-snug text-destructive"
         >
-          Something went wrong while analysing your brand. Open Brand Hub to retry.
+          Something went wrong while analysing your brand. Restart analysis to pick up where it stopped — you don't need to redo onboarding.
         </p>
+        <RestartAnalysisButton brandId={brandId} />
       </OnboardingCard>
     );
   }

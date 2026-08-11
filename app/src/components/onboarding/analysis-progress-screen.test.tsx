@@ -36,6 +36,14 @@ vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({ mocked: true }),
 }));
 
+vi.mock("@/components/brand-hub/restart-analysis-button", () => ({
+  RestartAnalysisButton: ({ brandId }: { brandId: string }) => (
+    <button type="button" data-testid="restart-analysis-button" data-brand-id={brandId}>
+      Restart analysis
+    </button>
+  ),
+}));
+
 import { AnalysisProgressScreen } from "./analysis-progress-screen";
 
 const answers = {
@@ -297,7 +305,7 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(await screen.findByText(/Crawling your website/i)).toBeTruthy();
   });
 
-  it("does not offer Retry when server intake_status is failed", async () => {
+  it("offers Restart analysis button when server intake_status is failed", async () => {
     mockKickoff.mockResolvedValue({
       kind: "listen_only",
       intakeStatus: "failed",
@@ -319,7 +327,100 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     );
 
     expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
-    expect(screen.getByTestId("analysis-status").textContent).toMatch(/Brand Hub/i);
-    expect(screen.queryByRole("button", { name: /Retry/i })).toBeNull();
+    expect(screen.getByTestId("analysis-status").textContent).toMatch(/Restart analysis to pick up/i);
+    expect(screen.getByTestId("restart-analysis-button")).toBeTruthy();
+    expect(screen.getByTestId("restart-analysis-button").getAttribute("data-brand-id")).toBe(
+      "brand-1",
+    );
+  });
+
+  it("transitions from failed to running when server status updates after restart", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "listen_only",
+      intakeStatus: "failed",
+    });
+    mockProgress = {
+      intakeStatus: "failed",
+      crawl: null,
+      phase: "failed",
+      reconnect: mockReconnect,
+    };
+
+    const { rerender } = render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+
+    // Simulate Realtime updating intake_status after restart succeeds.
+    mockProgress = {
+      intakeStatus: "crawl_running",
+      crawl: { pages_crawled: 3, pages_found: 10 },
+      phase: "live",
+      reconnect: mockReconnect,
+    };
+    rerender(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Crawling your website/i)).toBeTruthy();
+    expect(screen.queryByText(/Analysis failed/i)).toBeNull();
+    expect(screen.queryByTestId("restart-analysis-button")).toBeNull();
+  });
+
+  it("advances to payoff screen when draft_ready is received after restart", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "listen_only",
+      intakeStatus: "failed",
+    });
+    mockProgress = {
+      intakeStatus: "failed",
+      crawl: null,
+      phase: "failed",
+      reconnect: mockReconnect,
+    };
+
+    const onComplete = vi.fn();
+    const { rerender } = render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={onComplete}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+
+    // Simulate the restart flow reaching draft_ready.
+    mockProgress = {
+      intakeStatus: "draft_ready",
+      crawl: null,
+      phase: "idle",
+      reconnect: mockReconnect,
+    };
+    rerender(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={onComplete}
+        quietGapMs={0}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });
