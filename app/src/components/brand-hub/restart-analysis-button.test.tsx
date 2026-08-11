@@ -175,4 +175,55 @@ describe("RestartAnalysisButton", () => {
     expect((button as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByText(/network down/i)).toBeNull();
   });
+
+  it("calls onRestart after a successful restart (for client-only callers)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { ok: true, mode: "bi_restarted", intakeStatus: "analysis_running" }),
+    );
+
+    const onRestart = vi.fn();
+    render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={onRestart} />);
+    clickRestart();
+
+    await waitFor(() => expect(onRestart).toHaveBeenCalledTimes(1));
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call onRestart when restart fails (409 already_running)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(409, { ok: false, code: "already_running", message: "in progress" }),
+    );
+
+    const onRestart = vi.fn();
+    render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={onRestart} />);
+    clickRestart();
+
+    expect(await screen.findByText(/Analysis is already running/i)).toBeTruthy();
+    expect(onRestart).not.toHaveBeenCalled();
+  });
+
+  it("renders error text with role=alert when errorRole is set", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(503, { ok: false, code: "provider_unavailable", message: "x" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} errorRole="alert" />);
+    clickRestart();
+
+    const errorEl = await screen.findByText(/Try again in a minute/i);
+    expect(errorEl.getAttribute("role")).toBe("alert");
+    expect(errorEl.getAttribute("aria-live")).toBe("assertive");
+  });
+
+  it("renders error text without live-region semantics when errorRole is omitted (Brand Hub default)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(503, { ok: false, code: "provider_unavailable", message: "x" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+    clickRestart();
+
+    const errorEl = await screen.findByText(/Try again in a minute/i);
+    expect(errorEl.getAttribute("role")).toBeNull();
+  });
 });
