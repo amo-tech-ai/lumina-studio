@@ -72,9 +72,9 @@ describe("canBack", () => {
 });
 
 describe("canSkip", () => {
-  it("is true only on screens 4 through 7", () => {
+  it("is true only on screens 5 through 7", () => {
     for (const screen of ALL_SCREENS) {
-      expect(canSkip(screen), `screen ${screen}`).toBe(screen >= 4 && screen <= 7);
+      expect(canSkip(screen), `screen ${screen}`).toBe(screen >= 5 && screen <= 7);
     }
   });
 });
@@ -87,9 +87,9 @@ describe("ctaDisabled", () => {
     expect(ctaDisabled(7, EMPTY_ANSWERS)).toBe(true);
   });
 
-  it("releases each question screen once its own field is answered", () => {
+  it("releases each question screen once its required fields are answered", () => {
     expect(ctaDisabled(2, withAnswers({ build: "brand" }))).toBe(false);
-    expect(ctaDisabled(4, withAnswers({ brandName: "Maison Test" }))).toBe(false);
+    expect(ctaDisabled(4, withAnswers({ brandName: "Maison Test", websiteUrl: "https://maison.test" }))).toBe(false);
     expect(ctaDisabled(5, withAnswers({ listed: { shopify: true } }))).toBe(false);
     expect(ctaDisabled(7, withAnswers({ grow: "ads" }))).toBe(false);
   });
@@ -98,13 +98,12 @@ describe("ctaDisabled", () => {
     expect(ctaDisabled(4, withAnswers({ brandName: "   " }))).toBe(true);
   });
 
-  // The website field is optional, but the screen shows a validation error for a
-  // malformed value. Enabling Continue at the same time would tell the user their
-  // input is wrong and accept it anyway.
-  it("allows an empty optional website but blocks a malformed one", () => {
+  // The website field is required for crawl-backed Brand DNA. Blank and
+  // malformed URLs both block Continue; a valid URL releases it.
+  it("requires a website — blocks blank and malformed URLs", () => {
     const named = { brandName: "Maison Noir" };
-    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "" }))).toBe(false);
-    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "   " }))).toBe(false);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "" }))).toBe(true);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "   " }))).toBe(true);
     expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "not-a-url" }))).toBe(true);
     expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "maisonnoir" }))).toBe(true);
     expect(
