@@ -1999,7 +1999,6 @@ export type Database = {
         Row: {
           approval: string
           asset_id: string
-          brand_id: string | null
           bytes: number | null
           cloudinary_asset_id: string | null
           created_at: string
@@ -2023,7 +2022,6 @@ export type Database = {
         Insert: {
           approval?: string
           asset_id: string
-          brand_id?: string | null
           bytes?: number | null
           cloudinary_asset_id?: string | null
           created_at?: string
@@ -2047,7 +2045,6 @@ export type Database = {
         Update: {
           approval?: string
           asset_id?: string
-          brand_id?: string | null
           bytes?: number | null
           cloudinary_asset_id?: string | null
           created_at?: string
@@ -2074,13 +2071,6 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: true
             referencedRelation: "assets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cloudinary_assets_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "brands"
             referencedColumns: ["id"]
           },
         ]
