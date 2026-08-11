@@ -48,22 +48,9 @@ function errorCopyFor(payload: unknown): string {
 
 export type RestartAnalysisButtonProps = {
   brandId: string;
-  /**
-   * Called after a successful restart POST resolves. Brand Hub (SSR parent)
-   * relies on router.refresh() to replace this component; onboarding callers
-   * (pure client) need to reset their own failed phase since router.refresh()
-   * does not unmount them. Optional so existing Brand Hub callers are unaffected.
-   */
-  onRestart?: () => void;
-  /**
-   * Optional live-region role for the error text. Brand Hub nests this button
-   * inside an existing role="alert" banner; onboarding renders it as a sibling,
-   * so the caller can opt into announcement semantics here.
-   */
-  errorRole?: "alert" | "status";
 };
 
-export const RestartAnalysisButton = ({ brandId, onRestart, errorRole }: RestartAnalysisButtonProps) => {
+export const RestartAnalysisButton = ({ brandId }: RestartAnalysisButtonProps) => {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +98,6 @@ export const RestartAnalysisButton = ({ brandId, onRestart, errorRole }: Restart
       // re-enable the button for a window where a second click could fire another
       // POST before the refreshed page replaces this failed-state banner.
       router.refresh();
-      onRestart?.();
     } catch {
       setError(RESTART_ERROR_FALLBACK);
       inFlight.current = false;
@@ -132,14 +118,10 @@ export const RestartAnalysisButton = ({ brandId, onRestart, errorRole }: Restart
         <RotateCcw size={14} aria-hidden />
         {pending ? "Restarting…" : "Restart analysis"}
       </Button>
-      {error && (
-        <p
-          className="font-sans text-[11px] text-[#991B1B]"
-          {...(errorRole ? { role: errorRole, "aria-live": errorRole === "alert" ? "assertive" : "polite" } : {})}
-        >
-          {error}
-        </p>
-      )}
+      {/* No role/aria-live here: the only caller (the failed AnalysisProgressBanner)
+          is already role="alert" aria-live="assertive", and a nested live region
+          makes screen readers re-announce the whole banner. */}
+      {error && <p className="font-sans text-[11px] text-[#991B1B]">{error}</p>}
     </div>
   );
 };
