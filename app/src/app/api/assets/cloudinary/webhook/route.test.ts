@@ -45,6 +45,7 @@ const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
 const aiAgentLogsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
 const brandsSelectMaybeSingle = vi.fn();
+const assetEventsInsert = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "assets") {
@@ -64,6 +65,9 @@ const mockFrom = vi.fn((table: string) => {
   }
   if (table === "ai_agent_logs") {
     return { insert: aiAgentLogsInsert };
+  }
+  if (table === "asset_events") {
+    return { insert: assetEventsInsert };
   }
   if (table === "campaigns") {
     return {
@@ -132,6 +136,7 @@ beforeEach(() => {
   cloudinaryAssetsUpdateIs.mockResolvedValue({ data: null, error: null });
   mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
+  assetEventsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
   mockFetch.mockReset();

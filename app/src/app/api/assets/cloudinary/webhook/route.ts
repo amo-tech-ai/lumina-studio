@@ -45,6 +45,8 @@ type CloudinaryNotification = {
   context?: unknown;
   /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
   signature_key?: string;
+  /** Cloudinary request id for idempotency — top-level `request_id` or header `X-Cld-Request-Id`. */
+  request_id?: string;
   /** Delete notifications often omit top-level public_id and use resources[]. */
   resources?: Array<{ public_id?: string; asset_id?: string }>;
 };
@@ -874,6 +876,24 @@ async function handleUpload(
         "[cloudinary/webhook] failed to delete provisional assets row after canonical race:",
         orphanErr.message,
       );
+      return { retryable: true };
+    }
+  }
+
+  // IPI-441 minimal: one upload event, request_id unique for idempotency, service_role only.
+  // Defer resource_metadata_changed, restore, Realtime to IPI-439/64.
+  if (payload.notification_type === "upload") {
+    const requestId =
+      payload.request_id?.trim() || `${identity.cloudinary_asset_id ?? publicId}-${identity.version ?? Date.now()}`;
+    const { error: eventErr } = await db.from("asset_events").insert({
+      asset_id: canonicalAssetId,
+      cloudinary_asset_id: identity.cloudinary_asset_id ?? null,
+      version: identity.version ?? null,
+      kind: "upload",
+      request_id: requestId,
+    });
+    if (eventErr && eventErr.code !== "23505") {
+      console.error("[cloudinary/webhook] asset_events insert failed:", eventErr.message);
       return { retryable: true };
     }
   }

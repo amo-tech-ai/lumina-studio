@@ -898,6 +898,44 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_events: {
+        Row: {
+          asset_id: string
+          cloudinary_asset_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          request_id: string
+          version: number | null
+        }
+        Insert: {
+          asset_id: string
+          cloudinary_asset_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          request_id: string
+          version?: number | null
+        }
+        Update: {
+          asset_id?: string
+          cloudinary_asset_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          request_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_events_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_links: {
         Row: {
           asset_id: string
