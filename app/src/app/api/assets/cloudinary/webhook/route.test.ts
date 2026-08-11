@@ -43,6 +43,7 @@ function mockUpdateEqResult(result: { data: null; error: unknown }) {
 }
 const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
 const aiAgentLogsInsert = vi.fn();
+const assetEventsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
 const brandsSelectMaybeSingle = vi.fn();
 
@@ -56,14 +57,26 @@ const mockFrom = vi.fn((table: string) => {
     };
   }
   if (table === "cloudinary_assets") {
+    const chainableSelect = () => {
+      const eqFn = vi.fn(() => {
+        const base: Record<string, unknown> = { maybeSingle: cloudinaryAssetsSelectMaybeSingle };
+        // support .is() chaining for legacy null-identity lookup
+        (base as Record<string, unknown>).is = vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle }));
+        return base;
+      });
+      return { eq: eqFn };
+    };
     return {
-      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle })) })),
+      select: vi.fn(chainableSelect),
       upsert: cloudinaryAssetsUpsert,
       update: cloudinaryAssetsUpdate,
     };
   }
   if (table === "ai_agent_logs") {
     return { insert: aiAgentLogsInsert };
+  }
+  if (table === "asset_events") {
+    return { insert: assetEventsInsert };
   }
   if (table === "campaigns") {
     return {
@@ -132,6 +145,7 @@ beforeEach(() => {
   cloudinaryAssetsUpdateIs.mockResolvedValue({ data: null, error: null });
   mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
+  assetEventsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
   mockFetch.mockReset();
@@ -1162,6 +1176,58 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       });
       expect(parseTaxonomyBrandId(`ipix/brands/${BRAND_ID}/products/x`)).toBeNull();
       expect(parseTaxonomyBrandId(`ipix/dev/${ORG_ID}/${BRAND_ID}/not-a-work-type/x`)).toBeNull();
+    });
+  });
+
+  describe("IPI-441 — asset_events timeline (append-only)", () => {
+    it("upload inserts asset_events with kind=upload and exact cloudinary_asset_id+version+request_id", async () => {
+      const { POST } = await importRoute();
+      const reqId = "req-123";
+      await POST(makeRequest({ ...UPLOAD_PAYLOAD, request_id: reqId }));
+      expect(assetEventsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          asset_id: "asset-1",
+          cloudinary_asset_id: PROVIDER_ASSET_ID,
+          version: 1,
+          kind: "upload",
+          request_id: reqId,
+        }),
+      );
+    });
+
+    it("injects X-Cld-Request-Id header when body request_id missing", async () => {
+      const { POST } = await importRoute();
+      const headerId = "header-req-999";
+      const res = await POST(
+        makeRequest({ ...UPLOAD_PAYLOAD, request_id: undefined }, { "x-cld-request-id": headerId }),
+      );
+      expect(res.status).toBe(200);
+      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ request_id: headerId }));
+    });
+
+    it("duplicate request_id (23505) is ignored idempotently and still returns 200", async () => {
+      assetEventsInsert.mockResolvedValueOnce({ data: null, error: { code: "23505", message: "duplicate" } });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, request_id: "dup-1" }));
+      expect(res.status).toBe(200);
+      expect(assetEventsInsert).toHaveBeenCalled();
+    });
+
+    it("stale version does not insert asset_events", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+        data: {
+          id: "mirror-1",
+          asset_id: "asset-existing",
+          version: 5,
+          public_id: `ipix/brands/${BRAND_ID}/products/current`,
+          secure_url: "https://res.cloudinary.com/x/current.jpg",
+        },
+        error: null,
+      });
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id: `ipix/brands/${BRAND_ID}/products/stale-old-name`, version: 2 }));
+      expect(assetEventsInsert).not.toHaveBeenCalled();
     });
   });
 });
