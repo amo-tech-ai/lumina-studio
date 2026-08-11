@@ -73,16 +73,3 @@ alter table public.cloudinary_assets
 
 -- 5. Comment for traceability
 comment on table public.cloudinary_assets is 'IPI-962 — brand ownership is via assets.brand_id through asset_id; mirror brand_id removed.';
-
--- ============================================================================
--- ROLLBACK (manual — run as separate down migration if needed)
--- ----------------------------------------------------------------------------
--- alter table public.cloudinary_assets
---   add column if not exists brand_id uuid references public.brands(id) on delete set null;
--- create index if not exists idx_cloudinary_assets_brand
---   on public.cloudinary_assets using btree (brand_id) where (brand_id is not null);
--- drop policy if exists "ca_insert_via_brand" on public.cloudinary_assets;
--- create policy "ca_insert_via_brand" ... with brand_id IS NULL OR = a.brand_id ...
--- drop policy if exists "ca_update_via_brand" on public.cloudinary_assets;
--- create policy "ca_update_via_brand" ... with brand_id IS NULL OR = a.brand_id ...
--- ============================================================================
