@@ -6,31 +6,15 @@
  * Default: `health` only (no edge-test / no ai_agent_logs).
  * Opt-in auth smoke: REQUIRE_AUTH_EDGE_SMOKE=1 (requires remote ALLOW_EDGE_TEST=1).
  */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
+import { createJsonFetcher } from "./lib/fetch-json.mjs";
+import { createReporter } from "./lib/check-reporter.mjs";
+import { loadRepoEnv, resolveSupabaseEnv } from "./lib/script-env.mjs";
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    const val = trimmed.slice(eq + 1);
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
+loadRepoEnv();
 
-const url =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_SUPABASE_URL;
-const anonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const { url, anonKey, serviceRoleKey: serviceKey } = resolveSupabaseEnv();
 const requireAuthSmoke = process.env.REQUIRE_AUTH_EDGE_SMOKE === "1";
 
 if (!url || !anonKey) {
@@ -41,28 +25,9 @@ if (!url || !anonKey) {
 }
 
 const functionsBase = `${url}/functions/v1`;
-let failures = 0;
-
-function fail(msg) {
-  console.error(`FAIL: ${msg}`);
-  failures += 1;
-}
-
-function pass(msg) {
-  console.log(`ok: ${msg}`);
-}
-
-async function fetchJson(path, init = {}) {
-  const res = await fetch(`${functionsBase}${path}`, init);
-  const text = await res.text();
-  let json;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
-  }
-  return { res, json, text };
-}
+const fetchJson = createJsonFetcher(functionsBase);
+const reporter = createReporter();
+const { fail, pass } = reporter;
 
 async function main() {
   console.log("PLT-003 edge function verification\n");
@@ -86,8 +51,10 @@ async function main() {
 
   if (!requireAuthSmoke) {
     pass("skipped edge-test auth smoke (set REQUIRE_AUTH_EDGE_SMOKE=1 to enable)");
-    console.log(failures ? "\nEdge verification FAILED" : "\nEdge verification passed");
-    process.exit(failures ? 1 : 0);
+    console.log(
+      reporter.failures ? "\nEdge verification FAILED" : "\nEdge verification passed",
+    );
+    process.exit(reporter.failures ? 1 : 0);
   }
 
   // Opt-in: authenticated Edge runtime probe (remote must have ALLOW_EDGE_TEST=1)
@@ -169,8 +136,10 @@ async function main() {
     pass("cleaned up test user");
   }
 
-  console.log(failures ? "\nEdge verification FAILED" : "\nEdge verification passed");
-  process.exit(failures ? 1 : 0);
+  console.log(
+    reporter.failures ? "\nEdge verification FAILED" : "\nEdge verification passed",
+  );
+  process.exit(reporter.failures ? 1 : 0);
 }
 
 main().catch((e) => {

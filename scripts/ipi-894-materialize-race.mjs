@@ -28,38 +28,19 @@
  */
 
 import { createRequire } from "node:module";
-import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const requireFromApp = createRequire(resolve(import.meta.dirname, "../app/package.json"));
+import { loadRepoEnv, repoRoot as ROOT } from "./lib/script-env.mjs";
+import { resolvePgSsl, sanitizePgConnectionString } from "./lib/pg-ssl.mjs";
+
+const requireFromApp = createRequire(resolve(ROOT, "app/package.json"));
 const { Client } = requireFromApp("pg");
 
 const QA_REF = "wtuhdynujhszsbwxlbdi";
 const PROD_REF = "nvdlhrodvevgwdsneplk";
-const ROOT = resolve(import.meta.dirname, "..");
 
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    let val = trimmed.slice(eq + 1);
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = val;
-  }
-}
-
-loadEnvFile(resolve(ROOT, ".env.local"));
-loadEnvFile(resolve(ROOT, "app", ".env.local"));
+loadRepoEnv({ includeApp: true });
 
 function parseArgs(argv) {
   let runs = 3;
@@ -100,46 +81,20 @@ function assertQaOnly(label, value) {
   }
 }
 
-function sanitizePgConnectionString(connectionString) {
+/** A missing CA is fatal here — never connect on a weaker trust chain. */
+function requiredPgSsl() {
   try {
-    const u = new URL(connectionString);
-    for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey"]) {
-      u.searchParams.delete(key);
-    }
-    return u.toString();
-  } catch {
-    return connectionString;
+    return resolvePgSsl({ requireCa: true });
+  } catch (err) {
+    refuse(err.message);
   }
-}
-
-function resolvePgSsl() {
-  if (
-    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
-  ) {
-    return { rejectUnauthorized: false };
-  }
-  const explicitCa =
-    process.env.PGSSLROOTCERT || process.env.VERIFY_RLS_PG_SSLROOTCERT || "";
-  const caPath =
-    explicitCa || resolve(ROOT, "scripts/certs/supabase-prod-ca-2021.crt");
-  if (!existsSync(caPath)) {
-    refuse(
-      `PG SSL CA not found at ${caPath} — refuse insecure fallback` +
-        (explicitCa
-          ? " (fix PGSSLROOTCERT / VERIFY_RLS_PG_SSLROOTCERT)"
-          : "") +
-        "; set VERIFY_RLS_PG_INSECURE_SSL=1 to opt in",
-    );
-  }
-  return { rejectUnauthorized: true, ca: readFileSync(caPath, "utf8") };
 }
 
 async function withPgClient(fn) {
   const connectionString = sanitizePgConnectionString(process.env.QA_DATABASE_URL);
   const client = new Client({
     connectionString,
-    ssl: resolvePgSsl(),
+    ssl: requiredPgSsl(),
   });
   await client.connect();
   try {
