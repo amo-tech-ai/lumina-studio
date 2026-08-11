@@ -6,7 +6,12 @@ import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { validateUrl } from "@/lib/onboarding/validate-url";
 
 /**
- * IPI-833 — screen 4. Brand name (required) and website (optional here).
+ * IPI-833 / IPI-989 — screen 4. Brand name (required) and website (required).
+ *
+ * The website URL is required because Brand DNA analysis is crawl-backed:
+ * without a URL to crawl, the analysis pipeline has no input. The previous
+ * "optional" labeling created a dead-end where users completed 8 more screens
+ * only to be sent backward at analysis time (ONB2-WEB-REQ-001).
  *
  * The design comp renders a fabricated crawl summary under the URL field:
  *
@@ -32,9 +37,8 @@ export function BrandDetailsQuestion({
   const urlId = useId();
   const urlErrorId = `${urlId}-error`;
 
-  // Only complain once they have typed something — validating an untouched
-  // optional field would be scolding them for nothing.
-  const urlError = websiteUrl.trim() === "" ? null : validateUrl(websiteUrl);
+  // Validate immediately — the field is required, not optional.
+  const urlError = validateUrl(websiteUrl);
   const host = websiteUrl.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
 
   return (
@@ -64,7 +68,7 @@ export function BrandDetailsQuestion({
 
         <div className="grid gap-1.5">
           <label htmlFor={urlId} className="text-xs font-semibold text-[var(--onboarding-sub)]">
-            Website <span className="font-normal text-[var(--onboarding-muted)]">(optional)</span>
+            Website <span className="font-normal text-[var(--onboarding-muted)]">(required for Brand DNA crawl)</span>
           </label>
           <input
             id={urlId}
