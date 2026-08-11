@@ -280,6 +280,12 @@ function AnalysisProgressLive({
   // IPI-905/918 recovery action so users retry without leaving onboarding.
   // The restart API is stage-aware (reuse active crawl, restart failed crawl,
   // or re-run BI only) and idempotent — no duplicate crawl is started.
+  // The Realtime listener picks up the new intake_status automatically; the
+  // onRestart callback (reconnect) forces a re-subscribe + re-read of current
+  // intake_status as a belt-and-suspenders escape hatch for missed events.
+  // The button's router.refresh() is a no-op here since this is a pure client
+  // component with no SSR parent to replace it — so the button resets itself
+  // after the onRestart callback to stay clickable for a second retry.
   if (phase === "failed") {
     return (
       <OnboardingCard>
@@ -294,7 +300,11 @@ function AnalysisProgressLive({
         >
           Something went wrong while analysing your brand. Restart analysis to pick up where it stopped — you don't need to redo onboarding.
         </p>
-        <RestartAnalysisButton brandId={brandId} />
+        <RestartAnalysisButton
+          brandId={brandId}
+          errorRole="alert"
+          onRestart={reconnect}
+        />
       </OnboardingCard>
     );
   }
