@@ -27,7 +27,18 @@ export function classifyConsoleError(error) {
   // Blocking error patterns
   if (/hydration|Hydration/i.test(t)) return true;
   if (/Uncaught|uncaught/i.test(t)) return true;
-  if (/Worker|Miniflare|Cloudflare/i.test(t) && /error/i.test(t)) return true;
+  // Cloudflare Worker / Miniflare runtime failures — match explicit runtime
+  // wording, NOT the substring "Worker" inside deployment URLs like
+  // "*.workers.dev" which appear in AI provider stack traces (false positive,
+  // IPI-972). Real Worker runtime errors say things like "Worker threw" or
+  // "Miniflare: ..." or "Cloudflare Workers runtime".
+  if (
+    /Worker (threw|exited|crashed|runtime)/i.test(t) ||
+    /Miniflare/i.test(t) ||
+    /Cloudflare Workers runtime/i.test(t)
+  ) {
+    return true;
+  }
   if (/ChunkLoadError|Script error/i.test(t)) return true;
   
   // Ignore known noisy third-party

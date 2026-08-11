@@ -34,13 +34,50 @@ const tests = [
     expected: true,
   },
   {
-    name: "Console: Worker error - blocking",
-    input: { text: "Worker error", type: "error" },
+    name: "Console: Worker runtime error - blocking",
+    input: { text: "Worker threw an error", type: "error" },
     expected: true,
   },
   {
     name: "Console: ChunkLoadError - blocking",
     input: { text: "ChunkLoadError", type: "error" },
+    expected: true,
+  },
+  
+  // IPI-972 regression: AI_APICallError stack traces contain *.workers.dev URLs
+  // but are NOT Cloudflare Worker runtime failures — they are transient provider
+  // errors and must not be classified as blocking infrastructure errors.
+  {
+    name: "Console: AI_APICallError with workers.dev URL - tolerated (not Worker runtime error)",
+    input: {
+      text: "AI_APICallError: This model is currently experiencing high demand. Spikes in demand are usually temporary. at process_ticks (webidl:526:23) at async Object.handler (https://ipix-operator-preview.sk-498.workers.dev/copilotkit/runtime)",
+      type: "log",
+    },
+    expected: false,
+  },
+  {
+    name: "Console: CopilotKit agent_run_error_event with AI_APICallError - tolerated",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: This model is currently experiencing high demand. at async fetch (https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/agent/run)",
+      type: "log",
+    },
+    expected: false,
+  },
+  
+  // Real Cloudflare Worker / Miniflare runtime errors remain blocking
+  {
+    name: "Console: Worker runtime error - blocking",
+    input: { text: "Worker threw an unhandled error: ReferenceError: foo is not defined", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Miniflare error - blocking",
+    input: { text: "Miniflare: Worker threw a thrown error: TypeError: Cannot read property", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Cloudflare Workers runtime error - blocking",
+    input: { text: "Cloudflare Workers runtime: unhandled exception in Worker", type: "error" },
     expected: true,
   },
   {
