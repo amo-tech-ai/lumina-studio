@@ -57,10 +57,55 @@ function mockClient(overrides: Record<string, unknown> = {}) {
 
 describe("getAssetEvents", () => {
   it("returns events in reverse-chronological order when asset is readable", async () => {
-    const client = mockClient();
-    const res = await getAssetEvents(client as never, ASSET_ID);
+    // Capture the two order calls: created_at then id, both ascending:false
+    const client = (() => {
+      const assetsMaybeSingle = vi.fn().mockResolvedValue({ data: { id: ASSET_ID }, error: null });
+      const limit = vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "1",
+            asset_id: ASSET_ID,
+            cloudinary_asset_id: "abc",
+            version: 1,
+            kind: "upload",
+            actor_id: null,
+            reason: null,
+            metadata: {},
+            created_at: new Date().toISOString(),
+          },
+          {
+            id: "2",
+            asset_id: ASSET_ID,
+            cloudinary_asset_id: "abc",
+            version: 2,
+            kind: "overwrite",
+            actor_id: null,
+            reason: null,
+            metadata: {},
+            created_at: new Date().toISOString(),
+          },
+        ],
+        error: null,
+      });
+      const innerOrder = vi.fn().mockReturnValue({ limit });
+      const outerOrder = vi.fn().mockReturnValue({ order: innerOrder });
+      const eventsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ order: outerOrder }),
+      });
+      const from = vi.fn((table: string) => {
+        if (table === "assets") {
+          return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: assetsMaybeSingle }) }) };
+        }
+        if (table === "asset_events") return { select: eventsSelect };
+        throw new Error(table);
+      });
+      return { client: { from } as unknown as import("@supabase/supabase-js").SupabaseClient, outerOrder, innerOrder };
+    })();
+    const res = await getAssetEvents(client.client as never, ASSET_ID);
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data).toHaveLength(2);
+    expect(client.outerOrder).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(client.innerOrder).toHaveBeenCalledWith("id", { ascending: false });
   });
 
   it("returns 404 when asset not found (RLS or missing)", async () => {

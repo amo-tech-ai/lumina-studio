@@ -1207,10 +1207,16 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
     it("duplicate request_id (23505) is ignored idempotently and still returns 200", async () => {
       assetEventsInsert.mockResolvedValueOnce({ data: null, error: { code: "23505", message: "duplicate" } });
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const { POST } = await importRoute();
       const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, request_id: "dup-1" }));
       expect(res.status).toBe(200);
       expect(assetEventsInsert).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("duplicate request_id"), "dup-1");
+      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("asset_events insert"), expect.anything());
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
     it("stale version does not insert asset_events", async () => {

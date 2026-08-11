@@ -1049,13 +1049,14 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
         .eq("cloudinary_asset_id", providerId);
       if (error) console.error("[cloudinary/webhook] delete->archive by provider id failed:", error.message);
       else if (!lookupErr && mirror?.asset_id) {
+        const fallback = `${providerId}:${(mirror as { version?: number | null }).version ?? "0"}:archived`;
         await insertAssetEvent(db, {
           assetId: mirror.asset_id,
           cloudinaryAssetId: providerId,
           version: (mirror as { version?: number | null }).version ?? undefined,
           kind: "archived",
           metadata: { public_id: publicIds[0] ?? null },
-          requestId: deleteRequestId,
+          requestId: deleteRequestId ?? fallback,
         });
       }
     }
@@ -1076,13 +1077,14 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
       if (error) {
         console.error("[cloudinary/webhook] delete->archive legacy null-identity failed:", error.message);
       } else if (legacyMirror?.asset_id) {
+        const fallback = `${publicId}:${(legacyMirror as { version?: number | null }).version ?? "0"}:archived`;
         await insertAssetEvent(db, {
           assetId: (legacyMirror as { asset_id: string }).asset_id,
           cloudinaryAssetId: undefined,
           version: (legacyMirror as { version?: number | null }).version ?? undefined,
           kind: "archived",
           metadata: { public_id: publicId },
-          requestId: deleteRequestId,
+          requestId: deleteRequestId ?? fallback,
         });
       }
     }
@@ -1098,13 +1100,14 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
     const { error } = await db.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
     if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);
     else if (mirror?.asset_id) {
+      const fallback = `${publicId}:${(mirror as { version?: number | null }).version ?? "0"}:archived`;
       await insertAssetEvent(db, {
         assetId: (mirror as { asset_id: string }).asset_id,
         cloudinaryAssetId: undefined,
         version: (mirror as { version?: number | null }).version ?? undefined,
         kind: "archived",
         metadata: { public_id: publicId },
-        requestId: deleteRequestId,
+        requestId: deleteRequestId ?? fallback,
       });
     }
   }

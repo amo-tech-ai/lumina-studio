@@ -59,24 +59,10 @@ create policy "asset_events_select"
     )
   );
 
-drop policy if exists "asset_events_insert" on public.asset_events;
-create policy "asset_events_insert"
-  on public.asset_events for insert to authenticated
-  with check (
-    exists (
-      select 1
-      from public.assets a
-      join public.brands b on b.id = a.brand_id
-      where a.id = asset_events.asset_id
-        and public.is_org_member(b.org_id)
-    )
-  );
-
--- No UPDATE / DELETE policies — append-only (default deny).
+-- No INSERT/UPDATE/DELETE policies for authenticated — writes only via service_role webhook/RPC (append-only).
 -- Service role (webhook) bypasses RLS; no with_check bypass needed.
 
 comment on policy "asset_events_select" on public.asset_events is 'IPI-441 — org members of the owning brand can read timeline.';
-comment on policy "asset_events_insert" on public.asset_events is 'IPI-441 — org members can write timeline (webhook uses service_role bypass).';
 
 commit;
 

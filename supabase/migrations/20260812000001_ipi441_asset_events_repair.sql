@@ -2,11 +2,10 @@
 -- This migration is idempotent: handles both fresh (empty) and legacy (request_id) installs.
 begin;
 
--- Drop legacy request_id artifacts if present (remote 20260811223653)
+-- Preserve request_id data — drop only obsolete unique constraint/index, keep column
 alter table public.asset_events drop constraint if exists asset_events_request_id_key;
 drop index if exists public.asset_events_request_id_key;
 drop index if exists public.asset_events_request_id_idx;
-alter table public.asset_events drop column if exists request_id;
 
 -- Ensure v1 columns
 alter table public.asset_events add column if not exists actor_id uuid references auth.users(id) on delete set null;
@@ -23,14 +22,12 @@ create index if not exists idx_asset_events_cloudinary_asset_id on public.asset_
 create index if not exists idx_asset_events_asset_kind_created on public.asset_events(asset_id, created_at desc);
 
 -- RLS: org-only (IPI-956) — replace stale dual org_id/user_id predicate
+-- No authenticated INSERT — writes only via service_role webhook/RPC
 drop policy if exists asset_events_select on public.asset_events;
 drop policy if exists asset_events_insert on public.asset_events;
 drop policy if exists asset_events_insert_service on public.asset_events;
 
 create policy asset_events_select on public.asset_events for select to authenticated
   using (exists (select 1 from public.assets a join public.brands b on b.id=a.brand_id where a.id=asset_events.asset_id and public.is_org_member(b.org_id)));
-
-create policy asset_events_insert on public.asset_events for insert to authenticated
-  with check (exists (select 1 from public.assets a join public.brands b on b.id=a.brand_id where a.id=asset_events.asset_id and public.is_org_member(b.org_id)));
 
 commit;

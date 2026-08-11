@@ -4,16 +4,18 @@
 -- - Preserve audit on asset delete (restrict, not cascade)
 begin;
 
--- Grants: authenticated needs explicit table-level privileges post-IPI-896
-grant select, insert on table public.asset_events to authenticated;
+-- Grants: authenticated needs explicit SELECT post-IPI-896 (no INSERT — writes via service_role webhook/RPC only)
+grant select on table public.asset_events to authenticated;
+revoke insert on table public.asset_events from authenticated;
 
 -- Service role retains insert+select for webhook, but revoke mutation to enforce append-only
 revoke update, delete, truncate on table public.asset_events from service_role;
 
 -- Idempotency: Cloudinary X-Cld-Request-Id header / payload.request_id
--- Legacy had it, repair dropped it — re-add for dedup (unique where not null)
+-- Preserve request_id data; enforce uniqueness per asset to allow multi-resource deletes sharing one request_id
 alter table public.asset_events add column if not exists request_id text;
-create unique index if not exists asset_events_request_id_key on public.asset_events(request_id) where request_id is not null;
+drop index if exists asset_events_request_id_key;
+create unique index if not exists asset_events_request_id_key on public.asset_events(request_id, asset_id) where request_id is not null;
 create index if not exists asset_events_request_id_idx on public.asset_events(request_id) where request_id is not null;
 
 -- Preserve audit: prevent parent asset deletion from silently wiping history
