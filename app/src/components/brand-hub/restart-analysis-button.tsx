@@ -138,7 +138,7 @@ export const RestartAnalysisButton = ({
   return (
     <div
       className="mt-3 flex flex-col items-start gap-1"
-      {...(errorRole
+      {...(error && errorRole
         ? {
             role: errorRole,
             "aria-live": errorRole === "alert" ? "assertive" : "polite",
