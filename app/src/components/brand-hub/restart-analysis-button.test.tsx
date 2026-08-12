@@ -276,6 +276,15 @@ describe("RestartAnalysisButton", () => {
     expect(errorEl.getAttribute("role")).toBeNull();
   });
 
+  it("does not apply live-region role/aria-live on initial render (no error)", () => {
+    const { container } = render(
+      <RestartAnalysisButton brandId={BRAND_ID} errorRole="alert" />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.getAttribute("role")).toBeNull();
+    expect(wrapper.getAttribute("aria-live")).toBeNull();
+  });
+
   it("recovers to an enabled button after a network failure", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
 
