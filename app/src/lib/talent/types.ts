@@ -14,6 +14,7 @@ export const TalentResultSchema = z.object({
   is_agency_represented: z.boolean(),
   rate_tier: z.string().nullable(),
   is_available: z.boolean(),
+  avatar_public_id: z.string().nullable().optional(),
 });
 
 export type TalentResult = z.infer<typeof TalentResultSchema>;

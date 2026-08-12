@@ -6,6 +6,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
 import { cn } from "@/lib/utils";
 import type { TalentResult } from "@/lib/talent/types";
 import type { MatchScore } from "@/lib/talent/match-score";
@@ -43,6 +44,9 @@ export function TalentSwipeCard({
   onPass,
   onShortlist,
 }: CardProps) {
+  const cardImageUrl = talent.avatar_public_id
+    ? cloudinaryImageUrl(talent.avatar_public_id, { w: 600, h: 800, crop: "fill" })
+    : null;
   return (
     <div
       className={cn(
@@ -53,9 +57,23 @@ export function TalentSwipeCard({
       <button
         type="button"
         onClick={onSelect}
-        className={`relative block aspect-[3/4] w-full text-left ${styles.thumbMuted}`}
+        className={`relative block aspect-[3/4] w-full overflow-hidden text-left ${styles.thumbMuted}`}
         aria-label={`View match details for ${talent.display_name}`}
       >
+        {cardImageUrl ? (
+          // ponytail: verified mapping only — null/failed shows muted fallback, no layout shift (aspect-[3/4] container)
+          <img
+            src={cardImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            sizes="(max-width: 768px) 50vw, 33vw"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
         <span
           className="absolute right-2.5 top-2.5 rounded-full bg-white/95 px-2 py-0.5 font-sans text-xs font-bold"
           style={{ color: fitScoreColor(match.score) }}
@@ -100,6 +118,9 @@ export function TalentRow({
   onSelect,
   onShortlist,
 }: Omit<CardProps, "onPass">) {
+  const avatarUrl = talent.avatar_public_id
+    ? cloudinaryImageUrl(talent.avatar_public_id, { w: 96, h: 96, crop: "thumb" })
+    : null;
   // role="button" div, not a nested <button> — a real <button> can't contain
   // another <button> (invalid HTML, inconsistent a11y/browser behavior); the
   // shortlist toggle needs its own independent interactive control.
@@ -120,7 +141,20 @@ export function TalentRow({
         selected ? styles.cardSelected : styles.card,
       )}
     >
-      <div className={`h-12 w-12 shrink-0 rounded-full ${styles.thumbMuted}`} aria-hidden />
+      <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-full ${styles.thumbMuted}`} aria-hidden>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : null}
+      </div>
       <div className="min-w-0 flex-1">
         <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
         <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
