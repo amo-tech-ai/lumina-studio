@@ -30,11 +30,14 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 const clickRestart = () =>
   fireEvent.click(screen.getByRole("button", { name: /Restart analysis/i }));
+
+const FAKE_TIMER_OPTIONS = { doNotFake: ["nextTick", "microtask"] } as const;
 
 describe("RestartAnalysisButton", () => {
   it("POSTs once to the restart route with same-origin credentials", async () => {
@@ -69,7 +72,6 @@ describe("RestartAnalysisButton", () => {
     expect((button as HTMLButtonElement).disabled).toBe(true);
 
     release(jsonResponse(200, { ok: true }));
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
   it("sends only one request when clicked twice in a row", async () => {
@@ -147,7 +149,9 @@ describe("RestartAnalysisButton", () => {
     expect(await screen.findByText(/Try again in a minute/i)).toBeTruthy();
   });
 
-  it("stays locked after a successful restart until the page refresh replaces it", async () => {
+  it("re-enables the button after a successful restart + 1s cooldown", async () => {
+    vi.useFakeTimers(FAKE_TIMER_OPTIONS);
+
     fetchMock.mockResolvedValue(
       jsonResponse(200, { ok: true, mode: "crawl_restarted", intakeStatus: "crawl_running" }),
     );
@@ -155,13 +159,130 @@ describe("RestartAnalysisButton", () => {
     render(<RestartAnalysisButton brandId={BRAND_ID} />);
     clickRestart();
 
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /Restarting/i })).toBeTruthy();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    const button = screen.getByRole("button", { name: /Restart analysis/i });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("calls onRestart after a successful restart (for client-only callers)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { ok: true, mode: "bi_restarted", intakeStatus: "analysis_running" }),
+    );
+
+    const onRestart = vi.fn();
+    render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={onRestart} />);
+    clickRestart();
+
+    await waitFor(() => expect(onRestart).toHaveBeenCalledTimes(1));
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it("clears stale error text when a retry succeeds", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(409, { ok: false, code: "already_running", message: "in progress" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { ok: true, mode: "crawl_restarted", intakeStatus: "crawl_running" }),
+      );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+
+    clickRestart();
+    expect(await screen.findByText(/Analysis is already running/i)).toBeTruthy();
+
+    clickRestart();
     await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/Analysis is already running/i)).toBeNull();
+  });
+
+  it("blocks a second POST during the cooldown after a successful restart", async () => {
+    vi.useFakeTimers(FAKE_TIMER_OPTIONS);
+
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { ok: true, mode: "bi_restarted", intakeStatus: "analysis_running" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={vi.fn()} />);
+    clickRestart();
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRefresh).not.toHaveBeenCalled();
 
     const button = screen.getByRole("button", { name: /Restarting/i });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(button);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(500);
+    fireEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(0);
+    const enabledButton = screen.getByRole("button", { name: /Restart analysis/i });
+    expect((enabledButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(enabledButton);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not call onRestart when restart fails (409 already_running)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(409, { ok: false, code: "already_running", message: "in progress" }),
+    );
+
+    const onRestart = vi.fn();
+    render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={onRestart} />);
+    clickRestart();
+
+    expect(await screen.findByText(/Analysis is already running/i)).toBeTruthy();
+    expect(onRestart).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Restart analysis/i })).toBeTruthy();
+  });
+
+  it("exposes errorRole as a live region on the container (not the error <p>)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(503, { ok: false, code: "provider_unavailable", message: "x" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} errorRole="alert" />);
+    clickRestart();
+
+    const errorEl = await screen.findByText(/Try again in a minute/i);
+    const container = errorEl.parentElement;
+    expect(container?.getAttribute("role")).toBe("alert");
+    expect(container?.getAttribute("aria-live")).toBe("assertive");
+    expect(errorEl.getAttribute("role")).toBeNull();
+  });
+
+  it("renders error text without live-region semantics when errorRole is omitted (Brand Hub default)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(503, { ok: false, code: "provider_unavailable", message: "x" }),
+    );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+    clickRestart();
+
+    const errorEl = await screen.findByText(/Try again in a minute/i);
+    const container = errorEl.parentElement;
+    expect(container?.getAttribute("role")).toBeNull();
+    expect(container?.getAttribute("aria-live")).toBeNull();
+    expect(errorEl.getAttribute("role")).toBeNull();
+  });
+
+  it("does not apply live-region role/aria-live on initial render (no error)", () => {
+    const { container } = render(
+      <RestartAnalysisButton brandId={BRAND_ID} errorRole="alert" />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.getAttribute("role")).toBeNull();
+    expect(wrapper.getAttribute("aria-live")).toBeNull();
   });
 
   it("recovers to an enabled button after a network failure", async () => {
