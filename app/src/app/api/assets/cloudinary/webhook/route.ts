@@ -285,7 +285,7 @@ async function insertAssetEvent(
     metadata?: Record<string, unknown>;
     requestId?: string | null;
   },
-) {
+): Promise<{ ok: boolean; retryable?: boolean }> {
   try {
     const row: Record<string, unknown> = {
       asset_id: fields.assetId,
@@ -302,12 +302,15 @@ async function insertAssetEvent(
       const code = (error as { code?: string }).code;
       if (code === "23505") {
         console.warn("[cloudinary/webhook] asset_events duplicate request_id ignored (idempotent):", fields.requestId);
-        return;
+        return { ok: true };
       }
       console.error("[cloudinary/webhook] asset_events insert (non-fatal):", error.message);
+      return { ok: false, retryable: true };
     }
+    return { ok: true };
   } catch (e) {
     console.error("[cloudinary/webhook] asset_events insert (non-fatal):", e);
+    return { ok: false, retryable: true };
   }
 }
 
@@ -943,21 +946,29 @@ async function handleUpload(
   });
 
   // IPI-441 — append-only timeline (non-fatal, exact version binding)
-  // request_id may come from body or X-Cld-Request-Id header (injected into payload)
-  const requestId = payload.request_id?.trim() || undefined;
-  // Deterministic fallback for idempotency when header/body absent: bind to provider identity+version
-  const fallbackRequestId =
-    identity.cloudinary_asset_id && identity.version != null
-      ? `${identity.cloudinary_asset_id}:${identity.version}:${resolveAssetEventKind(payload, priorLookup, publicId)}`
-      : undefined;
-  await insertAssetEvent(db, {
-    assetId: canonicalAssetId,
-    cloudinaryAssetId: identity.cloudinary_asset_id,
-    version: identity.version,
-    kind: resolveAssetEventKind(payload, priorLookup, publicId),
-    metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : {},
-    requestId: requestId ?? fallbackRequestId,
-  });
+  // Eager notifications are derived-image callbacks after upload — not a new version, so skip timeline.
+  if (payload.notification_type === "eager") {
+    // No asset_events row for eager; upload already logged the version.
+  } else {
+    // request_id may come from body or X-Cld-Request-Id header (injected into payload)
+    const requestId = payload.request_id?.trim() || undefined;
+    // Deterministic fallback for idempotency when header/body absent: bind to provider identity+version
+    const fallbackRequestId =
+      identity.cloudinary_asset_id && identity.version != null
+        ? `${identity.cloudinary_asset_id}:${identity.version}:${resolveAssetEventKind(payload, priorLookup, publicId)}`
+        : undefined;
+    const inserted = await insertAssetEvent(db, {
+      assetId: canonicalAssetId,
+      cloudinaryAssetId: identity.cloudinary_asset_id,
+      version: identity.version,
+      kind: resolveAssetEventKind(payload, priorLookup, publicId),
+      metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : {},
+      requestId: requestId ?? fallbackRequestId,
+    });
+    if (!inserted.ok && inserted.retryable) {
+      return { retryable: true };
+    }
+  }
 
   // Renames do not change bytes — skip DNA re-score.
   if (
