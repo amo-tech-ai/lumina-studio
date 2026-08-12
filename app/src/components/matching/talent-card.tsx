@@ -4,6 +4,7 @@
 // Pass/Shortlist are always-visible buttons (a11y: no swipe-only interaction),
 // per tasks/models/design/11a-model-booking-matching-talent.md.
 
+import { User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
@@ -60,8 +61,11 @@ export function TalentSwipeCard({
         className={`relative block aspect-[3/4] w-full overflow-hidden text-left ${styles.thumbMuted}`}
         aria-label={`View match details for ${talent.display_name}`}
       >
+        {/* ponytail: placeholder stays behind image — onError hides img, no layout shift, muted bg + icon remains */}
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <User className="h-8 w-8 opacity-30" />
+        </div>
         {cardImageUrl ? (
-          // ponytail: verified mapping only — null/failed shows muted fallback, no layout shift (aspect-[3/4] container)
           <img
             src={cardImageUrl}
             alt=""
@@ -141,12 +145,13 @@ export function TalentRow({
         selected ? styles.cardSelected : styles.card,
       )}
     >
-      <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-full ${styles.thumbMuted}`} aria-hidden>
+      <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full ${styles.thumbMuted} flex items-center justify-center`} aria-hidden>
+        <User className="h-5 w-5 opacity-30" />
         {avatarUrl ? (
           <img
             src={avatarUrl}
             alt=""
-            className="h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
             decoding="async"
             onError={(e) => {
