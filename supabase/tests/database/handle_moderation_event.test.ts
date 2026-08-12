@@ -56,8 +56,12 @@ describe("handle_moderation_event — idempotency and version-bound", () => {
     expect(c2).toBe(c1);
   });
 
-  it("approved → rejected → approved without request_id creates distinct rows (UUID fallback)", async () => {
-    // First approved without request_id → UUID generated, should be changed
+  it("same-status retry without request_id creates no duplicate (UUID only after lock)", async () => {
+    // Ensure pending first
+    await client.from("cloudinary_assets").update({ moderation_status: "pending" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+    // Clean asset_events for this asset/version to isolate test
+    await client.from("asset_events").delete().eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+
     const { data: d1 } = await client.rpc("handle_moderation_event", {
       p_cloudinary_asset_id: cloudinaryAssetId,
       p_version: 1,
@@ -66,8 +70,11 @@ describe("handle_moderation_event — idempotency and version-bound", () => {
       p_moderation_kind: "manual",
       p_public_id: "test/handle",
     });
-    // Note: first approved may be no-op if already approved from previous test, so reset to pending first
-    await client.from("cloudinary_assets").update({ moderation_status: "pending" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+    expect(d1).toBe("changed");
+    const { count: c1 } = await client.from("asset_events").select("id", { count: "exact" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+    expect(c1).toBe(1);
+
+    // Same-status retry without request_id — should return unchanged, no new row, UUID not generated
     const { data: d2 } = await client.rpc("handle_moderation_event", {
       p_cloudinary_asset_id: cloudinaryAssetId,
       p_version: 1,
@@ -76,9 +83,89 @@ describe("handle_moderation_event — idempotency and version-bound", () => {
       p_moderation_kind: "manual",
       p_public_id: "test/handle",
     });
-    expect(d2).toBe("changed");
+    expect(d2).toBe("unchanged");
     const { count: c2 } = await client.from("asset_events").select("id", { count: "exact" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
-    // Should have at least 2 approved events with different request_ids (UUIDs)
-    expect((c2 ?? 0) >= 2).toBe(true);
+    expect(c2).toBe(1);
+  });
+
+  it("approved → rejected → approved without request_id creates distinct rows (UUID fallback after lock)", async () => {
+    await client.from("cloudinary_assets").update({ moderation_status: "pending" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+    await client.from("asset_events").delete().eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+
+    const { data: dApproved } = await client.rpc("handle_moderation_event", {
+      p_cloudinary_asset_id: cloudinaryAssetId,
+      p_version: 1,
+      p_moderation_status: "approved",
+      p_request_id: null,
+      p_moderation_kind: "manual",
+      p_public_id: "test/handle",
+    });
+    expect(dApproved).toBe("changed");
+
+    const { data: dRejected } = await client.rpc("handle_moderation_event", {
+      p_cloudinary_asset_id: cloudinaryAssetId,
+      p_version: 1,
+      p_moderation_status: "rejected",
+      p_request_id: null,
+      p_moderation_kind: "manual",
+      p_public_id: "test/handle",
+    });
+    expect(dRejected).toBe("changed");
+
+    const { data: dApproved2 } = await client.rpc("handle_moderation_event", {
+      p_cloudinary_asset_id: cloudinaryAssetId,
+      p_version: 1,
+      p_moderation_status: "approved",
+      p_request_id: null,
+      p_moderation_kind: "manual",
+      p_public_id: "test/handle",
+    });
+    expect(dApproved2).toBe("changed");
+
+    const { data: events, count } = await client
+      .from("asset_events")
+      .select("id, request_id, metadata", { count: "exact" })
+      .eq("cloudinary_asset_id", cloudinaryAssetId)
+      .eq("version", 1)
+      .order("created_at", { ascending: true });
+
+    expect(count).toBe(3);
+    // Each row should have a distinct UUID request_id (fallback) — not reusing same idempotency key
+    const requestIds = (events ?? []).map((r: { request_id: string }) => r.request_id);
+    expect(new Set(requestIds).size).toBe(3);
+  });
+
+  it("concurrent same-status retry with same request_id creates no duplicate (ON CONFLICT + unchanged)", async () => {
+    await client.from("cloudinary_assets").update({ moderation_status: "pending" }).eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+    await client.from("asset_events").delete().eq("cloudinary_asset_id", cloudinaryAssetId).eq("version", 1);
+
+    const requestId = `test-concurrent-${Date.now()}`;
+    const p = {
+      p_cloudinary_asset_id: cloudinaryAssetId,
+      p_version: 1,
+      p_moderation_status: "approved",
+      p_request_id: requestId,
+      p_moderation_kind: "manual",
+      p_public_id: "test/handle",
+    };
+
+    // Simulate two concurrent deliveries with same request_id
+    const [r1, r2] = await Promise.all([client.rpc("handle_moderation_event", p), client.rpc("handle_moderation_event", p)]);
+    // One should be changed, other unchanged (or both changed but second ON CONFLICT skips insert, but our FOR UPDATE + same-status check makes second unchanged)
+    expect([r1.data, r2.data].includes("changed")).toBe(true);
+    const { count } = await client.from("asset_events").select("id", { count: "exact" }).eq("request_id", requestId);
+    expect(count).toBe(1);
+  });
+
+  it("phantom asset/version returns unchanged (no false audit)", async () => {
+    const { data } = await client.rpc("handle_moderation_event", {
+      p_cloudinary_asset_id: "non-existent-asset-id",
+      p_version: 9999,
+      p_moderation_status: "approved",
+      p_request_id: `phantom-${Date.now()}`,
+      p_moderation_kind: "manual",
+      p_public_id: "test/phantom",
+    });
+    expect(data).toBe("unchanged");
   });
 });

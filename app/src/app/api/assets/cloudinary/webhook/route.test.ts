@@ -1336,9 +1336,9 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       );
     });
 
-    it("approved legacy public-ID mirror → newer version resets to pending", async () => {
-      // Verify actual update payload includes moderation_status pending for newer version (isNewerVersion true)
-      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "mirror-1", asset_id: "asset-1", version: 5, public_id: "ipix/old.jpg", secure_url: "https://..." }, error: null });
+    it("approved legacy public-ID mirror → newer version resets to pending (provider-id path)", async () => {
+      // Provider-id path: existing mirror found via cloudinary_asset_id, newer version overwrites → pending
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "mirror-1", asset_id: "asset-1", version: 5, public_id: "ipix/old.jpg", secure_url: "https://...", cloudinary_asset_id: "new-asset-id" }, error: null });
       mockUpdateEqResult({ data: [{ id: "mirror-1" }], error: null, count: 1 });
       const { POST } = await importRoute();
       const res = await POST(
@@ -1350,6 +1350,29 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         }),
       );
       expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(expect.objectContaining({ moderation_status: "pending" }));
+    });
+
+    it("approved legacy public-ID mirror with null provider id → newer version resets to pending (public-id path)", async () => {
+      // Legacy mirror has null cloudinary_asset_id. First provider lookup misses, second public_id lookup finds it.
+      // Incoming is newer version with same public_id (overwrite) or explicit provider id.
+      cloudinaryAssetsSelectMaybeSingle
+        .mockResolvedValueOnce({ data: null, error: null }) // provider id miss
+        .mockResolvedValueOnce({ data: { id: "mirror-legacy", asset_id: "asset-1", version: 5, public_id: "ipix/brands/11111111-1111-1111-1111-111111111111/products/abc123", secure_url: "https://...", cloudinary_asset_id: null }, error: null }); // public_id hit (legacy)
+      mockUpdateEqResult({ data: [{ id: "mirror-legacy" }], error: null, count: 1 });
+      // Need to also mock assets lookup for resolveAssetForUpload (brand)
+      assetsSelectMaybeSingle.mockResolvedValue({ data: { id: "asset-1", brand_id: BRAND_ID }, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: `ipix/brands/${BRAND_ID}/products/abc123`,
+          version: 6,
+          asset_id: "new-provider-id-123",
+        }),
+      );
+      expect(res.status).toBe(200);
+      // Should have called update with moderation_status pending via public_id path fix
       expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(expect.objectContaining({ moderation_status: "pending" }));
     });
 

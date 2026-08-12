@@ -674,6 +674,13 @@ async function upsertCloudinaryAssetRecord(
     } else {
       // Same provider, legacy null identity, or no incoming id — update that row in place.
       row.asset_id = byPublicId.mirror.asset_id;
+      const storedVersion = byPublicId.mirror.version;
+      const incomingVersion = identity.version;
+      const isNewerVersion =
+        incomingVersion != null && (storedVersion == null || incomingVersion > storedVersion);
+      if (isNewerVersion) {
+        (row as Record<string, unknown>).moderation_status = "pending";
+      }
       const { error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id);
       if (error) {
         console.error("[cloudinary/webhook] cloudinary_assets update by public_id failed:", error.message);
