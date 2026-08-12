@@ -1235,5 +1235,68 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id: `ipix/brands/${BRAND_ID}/products/stale-old-name`, version: 2 }));
       expect(assetEventsInsert).not.toHaveBeenCalled();
     });
+
+    it("delete by provider asset_id inserts archived event with correct public_id", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+        data: { id: "mirror-1", asset_id: "asset-1", version: 3 },
+        error: null,
+      });
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      await POST(makeRequest({ notification_type: "delete", asset_id: "asset-id-1", public_id: "ipix/a.jpg", request_id: "req-del-1" }));
+      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "archived", request_id: "req-del-1" }));
+    });
+
+    it("delete by public_id-only inserts archived event", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "mirror-2", asset_id: "asset-2", version: 2 }, error: null });
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      await POST(makeRequest({ notification_type: "delete", public_id: "ipix/b.jpg", request_id: "req-del-2" }));
+      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "archived", request_id: "req-del-2" }));
+    });
+
+    it("batch delete with 2 resources uses correct public_id per resource", async () => {
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      // First resource lookup
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValueOnce({ data: { id: "m1", asset_id: "asset-1", version: 1 }, error: null });
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValueOnce({ data: { id: "m2", asset_id: "asset-2", version: 2 }, error: null });
+      await POST(
+        makeRequest({
+          notification_type: "delete",
+          request_id: "batch-1",
+          resources: [
+            { asset_id: "asset-id-1", public_id: "ipix/a.jpg" },
+            { asset_id: "asset-id-2", public_id: "ipix/b.jpg" },
+          ],
+        }),
+      );
+      const calls = assetEventsInsert.mock.calls as unknown as Array<[Record<string, unknown>]>;
+      // At least 2 insert calls, each with distinct public_id
+      expect(calls.length).toBeGreaterThanOrEqual(2);
+      const metas = calls.map((c) => (c[0] as { metadata?: { public_id?: string } }).metadata?.public_id);
+      expect(metas).toContain("ipix/a.jpg");
+      expect(metas).toContain("ipix/b.jpg");
+    });
+
+    it("delete lookup failure is logged and does not insert audit", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: null, error: { message: "db down", code: "50000" } } as never);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      await POST(makeRequest({ notification_type: "delete", asset_id: "asset-id-1", request_id: "req-fail-lookup" }));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("delete lookup by provider id failed"), expect.anything());
+      expect(assetEventsInsert).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it("non-23505 asset_events insert failure is non-fatal for delete (archived still succeeds)", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 1 }, error: null });
+      assetEventsInsert.mockResolvedValueOnce({ data: null, error: { code: "50000", message: "transient db" } } as never);
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest({ notification_type: "delete", asset_id: "asset-id-1", request_id: "req-fail-insert" }));
+      expect(res.status).toBe(200); // delete still acks, audit is non-fatal
+      expect(assetEventsInsert).toHaveBeenCalled();
+    });
   });
 });
