@@ -301,3 +301,99 @@ describe("draftCampaignBrief", () => {
     expect(result?.draft?.summary).not.toMatch(/<\/untrusted_user_content>/);
   });
 });
+
+describe("draftCampaignBrief routing — IPI-751 nested canary", () => {
+  it("native request context selects creative-director + structured + Kimi K2.6", async () => {
+    const { RequestContext } = await import("@mastra/core/request-context");
+    const cloudflareModels = await import("@/lib/ai/cloudflare-models");
+    const spy = vi.spyOn(cloudflareModels, "resolveAgentModel");
+    const rc = new RequestContext();
+    (rc as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
+      AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "native",
+      AI: { run: vi.fn() },
+    });
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow" } as never,
+      { requestContext: rc } as never,
+    );
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ agentId: "creative-director", tier: "structured" }));
+    const modelArg = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
+    expect(modelArg.modelId).toBe("@cf/moonshotai/kimi-k2.6");
+  });
+
+  it("missing request context uses legacy model", async () => {
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow" } as never,
+      {} as never,
+    );
+    const modelArg = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
+    expect(modelArg.modelId).not.toBe("@cf/moonshotai/kimi-k2.6");
+  });
+
+  it("resolver failure logs sanitized warning and uses legacy model", async () => {
+    const cloudflareModels = await import("@/lib/ai/cloudflare-models");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const modelSpy = vi.spyOn(cloudflareModels, "resolveAgentModel").mockImplementation(() => {
+      throw new Error("secret config leak: token=abc123\nstack: at foo");
+    });
+    const { RequestContext } = await import("@mastra/core/request-context");
+    const rc = new RequestContext();
+    (rc as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
+      AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "native",
+      AI: { run: vi.fn() },
+    });
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow" } as never,
+      { requestContext: rc } as never,
+    );
+    const modelArg = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
+    expect(modelArg.modelId).not.toBe("@cf/moonshotai/kimi-k2.6");
+    expect(warnSpy).toHaveBeenCalledWith("[draftCampaignBrief] resolveAgentModel failed, falling back to legacy model");
+    expect(warnSpy.mock.calls[0][0]).not.toMatch(/secret|token|stack|Error/);
+    warnSpy.mockRestore();
+    modelSpy.mockRestore();
+  });
+
+  it("turning flag off immediately restores legacy routing", async () => {
+    const { RequestContext } = await import("@mastra/core/request-context");
+    const rcNative = new RequestContext();
+    (rcNative as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
+      AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "native",
+      AI: { run: vi.fn() },
+    });
+    const rcLegacy = new RequestContext();
+    (rcLegacy as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
+      AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "legacy",
+      AI: { run: vi.fn() },
+    });
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow" } as never,
+      { requestContext: rcNative } as never,
+    );
+    const nativeModel = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
+    vi.clearAllMocks();
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow" } as never,
+      { requestContext: rcLegacy } as never,
+    );
+    const legacyModel = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
+    expect(nativeModel.modelId).toBe("@cf/moonshotai/kimi-k2.6");
+    expect(legacyModel.modelId).not.toBe("@cf/moonshotai/kimi-k2.6");
+  });
+
+  it("existing tool output remains valid", async () => {
+    vi.mocked(generateObject).mockResolvedValue({ object: MOCK_DRAFT } as never);
+    const result = await draftCampaignBrief.execute!(
+      { brandId: BRAND_ID, campaignName: "Spring Glow", channels: ["instagram"] } as never,
+      {} as never,
+    );
+    expect(result?.ok).toBe(true);
+    expect(result?.draft?.status).toBe("draft");
+    expect(result?.draft?.mood).toBe(MOCK_DRAFT.mood);
+  });
+});

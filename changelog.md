@@ -23,6 +23,12 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 - **Classifier false-positive on workers.dev URLs** (`9cbcab2ede`, [#904](https://github.com/amo-tech-ai/lumina-studio/pull/904)) — The `/info` 503 threshold classifier matched the bare substring `Worker` inside `*.workers.dev` deployment URLs that appear in transient `AI_APICallError` stack traces, falsely classifying a provider-side 503 as a blocking Cloudflare Worker runtime failure. Replaced the broad `/Worker\|Miniflare\|Cloudflare/` + `/error/` rule with precise runtime-error wording (`Worker threw|exited|crashed|runtime`, `Miniflare`, `Cloudflare Workers runtime`). `AI_APICallError` and CopilotKit `agent_run_error_event` traces containing `workers.dev` URLs are now tolerated; genuine Worker/Miniflare/Cloudflare runtime errors remain blocking. Verified: `info-503-threshold.selfcheck.mjs` — 35 passed, 0 failed.
 
+### 2026-08-11 — Onboarding: require website URL, remove dead-end labeling (IPI-989)
+
+**IPI-989 · ONBOARD-001 — Require website URL in brand onboarding**
+
+- **Require website URL field** (`bdebba44a`, [#899](https://github.com/amo-tech-ai/lumina-studio/pull/899)) — brand onboarding now requires a website URL before proceeding, removing the optional labeling field and a dead-end path that allowed onboarding without critical brand identity data.
+
 ### 2026-08-09 — App quality: test coverage + OAuth preview host trust
 
 **APP QUALITY — Add tests for notifications, uploads, AI routing, and dashboard data**

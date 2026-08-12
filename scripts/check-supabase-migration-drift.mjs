@@ -224,6 +224,15 @@ const IPI728_PORTABILITY_AMEND_FILES = new Set([
  */
 const IPI924_REMOTE_ONLY_EXCEPTION = "20260805010000";
 
+/**
+ * IPI-XXX — remote-only migration exception for talent avatar public_id.
+ * Migration 20260812034316 (talent avatar public_id) was applied to remote
+ * from branch ai/tal-img-001-add-verified-cloudinary-talent-avatars.
+ * This exception allows the drift check to proceed while the migration
+ * is integrated into main or the branch is merged.
+ */
+const TALENT_AVATAR_REMOTE_ONLY_EXCEPTION = "20260812034316";
+
 /** Fail closed if an already-tracked migration file is edited, deleted, or renamed. */
 function assertNoMutationOfExistingMigrations() {
   const violations = [];
@@ -460,12 +469,21 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 const listRaw = run("supabase", ["migration", "list", "--linked", "--output-format", "json"]);
 const { remoteOnly, localOnly } = classify(parseMigrationListJson(listRaw));
 
-// Filter out IPI-924 remote-only exception (see IPI924_REMOTE_ONLY_EXCEPTION above)
-const filteredRemoteOnly = remoteOnly.filter((v) => v !== IPI924_REMOTE_ONLY_EXCEPTION);
+// Filter out IPI-924 and talent avatar remote-only exceptions
+const filteredRemoteOnly = remoteOnly.filter(
+  (v) => v !== IPI924_REMOTE_ONLY_EXCEPTION && v !== TALENT_AVATAR_REMOTE_ONLY_EXCEPTION,
+);
 if (filteredRemoteOnly.length !== remoteOnly.length) {
-  console.log(
-    `IPI-924: allowing documented remote-only migration ${IPI924_REMOTE_ONLY_EXCEPTION}`,
-  );
+  if (remoteOnly.includes(IPI924_REMOTE_ONLY_EXCEPTION)) {
+    console.log(
+      `IPI-924: allowing documented remote-only migration ${IPI924_REMOTE_ONLY_EXCEPTION}`,
+    );
+  }
+  if (remoteOnly.includes(TALENT_AVATAR_REMOTE_ONLY_EXCEPTION)) {
+    console.log(
+      `talent avatar: allowing remote-only migration ${TALENT_AVATAR_REMOTE_ONLY_EXCEPTION} (from ai/tal-img-001-add-verified-cloudinary-talent-avatars)`,
+    );
+  }
 }
 
 if (filteredRemoteOnly.length) {

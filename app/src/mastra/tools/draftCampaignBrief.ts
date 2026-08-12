@@ -2,6 +2,7 @@
 // Proposal-only campaign creative brief for creative-director on /app/campaigns.
 // Reads brand DNA via RLS-scoped Supabase — NEVER inserts/updates campaigns or briefs.
 import { createTool } from "@mastra/core/tools";
+import type { RequestContext } from "@mastra/core/request-context";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { scoreLabel } from "@/lib/brand-utils";
@@ -9,6 +10,7 @@ import { parseAiProfile, type AiProfile } from "@/lib/brand-hub";
 import { fenceUntrusted } from "@/lib/crm/relationship-evidence";
 import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
 import { requestToken } from "@/lib/request-token";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
 const MODEL = resolveModel("structured");
@@ -154,7 +156,10 @@ export const draftCampaignBrief = createTool({
       })
       .nullable(),
   }),
-  execute: async ({ brandId, campaignName, channels: inputChannels, goal, briefSeed }) => {
+  execute: async (
+    { brandId, campaignName, channels: inputChannels, goal, briefSeed },
+    { requestContext }: { requestContext?: RequestContext } = {} as never,
+  ) => {
     const channels = inputChannels ?? [];
     const loaded = await loadBrandDnaContext(brandId);
     if (!loaded.ok) {
@@ -182,8 +187,20 @@ export const draftCampaignBrief = createTool({
       ? fenceUntrusted(`Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`, 4100)
       : "";
 
+    // P1 — route nested generation through same per-request flag as outer turn.
+    const model = (() => {
+      if (requestContext) {
+        try {
+          return resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext });
+        } catch {
+          console.warn("[draftCampaignBrief] resolveAgentModel failed, falling back to legacy model");
+        }
+      }
+      return MODEL;
+    })();
+
     const { object } = await generateObject({
-      model: MODEL,
+      model,
       schema: CampaignBriefDraftContentSchema,
       prompt: `You are an iPix creative director drafting a campaign brief for a fashion/DTC operator.
 
