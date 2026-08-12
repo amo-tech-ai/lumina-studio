@@ -6996,6 +6996,17 @@ export type Database = {
           status: Database["public"]["Enums"]["shoot_status_v2"]
         }[]
       }
+      handle_moderation_event: {
+        Args: {
+          p_cloudinary_asset_id: string
+          p_moderation_kind: string
+          p_moderation_status: string
+          p_public_id: string
+          p_request_id: string
+          p_version: number
+        }
+        Returns: string
+      }
       identify_rls_policies_needing_optimization: {
         Args: never
         Returns: {
