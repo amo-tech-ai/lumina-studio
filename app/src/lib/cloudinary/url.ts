@@ -59,11 +59,15 @@ export function cloudinaryImageUrl(
   publicId: string,
   { w, h, crop = "fill" }: { w: number; h: number; crop?: "fill" | "thumb" },
 ): string {
+  // ponytail: guard malformed public IDs — getCldImageUrl throws on empty src,
+  // which would otherwise render an empty src or crash the card; return "" so
+  // callers fall back to muted placeholder (CLOUDINARY_CLOUD_NAME has a default,
+  // so don't guard on it — verified avatars should still render)
   if (!publicId || typeof publicId !== "string" || !publicId.trim() || /[\s?&#%{}\[\]\\:*"<>|]/.test(publicId)) return "";
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return "";
   try {
     return getCldImageUrl(
-      { src: publicId, width: w, height: h, crop, gravity: "auto" },
+      { src: publicId, width: w, height: h, crop, gravity: "auto", quality: "auto", format: "auto" },
       { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
     );
   } catch {

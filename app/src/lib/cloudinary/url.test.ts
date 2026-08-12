@@ -20,6 +20,8 @@ describe("cloudinaryImageUrl", () => {
     const url = cloudinaryImageUrl("some-public-id", { w: 400, h: 300 });
     expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\//);
     expect(url).toContain("c_fill,w_400,h_300,g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
     expect(url).toContain("some-public-id");
   });
 
@@ -27,6 +29,8 @@ describe("cloudinaryImageUrl", () => {
     const { cloudinaryImageUrl } = await importUrl();
     const url = cloudinaryImageUrl("some-public-id", { w: 100, h: 100, crop: "thumb" });
     expect(url).toContain("c_thumb,w_100,h_100,g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
   });
 
   it("returns empty string for forbidden chars, invalid dimensions, or newline-contaminated IDs", async () => {
