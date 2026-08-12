@@ -6,7 +6,10 @@
 // same pattern as other authenticated browser-client reads in this app).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EvidenceBlock } from "@/components/evidence-block";
@@ -24,6 +27,7 @@ const ANY = "any";
 export function TalentTab() {
   const [filters, setFilters] = useState<TalentSearchFilters>({});
   const [view, setView] = useState<ViewMode>("swipe");
+  const [sortBy, setSortBy] = useState<"match" | "name">("match");
   const [talents, setTalents] = useState<TalentResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -196,11 +200,22 @@ export function TalentTab() {
 
   useSetIntelligenceDetail(detailNode);
 
-  const visible = talents?.filter((t) => !passedIds.has(t.id)) ?? null;
+  const visibleRaw = talents?.filter((t) => !passedIds.has(t.id)) ?? null;
+  // ponytail: sort only in table view — swipe deck keeps stable API order; avoids leaking Name A–Z into deck when toggling views
+  const visible = useMemo(() => {
+    if (!visibleRaw) return null;
+    if (view !== "list") return visibleRaw;
+    if (sortBy === "name") return [...visibleRaw].sort((a, b) => a.display_name.localeCompare(b.display_name));
+    return [...visibleRaw].sort((a, b) => {
+      const sa = computeMatchScore({ talent: a, shootType: filters.shootType, representationPreferred: filters.representation }).score;
+      const sb = computeMatchScore({ talent: b, shootType: filters.shootType, representationPreferred: filters.representation }).score;
+      return sb - sa;
+    });
+  }, [visibleRaw, sortBy, filters.shootType, filters.representation, view]);
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="flex h-full flex-col gap-4 min-w-0">
+      <div className="flex flex-wrap items-center gap-3 min-w-0">
         <Select
           value={filters.shootType ?? ANY}
           onValueChange={(v) => setFilters((f) => ({ ...f, shootType: v === ANY ? undefined : v }))}
@@ -247,12 +262,16 @@ export function TalentTab() {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-1.5 font-sans text-xs text-[#6B7280]">
+        <div
+          className="flex items-center gap-1.5 font-sans text-xs"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
           <span aria-hidden>Available</span>
           <input
             type="date"
             aria-label="Available from"
-            className="rounded-md border border-[#E5E7EB] px-2 py-1 text-xs"
+            className="rounded-md border px-2 py-1 text-xs"
+            style={{ borderColor: "var(--color-border)" }}
             value={filters.dateStart ?? ""}
             onChange={(e) => setFilters((f) => ({ ...f, dateStart: e.target.value || undefined }))}
           />
@@ -260,22 +279,50 @@ export function TalentTab() {
           <input
             type="date"
             aria-label="Available until"
-            className="rounded-md border border-[#E5E7EB] px-2 py-1 text-xs"
+            className="rounded-md border px-2 py-1 text-xs"
+            style={{ borderColor: "var(--color-border)" }}
             value={filters.dateEnd ?? ""}
             onChange={(e) => setFilters((f) => ({ ...f, dateEnd: e.target.value || undefined }))}
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => setShortlistOpen(true)}>
-            Shortlist ({shortlistedIds.size})
+        <div className="ml-auto flex flex-wrap items-center gap-2 min-w-0">
+          {visible !== null ? (
+            <span className="font-mono text-xs" style={{ color: "var(--color-text-muted)" }} data-testid="result-count">
+              {visible.length} models
+            </span>
+          ) : null}
+          {visible !== null && view === "list" && visible.length > 1 ? (
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "match" | "name")}>
+              <SelectTrigger className="w-[132px]" aria-label="Sort by">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="match">Sort: Best match</SelectItem>
+                <SelectItem value="name">Sort: Name A–Z</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShortlistOpen(true)}
+            aria-label={`Open shortlist, ${shortlistedIds.size} items`}
+          >
+            Shortlist <span className="font-mono" style={{ color: "var(--color-text-muted)" }}>({shortlistedIds.size})</span>
           </Button>
-          <div className="flex overflow-hidden rounded-md border border-[#E5E7EB]">
+          <div
+            className="flex overflow-hidden rounded-md border"
+            style={{ borderColor: "var(--color-border)" }}
+            role="group"
+            aria-label="View mode"
+          >
             <Button
               type="button"
               variant={view === "swipe" ? "default" : "ghost"}
               size="sm"
               className="rounded-none"
+              aria-pressed={view === "swipe"}
               onClick={() => setView("swipe")}
             >
               Swipe deck
@@ -284,7 +331,8 @@ export function TalentTab() {
               type="button"
               variant={view === "list" ? "default" : "ghost"}
               size="sm"
-              className="hidden rounded-none md:inline-flex"
+              className="rounded-none"
+              aria-pressed={view === "list"}
               onClick={() => setView("list")}
             >
               Table
@@ -295,12 +343,7 @@ export function TalentTab() {
 
       <div className="flex-1 overflow-y-auto" aria-live="polite">
         {error ? (
-          <div className="rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] p-4 font-sans text-sm text-[#DC2626]">
-            {error}{" "}
-            <Button type="button" variant="outline" size="sm" onClick={() => runSearch(filters)}>
-              Retry
-            </Button>
-          </div>
+          <ErrorState message={error} onRetry={() => runSearch(filters)} retryLabel="Retry" />
         ) : visible === null ? (
           <div className={view === "swipe" ? "grid grid-cols-2 gap-3 lg:grid-cols-3" : "flex flex-col gap-2"}>
             {Array.from({ length: 6 }).map((_, i) => (
@@ -308,12 +351,16 @@ export function TalentTab() {
             ))}
           </div>
         ) : visible.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <p className="font-sans text-sm text-[#6B7280]">No talent matches this brief yet.</p>
-            <Button type="button" variant="outline" onClick={() => setFilters({})}>
-              Adjust filters
-            </Button>
-          </div>
+          <EmptyState
+            heading="No talent matches this brief yet."
+            body="Try adjusting filters or clearing the date range."
+            icon={<SearchX size={28} strokeWidth={1.7} aria-hidden />}
+            action={
+              <Button type="button" variant="outline" onClick={() => setFilters({})}>
+                Adjust filters
+              </Button>
+            }
+          />
         ) : view === "swipe" ? (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             {visible.map((t) => {
