@@ -1,6 +1,9 @@
 -- IPI-639: return changed/unchanged for webhook idempotency, keep FOR UPDATE + UUID-after-lock hardening
+-- Must DROP first because return type changes from void -> text (42P13 otherwise)
 
-create or replace function public.handle_moderation_event(
+drop function if exists public.handle_moderation_event(text, bigint, text, text, text, text);
+
+create function public.handle_moderation_event(
   p_cloudinary_asset_id text,
   p_version bigint,
   p_moderation_status text,
@@ -18,10 +21,8 @@ declare
   v_kind text;
   v_current_status text;
 begin
-  -- Provider moderation audit is always kind moderated (business approved is separate)
   v_kind := 'moderated';
 
-  -- SELECT exact asset/version FOR UPDATE to lock row before same-status check and update
   if p_version is not null then
     select moderation_status, asset_id, version into v_current_status, v_asset_id, v_version
       from public.cloudinary_assets
@@ -37,16 +38,13 @@ begin
   end if;
 
   if not found then
-    -- Phantom asset — no mirror, skip audit (do not create false history)
     return 'unchanged';
   end if;
 
-  -- Same-status retry no-op: if already in desired status for that exact version, skip (idempotent, no new audit)
   if v_current_status = p_moderation_status then
     return 'unchanged';
   end if;
 
-  -- For a real transition, update status and insert atomically (single transaction, already in function)
   if p_version is not null then
     update public.cloudinary_assets
       set moderation_status = p_moderation_status
@@ -61,10 +59,6 @@ begin
     return 'unchanged';
   end if;
 
-  -- Use Cloudinary request ID when present; when absent, generate UUID only after locked row confirms real transition
-  -- ponytail: generated UUIDs intentionally prevent ON CONFLICT deduplication for notifications without Cloudinary request ID.
-  -- Known limitation: only same-status early returns prevent duplicates; retries after intervening status changes (approved→rejected→approved same version, no request_id) can create duplicate audit rows.
-  -- Upgrade path: persist stable provider delivery ID (e.g., X-Cld-Notification-Id header) and use it as request_id instead of random fallback.
   if p_request_id is null then
     p_request_id := gen_random_uuid()::text;
   end if;
