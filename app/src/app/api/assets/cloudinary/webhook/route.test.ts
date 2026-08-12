@@ -1244,7 +1244,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const { POST } = await importRoute();
       assetEventsInsert.mockClear();
       await POST(makeRequest({ notification_type: "delete", asset_id: "asset-id-1", public_id: "ipix/a.jpg", request_id: "req-del-1" }));
-      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "archived", request_id: "req-del-1" }));
+      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "archived", request_id: "req-del-1", metadata: { public_id: "ipix/a.jpg" } }));
     });
 
     it("delete by public_id-only inserts archived event", async () => {
@@ -1272,11 +1272,9 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         }),
       );
       const calls = assetEventsInsert.mock.calls as unknown as Array<[Record<string, unknown>]>;
-      // At least 2 insert calls, each with distinct public_id
-      expect(calls.length).toBeGreaterThanOrEqual(2);
-      const metas = calls.map((c) => (c[0] as { metadata?: { public_id?: string } }).metadata?.public_id);
-      expect(metas).toContain("ipix/a.jpg");
-      expect(metas).toContain("ipix/b.jpg");
+      expect(calls.length).toBe(2);
+      expect(calls[0][0]).toMatchObject({ metadata: { public_id: "ipix/a.jpg" } });
+      expect(calls[1][0]).toMatchObject({ metadata: { public_id: "ipix/b.jpg" } });
     });
 
     it("delete lookup failure is logged and does not insert audit", async () => {
