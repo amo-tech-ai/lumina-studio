@@ -48,6 +48,7 @@ const aiAgentLogsInsert = vi.fn();
 const assetEventsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
 const brandsSelectMaybeSingle = vi.fn();
+const mockRpc = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "assets") {
@@ -102,7 +103,7 @@ const FK_VIOLATION = {
     'insert or update on table "assets" violates foreign key constraint "assets_brand_id_fkey"',
 };
 
-const mockCreateSupabaseAdminClient = vi.fn(() => ({ from: mockFrom }));
+const mockCreateSupabaseAdminClient = vi.fn(() => ({ from: mockFrom, rpc: mockRpc }));
 
 vi.mock("@/app/api/_lib/supabase-admin", () => ({
   createSupabaseAdminClient: () => mockCreateSupabaseAdminClient(),
@@ -151,6 +152,7 @@ beforeEach(() => {
   mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   assetEventsInsert.mockResolvedValue({ data: null, error: null });
+  mockRpc.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
   mockFetch.mockReset();
@@ -1311,10 +1313,12 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
 
     it("moderation approved updates moderation_status and inserts approved event", async () => {
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
-      mockUpdateEqResult({ data: [{ id: "m1" }], error: null, count: 1 });
       const { POST } = await importRoute();
       assetEventsInsert.mockClear();
+      mockRpc.mockClear();
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       const res = await POST(
         makeRequest({
           notification_type: "moderation",
@@ -1326,7 +1330,101 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         } as unknown as Record<string, unknown>),
       );
       expect(res.status).toBe(200);
-      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "approved", request_id: "req-mod-1" }));
+      expect(mockRpc).toHaveBeenCalledWith(
+        "handle_moderation_event",
+        expect.objectContaining({ p_moderation_status: "approved", p_request_id: "req-mod-1", p_cloudinary_asset_id: "asset-id-1", p_version: 5 }),
+      );
+    });
+
+    it("approved legacy public-ID mirror → newer version resets to pending (provider-id path)", async () => {
+      // Provider-id path: existing mirror found via cloudinary_asset_id, newer version overwrites → pending
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "mirror-1", asset_id: "asset-1", version: 5, public_id: "ipix/old.jpg", secure_url: "https://...", cloudinary_asset_id: "new-asset-id" }, error: null });
+      mockUpdateEqResult({ data: [{ id: "mirror-1" }], error: null, count: 1 });
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: "ipix/new.jpg",
+          version: 6,
+          asset_id: "new-asset-id",
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(expect.objectContaining({ moderation_status: "pending" }));
+    });
+
+    it("approved legacy public-ID mirror with null provider id → newer version resets to pending (public-id path)", async () => {
+      // Legacy mirror has null cloudinary_asset_id. First provider lookup misses, second public_id lookup finds it.
+      // Incoming is newer version with same public_id (overwrite) or explicit provider id.
+      cloudinaryAssetsSelectMaybeSingle
+        .mockResolvedValueOnce({ data: null, error: null }) // provider id miss
+        .mockResolvedValueOnce({ data: { id: "mirror-legacy", asset_id: "asset-1", version: 5, public_id: "ipix/brands/11111111-1111-1111-1111-111111111111/products/abc123", secure_url: "https://...", cloudinary_asset_id: null }, error: null }); // public_id hit (legacy)
+      mockUpdateEqResult({ data: [{ id: "mirror-legacy" }], error: null, count: 1 });
+      // Need to also mock assets lookup for resolveAssetForUpload (brand)
+      assetsSelectMaybeSingle.mockResolvedValue({ data: { id: "asset-1", brand_id: BRAND_ID }, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: `ipix/brands/${BRAND_ID}/products/abc123`,
+          version: 6,
+          asset_id: "new-provider-id-123",
+        }),
+      );
+      expect(res.status).toBe(200);
+      // Should have called update with moderation_status pending via public_id path fix
+      expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(expect.objectContaining({ moderation_status: "pending" }));
+    });
+
+    it("moderation without request_id forwards p_request_id null to RPC (UUID generated after lock)", async () => {
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
+      const { POST } = await importRoute();
+      await POST(
+        makeRequest({
+          notification_type: "moderation",
+          asset_id: "asset-id-1",
+          version: 5,
+          moderation_status: "approved",
+          request_id: null as unknown as string,
+        } as unknown as Record<string, unknown>),
+      );
+      expect(mockRpc).toHaveBeenCalledWith(
+        "handle_moderation_event",
+        expect.objectContaining({ p_request_id: null, p_moderation_status: "approved" }),
+      );
+    });
+
+    it("sequential same-status deliveries both reach RPC (idempotency via ON CONFLICT in DB)", async () => {
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
+      const { POST } = await importRoute();
+      const payload = {
+        notification_type: "moderation",
+        asset_id: "asset-id-1",
+        version: 5,
+        moderation_status: "approved",
+        request_id: "same-req-id",
+      } as unknown as Record<string, unknown>;
+      await POST(makeRequest(payload));
+      await POST(makeRequest(payload));
+      expect(mockRpc).toHaveBeenCalledTimes(2);
+      // Duplicate-row verification moved to supabase/tests/database/handle_moderation_event.test.ts (real DB, counts asset_events)
+    });
+
+    it("unchanged RPC result produces no ai_agent_logs insert", async () => {
+      mockRpc.mockResolvedValue({ data: "unchanged", error: null });
+      const { POST } = await importRoute();
+      await POST(
+        makeRequest({
+          notification_type: "moderation",
+          asset_id: "asset-id-1",
+          version: 5,
+          moderation_status: "approved",
+          request_id: "same-req-id",
+        } as unknown as Record<string, unknown>),
+      );
+      expect(aiAgentLogsInsert).not.toHaveBeenCalled();
     });
   });
 });

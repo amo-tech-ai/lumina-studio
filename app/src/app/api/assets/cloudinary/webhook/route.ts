@@ -648,6 +648,10 @@ async function upsertCloudinaryAssetRecord(
 
     // Never reassign the mirror FK — concurrent inserts must keep the canonical asset_id.
     row.asset_id = existing.mirror.asset_id;
+    // IPI-639 P1: reset approval when approved asset is overwritten — new version must be pending
+    if (isNewerVersion) {
+      (row as Record<string, unknown>).moderation_status = "pending";
+    }
 
     const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
     if (error) {
@@ -670,6 +674,13 @@ async function upsertCloudinaryAssetRecord(
     } else {
       // Same provider, legacy null identity, or no incoming id — update that row in place.
       row.asset_id = byPublicId.mirror.asset_id;
+      const storedVersion = byPublicId.mirror.version;
+      const incomingVersion = identity.version;
+      const isNewerVersion =
+        incomingVersion != null && (storedVersion == null || incomingVersion > storedVersion);
+      if (isNewerVersion) {
+        (row as Record<string, unknown>).moderation_status = "pending";
+      }
       const { error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id);
       if (error) {
         console.error("[cloudinary/webhook] cloudinary_assets update by public_id failed:", error.message);
@@ -1260,68 +1271,41 @@ export async function POST(request: Request) {
       }
       const statusMap: Record<string, string> = { pending: "pending", approved: "approved", rejected: "rejected" };
       const nextStatus = statusMap[moderationStatus] ?? "pending";
-      const eventKindMap: Record<string, string> = { pending: "moderated", approved: "approved", rejected: "rejected" };
-      const eventKind = eventKindMap[moderationStatus] ?? "moderated";
 
-      // Update exact version if version present, else per-asset. Capture count to avoid phantom audit for non-existent asset.
-      let updateQuery = db.from("cloudinary_assets").update({ moderation_status: nextStatus }).eq("cloudinary_asset_id", assetId);
-      if (typeof version === "number") updateQuery = updateQuery.eq("version", version);
-      const { data: updatedRows, error: updErr, count: updCount } = await updateQuery.select("id");
-      if (updErr) {
-        console.error("[cloudinary/webhook] moderation update failed:", updErr.message);
-        // Transient DB failure — let Cloudinary retry via 503, don't create audit
-        return NextResponse.json({ error: "Transient moderation update failure" }, { status: 503 });
-      }
-      const updatedCount = Array.isArray(updatedRows) ? updatedRows.length : (updCount ?? 0);
-      if (updatedCount === 0) {
-        console.warn("[cloudinary/webhook] moderation update touched 0 rows — phantom asset, skip audit", { assetId, version });
-        return NextResponse.json({ ok: true, ignored: "moderation-no-mirror" });
-      }
-
-      // Lookup canonical asset_id for audit — version-bound when version provided, else per-asset
-      let mirrorQuery = db.from("cloudinary_assets").select("asset_id, version, public_id").eq("cloudinary_asset_id", assetId);
-      if (typeof version === "number") mirrorQuery = mirrorQuery.eq("version", version);
-      const { data: mirror, error: mirrorErr } = await mirrorQuery.limit(1).maybeSingle();
-      if (mirrorErr) {
-        console.error("[cloudinary/webhook] moderation mirror lookup failed:", mirrorErr.message);
-        return NextResponse.json({ error: "Transient mirror lookup failure" }, { status: 503 });
-      }
-      const canonicalAssetId = (mirror as { asset_id?: string } | null)?.asset_id;
-      const canonicalVersion = (mirror as { version?: number | null } | null)?.version ?? version;
-      if (!canonicalAssetId) {
-        console.warn("[cloudinary/webhook] moderation no canonical asset after update", { assetId, version });
-        return NextResponse.json({ ok: true, ignored: "moderation-no-asset" });
-      }
-
-      // Brand ownership check (reuse existing helper) + audit log
-      const brandIdForAudit = await (async () => {
-        const { data: assetRow } = await db.from("assets").select("brand_id").eq("id", canonicalAssetId).maybeSingle();
-        return (assetRow as { brand_id?: string } | null)?.brand_id ?? null;
-      })();
-      if (brandIdForAudit) {
-        const brandCheck = await isBrandAccessible(db as unknown as SupabaseClient, brandIdForAudit);
-        if (!brandCheck.ok) {
-          console.warn("[cloudinary/webhook] moderation brand not accessible, skip audit", { brandId: brandIdForAudit });
-        }
-      }
-      await logNonFatal(db, {
-        brandId: brandIdForAudit,
-        input: { notification_type: "moderation", public_id: raw.public_id ?? payload.public_id ?? null, moderation_status: nextStatus, cloudinary_asset_id: assetId, version: canonicalVersion ?? null },
-        output: { asset_id: canonicalAssetId },
+      // IPI-639 P1/P2: atomic moderation update + audit via single RPC (provider moderation, not business approval)
+      // Business approval remains separate (asset_approvals with actorId), moderation audit is kind moderated
+      const { data: rpcData, error: rpcErr } = await db.rpc("handle_moderation_event", {
+        p_cloudinary_asset_id: assetId,
+        p_version: typeof version === "number" ? version : null,
+        p_moderation_status: nextStatus,
+        p_request_id: requestId ?? null,
+        p_moderation_kind: moderationKind ?? null,
+        p_public_id: raw.public_id ?? payload.public_id ?? null,
       });
-
-      const fallback = `${assetId}:${canonicalVersion ?? version ?? 0}:${eventKind}`;
-      const inserted = await insertAssetEvent(db, {
-        assetId: canonicalAssetId,
-        cloudinaryAssetId: assetId,
-        version: canonicalVersion ?? version ?? undefined,
-        kind: eventKind,
-        reason: moderationKind ?? null,
-        metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : { public_id: raw.public_id ?? payload.public_id ?? null },
-        requestId: requestId ?? fallback,
-      });
-      if (!inserted.ok && inserted.retryable) {
-        return NextResponse.json({ error: "Transient asset_events insert failure" }, { status: 503 });
+      if (rpcErr) {
+        console.error("[cloudinary/webhook] handle_moderation_event failed:", rpcErr.message);
+        // 23505 is handled inside function via ON CONFLICT DO NOTHING, so any other error is transient
+        return NextResponse.json({ error: "Transient moderation persistence failure" }, { status: 503 });
+      }
+      if (rpcData === "unchanged") {
+        return NextResponse.json({ ok: true, ignored: "moderation-no-change" });
+      }
+      // Brand-aware audit log (non-fatal, only when changed)
+      const { data: mirrorForLog } = await db
+        .from("cloudinary_assets")
+        .select("asset_id")
+        .eq("cloudinary_asset_id", assetId)
+        .limit(1)
+        .maybeSingle();
+      const canonicalAssetIdForLog = (mirrorForLog as { asset_id?: string } | null)?.asset_id;
+      if (canonicalAssetIdForLog) {
+        const { data: assetRow } = await db.from("assets").select("brand_id").eq("id", canonicalAssetIdForLog).maybeSingle();
+        const brandIdForAudit = (assetRow as { brand_id?: string } | null)?.brand_id ?? null;
+        await logNonFatal(db, {
+          brandId: brandIdForAudit,
+          input: { notification_type: "moderation", public_id: raw.public_id ?? payload.public_id ?? null, moderation_status: nextStatus, cloudinary_asset_id: assetId, version: version ?? null },
+          output: { asset_id: canonicalAssetIdForLog },
+        });
       }
     } else {
       // Unsupported/unknown event (analysis, etc.) — ack, no write.
