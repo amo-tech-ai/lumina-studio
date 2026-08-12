@@ -17,7 +17,18 @@ declare
   v_asset_id uuid;
   v_version bigint;
   v_kind text;
+  v_current_status text;
 begin
+  -- Same-status retry no-op: if already in desired status for that version, skip (idempotent, no new audit)
+  if p_version is not null then
+    select moderation_status into v_current_status from public.cloudinary_assets where cloudinary_asset_id = p_cloudinary_asset_id and version = p_version limit 1;
+  else
+    select moderation_status into v_current_status from public.cloudinary_assets where cloudinary_asset_id = p_cloudinary_asset_id limit 1;
+  end if;
+  if v_current_status = p_moderation_status then
+    return;
+  end if;
+
   -- Map moderation_status to event kind for provider moderation audit (always moderated, not business approved)
   v_kind := case p_moderation_status when 'approved' then 'moderated' when 'rejected' then 'moderated' else 'moderated' end;
 
@@ -55,9 +66,10 @@ begin
   end if;
 
   -- Deterministic request_id for idempotency: use provided Cloudinary request_id when present.
-  -- Same-status retries (same request_id) are no-ops via ON CONFLICT; repeated transitions (approved→rejected→approved same version) must have new request_id from Cloudinary to be recorded.
+  -- Same-status retries (same request_id) are no-ops via ON CONFLICT; repeated transitions must have new request_id from Cloudinary to be recorded.
+  -- Fallback distinguishes provider status: assetId:version:moderated:moderationStatus (no timestamp per 914 fix)
   if p_request_id is null then
-    p_request_id := p_cloudinary_asset_id || ':' || coalesce(p_version::text, '0') || ':' || v_kind;
+    p_request_id := p_cloudinary_asset_id || ':' || coalesce(p_version::text, '0') || ':' || v_kind || ':' || p_moderation_status;
   end if;
 
   insert into public.asset_events (asset_id, cloudinary_asset_id, version, kind, request_id, reason, metadata)
@@ -65,5 +77,8 @@ begin
     on conflict (request_id, asset_id) do nothing;
 end;
 $$;
+
+revoke all on function public.handle_moderation_event(text, bigint, text, text, text, text) from public, anon, authenticated;
+grant execute on function public.handle_moderation_event(text, bigint, text, text, text, text) to service_role;
 
 comment on function public.handle_moderation_event is 'IPI-639 atomic: moderation_status update + asset_events moderated (provider, not business approval). Business approval uses separate asset_approvals with actorId.';

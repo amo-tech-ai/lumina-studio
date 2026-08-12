@@ -48,6 +48,7 @@ const aiAgentLogsInsert = vi.fn();
 const assetEventsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
 const brandsSelectMaybeSingle = vi.fn();
+const mockRpc = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "assets") {
@@ -102,7 +103,7 @@ const FK_VIOLATION = {
     'insert or update on table "assets" violates foreign key constraint "assets_brand_id_fkey"',
 };
 
-const mockCreateSupabaseAdminClient = vi.fn(() => ({ from: mockFrom }));
+const mockCreateSupabaseAdminClient = vi.fn(() => ({ from: mockFrom, rpc: mockRpc }));
 
 vi.mock("@/app/api/_lib/supabase-admin", () => ({
   createSupabaseAdminClient: () => mockCreateSupabaseAdminClient(),
@@ -151,6 +152,7 @@ beforeEach(() => {
   mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   assetEventsInsert.mockResolvedValue({ data: null, error: null });
+  mockRpc.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
   mockFetch.mockReset();
@@ -1311,10 +1313,11 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
 
     it("moderation approved updates moderation_status and inserts approved event", async () => {
+      mockRpc.mockResolvedValue({ data: null, error: null });
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
-      mockUpdateEqResult({ data: [{ id: "m1" }], error: null, count: 1 });
       const { POST } = await importRoute();
       assetEventsInsert.mockClear();
+      mockRpc.mockClear();
       const res = await POST(
         makeRequest({
           notification_type: "moderation",
@@ -1326,7 +1329,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         } as unknown as Record<string, unknown>),
       );
       expect(res.status).toBe(200);
-      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "approved", request_id: "req-mod-1" }));
+      expect(mockRpc).toHaveBeenCalledWith("handle_moderation_event", expect.objectContaining({ p_moderation_status: "approved", p_request_id: "req-mod-1", p_cloudinary_asset_id: "asset-id-1" }));
     });
   });
 });
