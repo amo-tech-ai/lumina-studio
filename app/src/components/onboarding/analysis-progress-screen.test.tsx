@@ -50,15 +50,15 @@ vi.mock("@/components/brand-hub/restart-analysis-button", () => ({
   }) => {
     capturedOnRestart = onRestart;
     return (
-      <button
-        type="button"
+      <div
         data-testid="restart-analysis-button"
         data-brand-id={brandId}
         data-error-role={errorRole ?? "none"}
-        onClick={onRestart}
       >
-        Restart analysis
-      </button>
+        <button type="button" onClick={onRestart}>
+          Restart analysis
+        </button>
+      </div>
     );
   },
 }));

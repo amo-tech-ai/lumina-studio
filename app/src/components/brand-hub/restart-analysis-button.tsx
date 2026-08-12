@@ -116,8 +116,13 @@ export const RestartAnalysisButton = ({
       // before the cooldown elapses. On pure-client onboarding (router.refresh is
       // a no-op), the 1s cooldown window blocks a second POST from a double-click
       // while still allowing a manual retry after the cooldown expires.
+      //
+      // When onRestart is provided (client-only callers like onboarding), skip
+      // router.refresh() — it's a no-op there and the callback handles recovery.
       setError(null);
-      router.refresh();
+      if (!onRestart) {
+        router.refresh();
+      }
       onRestart?.();
       setTimeout(() => {
         inFlight.current = false;
@@ -131,7 +136,15 @@ export const RestartAnalysisButton = ({
   };
 
   return (
-    <div className="mt-3 flex flex-col items-start gap-1">
+    <div
+      className="mt-3 flex flex-col items-start gap-1"
+      {...(errorRole
+        ? {
+            role: errorRole,
+            "aria-live": errorRole === "alert" ? "assertive" : "polite",
+          }
+        : {})}
+    >
       <Button
         type="button"
         variant="outline"
@@ -143,19 +156,7 @@ export const RestartAnalysisButton = ({
         <RotateCcw size={14} aria-hidden />
         {pending ? "Restarting…" : "Restart analysis"}
       </Button>
-      {error && (
-        <p
-          className="font-sans text-[11px] text-[#991B1B]"
-          {...(errorRole
-            ? {
-                role: errorRole,
-                "aria-live": errorRole === "alert" ? "assertive" : "polite",
-              }
-            : {})}
-        >
-          {error}
-        </p>
-      )}
+      {error && <p className="font-sans text-[11px] text-[#991B1B]">{error}</p>}
     </div>
   );
 };
