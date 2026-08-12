@@ -193,7 +193,9 @@ export const draftCampaignBrief = createTool({
         model = await resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext });
       }
     } catch {
-      console.warn("[draftCampaignBrief] resolveAgentModel failed (agentId: creative-director, tier: structured), falling back to legacy model");
+      console.warn(
+        "[draftCampaignBrief] resolveAgentModel failed (agentId: creative-director, tier: structured); falling back to legacy model",
+      );
     }
 
     const { object } = await generateObject({
