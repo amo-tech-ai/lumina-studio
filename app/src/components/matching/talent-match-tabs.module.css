@@ -1,0 +1,13 @@
+/* IPI-405 · tab bar tokens */
+.tabBar {
+  border-color: var(--color-border);
+}
+
+.disabledTab {
+  color: var(--color-text-muted);
+}
+
+.activeTab {
+  border-color: var(--color-text-primary);
+  color: var(--color-text-primary);
+}

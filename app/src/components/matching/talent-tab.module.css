@@ -1,0 +1,24 @@
+/* IPI-405 · SCR-09 — token-only styles, no inline style attributes for static tokens */
+.availableLabel {
+  color: var(--color-text-secondary);
+}
+
+.dateInput {
+  border-color: var(--color-border);
+}
+
+.mutedText {
+  color: var(--color-text-muted);
+}
+
+.secondaryText {
+  color: var(--color-text-secondary);
+}
+
+.bordered {
+  border-color: var(--color-border);
+}
+
+.countInsideButton {
+  color: var(--color-text-muted);
+}
