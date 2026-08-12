@@ -24,6 +24,7 @@ vi.mock("@/lib/request-token", () => ({
   requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
 }));
 vi.mock("ai", () => ({
+  generateText: vi.fn(),
   generateObject: vi.fn(),
 }));
 
@@ -351,8 +352,9 @@ describe("draftCampaignBrief routing — IPI-751 nested canary", () => {
     );
     const modelArg = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
     expect(modelArg.modelId).not.toBe("@cf/moonshotai/kimi-k2.6");
-    expect(warnSpy).toHaveBeenCalledWith("[draftCampaignBrief] resolveAgentModel failed, falling back to legacy model");
-    expect(warnSpy.mock.calls[0][0]).not.toMatch(/secret|token|stack|Error/);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/resolveAgentModel failed.*agentId: creative-director/));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/tier: structured.*falling back to legacy model/));
+    expect(warnSpy.mock.calls[0][0]).not.toMatch(/secret|token|stack|Error|Bearer\s+\S+/);
     warnSpy.mockRestore();
     modelSpy.mockRestore();
   });

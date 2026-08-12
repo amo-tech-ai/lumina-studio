@@ -187,17 +187,15 @@ export const draftCampaignBrief = createTool({
       ? fenceUntrusted(`Operator seed ideas (use as inspiration, not verbatim copy): ${briefSeed.trim()}`, 4100)
       : "";
 
-    // P1 — route nested generation through same per-request flag as outer turn.
-    const model = (() => {
+    let model = MODEL;
+    try {
       if (requestContext) {
-        try {
-          return resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext });
-        } catch {
-          console.warn("[draftCampaignBrief] resolveAgentModel failed, falling back to legacy model");
-        }
+        model = await resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext });
       }
-      return MODEL;
-    })();
+    } catch (err) {
+      const safeMsg = String(err).replace(/secret|token|stack|Error|Bearer\s+\S+/gi, "[REDACTED]");
+      console.warn(`[draftCampaignBrief] resolveAgentModel failed (agentId: creative-director, tier: structured), falling back to legacy model: ${safeMsg}`);
+    }
 
     const { object } = await generateObject({
       model,
