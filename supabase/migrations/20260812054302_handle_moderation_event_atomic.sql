@@ -29,8 +29,8 @@ begin
     return;
   end if;
 
-  -- Map moderation_status to event kind for provider moderation audit (always moderated, not business approved)
-  v_kind := case p_moderation_status when 'approved' then 'moderated' when 'rejected' then 'moderated' else 'moderated' end;
+  -- Provider moderation audit is always kind moderated (business approved is separate)
+  v_kind := 'moderated';
 
   -- Update exact version if version present, else per-asset
   if p_version is not null then

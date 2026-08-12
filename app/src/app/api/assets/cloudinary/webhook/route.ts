@@ -1264,8 +1264,6 @@ export async function POST(request: Request) {
       }
       const statusMap: Record<string, string> = { pending: "pending", approved: "approved", rejected: "rejected" };
       const nextStatus = statusMap[moderationStatus] ?? "pending";
-      const eventKindMap: Record<string, string> = { pending: "moderated", approved: "approved", rejected: "rejected" };
-      const eventKind = eventKindMap[moderationStatus] ?? "moderated";
 
       // IPI-639 P1/P2: atomic moderation update + audit via single RPC (provider moderation, not business approval)
       // Business approval remains separate (asset_approvals with actorId), moderation audit is kind moderated
