@@ -1054,19 +1054,25 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
         .select("id, asset_id, version")
         .eq("cloudinary_asset_id", providerId)
         .maybeSingle();
+      if (lookupErr) {
+        console.error("[cloudinary/webhook] delete lookup by provider id failed:", lookupErr.message);
+      }
       const { error } = await db
         .from("cloudinary_assets")
         .update({ status: "archived" })
         .eq("cloudinary_asset_id", providerId);
       if (error) console.error("[cloudinary/webhook] delete->archive by provider id failed:", error.message);
       else if (!lookupErr && mirror?.asset_id) {
+        // Batch-delete: use the public_id that matches this asset_id, not publicIds[0] for every resource.
+        const resourcePublicId =
+          payload.resources?.find((r) => r.asset_id === providerId)?.public_id ?? publicIds[0] ?? null;
         const fallback = `${providerId}:${(mirror as { version?: number | null }).version ?? "0"}:archived`;
         await insertAssetEvent(db, {
           assetId: mirror.asset_id,
           cloudinaryAssetId: providerId,
           version: (mirror as { version?: number | null }).version ?? undefined,
           kind: "archived",
-          metadata: { public_id: publicIds[0] ?? null },
+          metadata: { public_id: resourcePublicId },
           requestId: deleteRequestId ?? fallback,
         });
       }
