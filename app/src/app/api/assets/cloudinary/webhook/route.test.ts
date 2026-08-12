@@ -1329,7 +1329,10 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         } as unknown as Record<string, unknown>),
       );
       expect(res.status).toBe(200);
-      expect(mockRpc).toHaveBeenCalledWith("handle_moderation_event", expect.objectContaining({ p_moderation_status: "approved", p_request_id: "req-mod-1", p_cloudinary_asset_id: "asset-id-1" }));
+      expect(mockRpc).toHaveBeenCalledWith(
+        "handle_moderation_event",
+        expect.objectContaining({ p_moderation_status: "approved", p_request_id: "req-mod-1", p_cloudinary_asset_id: "asset-id-1", p_version: 5 }),
+      );
     });
   });
 });
