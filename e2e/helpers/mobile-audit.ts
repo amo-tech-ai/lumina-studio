@@ -11,6 +11,26 @@ export const OPERATOR_ROUTES = [
   "/app/onboarding",
 ] as const;
 
+/** IPI-572 — SCR-26–31 CRM operator routes for mobile overflow / chrome gates.
+ *  List/board roots; detail URLs are discovered at runtime from the first row link. */
+export const CRM_MOBILE_ROUTES = [
+  "/app/crm/companies",
+  "/app/crm/contacts",
+  "/app/crm/pipeline",
+] as const;
+
+/** List → first detail row (company / contact / deal). */
+export const CRM_MOBILE_DETAIL_ENTRY = [
+  { list: "/app/crm/companies", linkName: /\/app\/crm\/companies\/[^/]+$/ },
+  { list: "/app/crm/contacts", linkName: /\/app\/crm\/contacts\/[^/]+$/ },
+  { list: "/app/crm/pipeline", linkName: /\/app\/crm\/pipeline\/[^/]+$/ },
+] as const;
+
+export const CRM_MOBILE_VIEWPORTS = [
+  { name: "320", width: 320, height: 568 },
+  { name: "390", width: 390, height: 844 },
+] as const;
+
 export async function assertNoHorizontalOverflow(page: Page) {
   const metrics = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,

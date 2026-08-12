@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Inbox, Lock } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +18,42 @@ import styles from "./pipeline-workspace.module.css";
 const STAGES: CrmDealStage[] = ["lead", "qualified", "proposal", "negotiation", "won", "lost"];
 const LOCKED_STAGES = new Set<CrmDealStage>(["won", "lost"]);
 const OPEN_STAGES = new Set<CrmDealStage>(["lead", "qualified", "proposal", "negotiation"]);
+const PIPELINE_NARROW_MQ = "(max-width: 1024px)";
+
+/** IPI-572 — exclusive `<details name>` fires close+open in one tick.
+ *  Functional reduce so a stale close cannot wipe the stage that just opened. */
+export function resolvePipelineAccordionStage(
+  current: CrmDealStage | null,
+  stage: CrmDealStage,
+  nextOpen: boolean,
+): CrmDealStage | null {
+  if (nextOpen) return stage;
+  return current === stage ? null : current;
+}
+
+function subscribePipelineNarrow(onStoreChange: () => void) {
+  const mq = window.matchMedia(PIPELINE_NARROW_MQ);
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getPipelineNarrowSnapshot() {
+  return window.matchMedia(PIPELINE_NARROW_MQ).matches;
+}
+
+function getPipelineNarrowServerSnapshot() {
+  return false;
+}
+
+/** IPI-572 — when columns stack (≤1024), use native <details name="crm-pipeline">.
+ *  Desktop kanban keeps plain column divs (exclusive accordion would collapse siblings). */
+function usePipelineNarrow(): boolean {
+  return useSyncExternalStore(
+    subscribePipelineNarrow,
+    getPipelineNarrowSnapshot,
+    getPipelineNarrowServerSnapshot,
+  );
+}
 
 // crm_deals has no risk_score column (verified against the generated schema
 // types) — "at risk" is a naive staleness heuristic (no update in AT_RISK_DAYS,
@@ -46,10 +82,12 @@ type Props = {
  *  (WCAG 2.5.7). Drag-and-drop is out of scope for this ticket. */
 export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerNames, fetchError, now }: Props) {
   const router = useRouter();
+  const narrow = usePipelineNarrow();
   const [atRiskOnly, setAtRiskOnly] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("");
   const [deals, setDeals] = useState(initialDeals);
   const [liveMessage, setLiveMessage] = useState("");
+  const [openStage, setOpenStage] = useState<CrmDealStage | null>(null);
   const focusDealIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -130,6 +168,25 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
   );
   useSetCrmChatContext(chatContext);
 
+  // Seed / retarget accordion when layout or filters change (IPI-572).
+  // Do not list `byStage` as a dependency: a deal move that empties the destination
+  // under "At risk only" (fresh updated_at) must not yank openStage off the stage
+  // the operator just moved into. Filter/narrow changes still retarget via those deps.
+  useEffect(() => {
+    if (!narrow) {
+      setOpenStage(null);
+      return;
+    }
+    setOpenStage((current) => {
+      const firstWithDeals = STAGES.find((s) => (byStage.get(s)?.length ?? 0) > 0) ?? "lead";
+      if (!current) return firstWithDeals;
+      if ((byStage.get(current)?.length ?? 0) > 0) return current;
+      return firstWithDeals;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: filters/narrow only
+  }, [narrow, ownerFilter, atRiskOnly]);
+
+
   function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
     setDeals((prev) =>
       prev.map((d) =>
@@ -138,6 +195,9 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
           : d,
       ),
     );
+    // Keep the destination stage open on mobile so the moved card (and focus
+    // restore) stay visible inside the accordion.
+    if (narrow) setOpenStage(newStage);
     focusDealIdRef.current = dealId;
     setLiveMessage(`Moved to ${crmDealStageLabel(newStage)}`);
     router.refresh();
@@ -219,7 +279,7 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
           />
         </div>
       ) : (
-        <div className={styles.board}>
+        <div className={styles.board} data-pipeline-layout={narrow ? "accordion" : "board"}>
           {STAGES.map((stage) => {
             const stageDeals = byStage.get(stage) ?? [];
             const stageTotals = new Map<string, number>();
@@ -228,25 +288,26 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
               stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + d.value);
             }
             const locked = LOCKED_STAGES.has(stage);
-            return (
-              <div key={stage} className={styles.column}>
-                <div className={styles.columnHeader}>
-                  <div className={styles.columnHeaderTop}>
-                    <div className={styles.columnHeaderLabel}>
-                      <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
-                      <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
-                      {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
-                    </div>
-                    <span className={styles.stageCount}>{stageDeals.length}</span>
+            const totalText =
+              stageTotals.size > 0
+                ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
+                : "—";
+            const header = (
+              <>
+                <div className={styles.columnHeaderTop}>
+                  <div className={styles.columnHeaderLabel}>
+                    <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
+                    <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
+                    {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
                   </div>
-                  <div className={styles.columnTotal}>
-                    {stageTotals.size > 0
-                      ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
-                      : "—"}
-                  </div>
+                  <span className={styles.stageCount}>{stageDeals.length}</span>
                 </div>
+                <div className={styles.columnTotal}>{totalText}</div>
+              </>
+            );
+            const body = (
+              <>
                 {locked ? <div className={styles.lockedBadge}>Enter via approval only</div> : null}
-
                 <div className={styles.cards}>
                   {stageDeals.map((deal) => {
                     const knownStage = OPEN_STAGES.has(deal.stage as CrmDealStage)
@@ -283,6 +344,32 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
                   })}
                   {stageDeals.length === 0 ? <div className={styles.columnEmpty}>No deals</div> : null}
                 </div>
+              </>
+            );
+
+            if (narrow) {
+              return (
+                <details
+                  key={stage}
+                  className={styles.column}
+                  name="crm-pipeline"
+                  open={openStage === stage}
+                  data-stage={stage}
+                  onToggle={(event) => {
+                    const nextOpen = event.currentTarget.open;
+                    setOpenStage((current) => resolvePipelineAccordionStage(current, stage, nextOpen));
+                  }}
+                >
+                  <summary className={styles.columnHeader}>{header}</summary>
+                  {body}
+                </details>
+              );
+            }
+
+            return (
+              <div key={stage} className={styles.column} data-stage={stage}>
+                <div className={styles.columnHeader}>{header}</div>
+                {body}
               </div>
             );
           })}
