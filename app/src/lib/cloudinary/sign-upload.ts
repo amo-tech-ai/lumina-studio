@@ -165,6 +165,7 @@ const WIDGET_SIGN_ALLOWLIST = new Set([
   "context",
   "source",
   "format",
+  "moderation",
 ]);
 
 const WIDGET_SIGN_BLOCKLIST = new Set([

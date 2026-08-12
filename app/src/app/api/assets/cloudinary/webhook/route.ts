@@ -1236,8 +1236,60 @@ export async function POST(request: Request) {
       }
     } else if (notificationType === "delete") {
       await handleDelete(db, payload);
+    } else if (notificationType === "moderation") {
+      // IPI-64 — Manual Moderation: pending → approved/rejected via Media Library or Admin API
+      const raw = payload as unknown as {
+        moderation_status?: string;
+        moderation_kind?: string;
+        moderation?: Array<{ status?: string; kind?: string }>;
+        asset_id?: string;
+        public_id?: string;
+        version?: number;
+        request_id?: string;
+      };
+      const moderationStatus = raw.moderation_status ?? raw.moderation?.[0]?.status;
+      const moderationKind = raw.moderation_kind ?? raw.moderation?.[0]?.kind;
+      const assetId = raw.asset_id ?? payload.asset_id;
+      const version = raw.version ?? payload.version;
+      const requestId = raw.request_id ?? payload.request_id;
+      if (!assetId || !moderationStatus) {
+        console.warn("[cloudinary/webhook] moderation missing asset_id or status", { assetId, moderationStatus });
+        return NextResponse.json({ ok: true, ignored: "moderation-missing-fields" });
+      }
+      const statusMap: Record<string, string> = { pending: "pending", approved: "approved", rejected: "rejected" };
+      const nextStatus = statusMap[moderationStatus] ?? "pending";
+      const eventKindMap: Record<string, string> = { pending: "moderated", approved: "approved", rejected: "rejected" };
+      const eventKind = eventKindMap[moderationStatus] ?? "moderated";
+
+      // Update exact version if version present, else all rows for asset_id (per-asset, not per-version fallback)
+      let updateQuery = db.from("cloudinary_assets").update({ moderation_status: nextStatus }).eq("cloudinary_asset_id", assetId);
+      if (typeof version === "number") updateQuery = updateQuery.eq("version", version);
+      const { error: updErr } = await updateQuery;
+      if (updErr) console.error("[cloudinary/webhook] moderation update failed:", updErr.message);
+
+      // Lookup canonical asset_id for audit (via cloudinary_assets)
+      const { data: mirror } = await db
+        .from("cloudinary_assets")
+        .select("asset_id, version")
+        .eq("cloudinary_asset_id", assetId)
+        .limit(1)
+        .maybeSingle();
+      const canonicalAssetId = (mirror as { asset_id?: string } | null)?.asset_id;
+      const canonicalVersion = (mirror as { version?: number | null } | null)?.version ?? version;
+      if (canonicalAssetId) {
+        const fallback = `${assetId}:${canonicalVersion ?? 0}:${eventKind}`;
+        await insertAssetEvent(db, {
+          assetId: canonicalAssetId,
+          cloudinaryAssetId: assetId,
+          version: canonicalVersion ?? undefined,
+          kind: eventKind,
+          reason: moderationKind ?? null,
+          metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : { public_id: raw.public_id ?? payload.public_id ?? null },
+          requestId: requestId ?? fallback,
+        });
+      }
     } else {
-      // Unsupported/unknown event (moderation, analysis, etc.) — ack, no write.
+      // Unsupported/unknown event (analysis, etc.) — ack, no write.
       return NextResponse.json({ ok: true, ignored: notificationType ?? "unknown" });
     }
   } catch (e) {

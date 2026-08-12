@@ -128,6 +128,21 @@ describe("sanitizeWidgetParamsToSign", () => {
     const widgetSig = signCloudinaryParams(sanitized, SECRET);
     expect(cloudinary.utils.api_sign_request(sanitized, SECRET)).toBe(widgetSig);
   });
+
+  it("includes moderation manual in signed params", async () => {
+    const { sanitizeWidgetParamsToSign } = await importSignUpload();
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID },
+        moderation: "manual",
+      },
+      VALID_BRAND_ID,
+      { orgId: VALID_ORG_ID },
+    );
+    expect(sanitized.moderation).toBe("manual");
+  });
 });
 
 describe("buildUploadParamsToSign", () => {
