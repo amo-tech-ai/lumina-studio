@@ -23,7 +23,7 @@ export function TalentMatchTabs() {
           aria-selected="false"
           aria-label={`${label} — ${COMING_SOON}`}
           title={COMING_SOON}
-          tabIndex={0}
+          tabIndex={-1}
           className="shrink-0 whitespace-nowrap py-3 font-sans text-sm"
           style={{ color: "var(--color-text-muted)" }}
         >

@@ -201,16 +201,16 @@ export function TalentTab() {
   useSetIntelligenceDetail(detailNode);
 
   const visibleRaw = talents?.filter((t) => !passedIds.has(t.id)) ?? null;
-  // ponytail: sort only in table view — swipe deck keeps stable API order; avoids leaking Name A–Z into deck when toggling views
+  // ponytail: sort only in table view — swipe deck keeps stable API order; avoid 2N·logN recompute by caching scores once
   const visible = useMemo(() => {
     if (!visibleRaw) return null;
     if (view !== "list") return visibleRaw;
     if (sortBy === "name") return [...visibleRaw].sort((a, b) => a.display_name.localeCompare(b.display_name));
-    return [...visibleRaw].sort((a, b) => {
-      const sa = computeMatchScore({ talent: a, shootType: filters.shootType, representationPreferred: filters.representation }).score;
-      const sb = computeMatchScore({ talent: b, shootType: filters.shootType, representationPreferred: filters.representation }).score;
-      return sb - sa;
-    });
+    const scoreById = new Map<string, number>();
+    for (const t of visibleRaw) {
+      scoreById.set(t.id, computeMatchScore({ talent: t, shootType: filters.shootType, representationPreferred: filters.representation }).score);
+    }
+    return [...visibleRaw].sort((a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0));
   }, [visibleRaw, sortBy, filters.shootType, filters.representation, view]);
 
   return (

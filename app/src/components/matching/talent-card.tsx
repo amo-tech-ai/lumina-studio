@@ -11,9 +11,9 @@ import type { TalentResult } from "@/lib/talent/types";
 import type { MatchScore } from "@/lib/talent/match-score";
 
 function fitScoreColor(score: number): string {
-  if (score >= 90) return "var(--color-dna-high)";
-  if (score >= 80) return "var(--color-dna-mid)";
-  return "var(--color-text-muted)";
+  if (score >= 80) return "var(--color-dna-high)";
+  if (score >= 60) return "var(--color-dna-mid)";
+  return "var(--color-dna-low)";
 }
 
 function repLabel(talent: TalentResult): string {
