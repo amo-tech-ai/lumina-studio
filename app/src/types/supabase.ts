@@ -898,6 +898,53 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_events: {
+        Row: {
+          actor_id: string | null
+          asset_id: string
+          cloudinary_asset_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          metadata: Json
+          reason: string | null
+          request_id: string | null
+          version: number | null
+        }
+        Insert: {
+          actor_id?: string | null
+          asset_id: string
+          cloudinary_asset_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          metadata?: Json
+          reason?: string | null
+          request_id?: string | null
+          version?: number | null
+        }
+        Update: {
+          actor_id?: string | null
+          asset_id?: string
+          cloudinary_asset_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          reason?: string | null
+          request_id?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_events_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_links: {
         Row: {
           asset_id: string
