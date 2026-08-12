@@ -1,7 +1,7 @@
 /**
  * Selfcheck for info-503-threshold classifier
  * 
- * IPI-967 · COPILOT-GATE-003
+ * IPI-967 · COPILOT-GATE-003 · IPI-972
  */
 
 import {
@@ -63,7 +63,40 @@ const tests = [
     },
     expected: false,
   },
-  
+
+  // IPI-972: The real CI error that triggered false-positive blocking (PR #901
+  // verify-copilot-preview failure). Transient high-demand 503 with INCOMPLETE_STREAM
+  // and a workers.dev URL must be tolerated.
+  {
+    name: "Console: AI_APICallError high demand + INCOMPLETE_STREAM + workers.dev - tolerated (real CI case)",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\n    at Object.onRunErrorEvent (https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/24azfybs20_-_.js:15:12241)\n    ... {source: onRunErrorEvent, event: Object, runtimeErrorCode: INCOMPLETE_STREAM, agentId: production-planner}",
+      type: "error",
+    },
+    expected: false,
+  },
+
+  // IPI-972: Non-retryable AI provider errors (401 invalid-key, 400 invalid-model)
+  // with workers.dev URLs must remain BLOCKING — not tolerated just because they
+  // don't match "Worker threw/crashed/runtime". The retryable-signal gate ensures
+  // only transient provider conditions are tolerated.
+  {
+    name: "Console: AI_APICallError 401 invalid-key + workers.dev URL - blocking (not retryable)",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: Received 401 Unauthorized. Check your API key. at async fetch (https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/agent/run)",
+      type: "error",
+    },
+    expected: true,
+  },
+  {
+    name: "Console: AI_APICallError 400 invalid-model + workers.dev URL - blocking (not retryable)",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: model 'foo-bar' not found at async fetch (https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/agent/run)",
+      type: "error",
+    },
+    expected: true,
+  },
+
   // Real Cloudflare Worker / Miniflare runtime errors remain blocking
   {
     name: "Console: Worker runtime error - blocking",
@@ -78,6 +111,23 @@ const tests = [
   {
     name: "Console: Cloudflare Workers runtime error - blocking",
     input: { text: "Cloudflare Workers runtime: unhandled exception in Worker", type: "error" },
+    expected: true,
+  },
+
+  // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
+  {
+    name: "Console: Cloudflare Error 1102 Worker exceeded resource limits - blocking",
+    input: { text: "Cloudflare Error 1102: Worker exceeded resource limits", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Cloudflare error: Worker failed to start - blocking",
+    input: { text: "Cloudflare error: Worker failed to start", type: "error" },
+    expected: true,
+  },
+  {
+    name: "Console: Worker exceeded memory limit - blocking",
+    input: { text: "Worker exceeded memory limit", type: "error" },
     expected: true,
   },
   {
