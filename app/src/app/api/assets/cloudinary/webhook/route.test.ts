@@ -32,12 +32,14 @@ const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsSelectMaybeSingle = vi.fn();
 const cloudinaryAssetsUpdateIs = vi.fn();
 const cloudinaryAssetsUpdateEq = vi.fn();
-/** `.eq()` is awaitable and chainable with `.is()` (legacy delete null-identity path). */
-function mockUpdateEqResult(result: { data: null; error: unknown }) {
+/** `.eq()` is awaitable and chainable with `.is()` and `.select()` (moderation update needs select id). */
+function mockUpdateEqResult(result: { data: null; error: unknown } | { data: Array<{ id: string }>; error: null; count: number }) {
   cloudinaryAssetsUpdateEq.mockImplementation(() => {
-    const pending = Promise.resolve(result);
+    const pending = Promise.resolve(result as never);
     return Object.assign(pending, {
       is: (...args: unknown[]) => cloudinaryAssetsUpdateIs(...args),
+      eq: cloudinaryAssetsUpdateEq,
+      select: (..._args: unknown[]) => Promise.resolve(result as never),
     });
   });
 }
@@ -62,6 +64,9 @@ const mockFrom = vi.fn((table: string) => {
         const base: Record<string, unknown> = { maybeSingle: cloudinaryAssetsSelectMaybeSingle };
         // support .is() chaining for legacy null-identity lookup
         (base as Record<string, unknown>).is = vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle }));
+        // support .limit() and second .eq() chaining for moderation version-bound lookup
+        (base as Record<string, unknown>).limit = vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle }));
+        (base as Record<string, unknown>).eq = eqFn;
         return base;
       });
       return { eq: eqFn };
@@ -227,9 +232,17 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("acks unknown notification types with 200 and no writes", async () => {
     const { POST } = await importRoute();
+    const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, notification_type: "unknown_foo" as unknown as string }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, ignored: "unknown_foo" });
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it("acks moderation with missing fields as ignored", async () => {
+    const { POST } = await importRoute();
     const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, notification_type: "moderation" }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, ignored: "moderation" });
+    expect(await res.json()).toEqual({ ok: true, ignored: "moderation-missing-fields" });
     expect(mockFrom).not.toHaveBeenCalled();
   });
 
@@ -1295,6 +1308,25 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       const res = await POST(makeRequest({ notification_type: "delete", asset_id: "asset-id-1", request_id: "req-fail-insert" }));
       expect(res.status).toBe(200); // delete still acks, audit is non-fatal
       expect(assetEventsInsert).toHaveBeenCalled();
+    });
+
+    it("moderation approved updates moderation_status and inserts approved event", async () => {
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
+      mockUpdateEqResult({ data: [{ id: "m1" }], error: null, count: 1 });
+      const { POST } = await importRoute();
+      assetEventsInsert.mockClear();
+      const res = await POST(
+        makeRequest({
+          notification_type: "moderation",
+          asset_id: "asset-id-1",
+          version: 5,
+          moderation_status: "approved",
+          moderation_kind: "manual",
+          request_id: "req-mod-1",
+        } as unknown as Record<string, unknown>),
+      );
+      expect(res.status).toBe(200);
+      expect(assetEventsInsert).toHaveBeenCalledWith(expect.objectContaining({ kind: "approved", request_id: "req-mod-1" }));
     });
   });
 });

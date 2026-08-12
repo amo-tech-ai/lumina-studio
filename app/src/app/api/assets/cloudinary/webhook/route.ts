@@ -2,6 +2,8 @@
 import { NextResponse, after } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { isBrandAccessible } from "@/lib/assets/brand-access";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { ENVIRONMENTS, WORK_TYPES } from "@/lib/cloudinary/taxonomy";
 
 export const dynamic = "force-dynamic";
@@ -1236,8 +1238,93 @@ export async function POST(request: Request) {
       }
     } else if (notificationType === "delete") {
       await handleDelete(db, payload);
+    } else if (notificationType === "moderation") {
+      // IPI-64 — Manual Moderation: pending → approved/rejected via Media Library or Admin API
+      const raw = payload as unknown as {
+        moderation_status?: string;
+        moderation_kind?: string;
+        moderation?: Array<{ status?: string; kind?: string }>;
+        asset_id?: string;
+        public_id?: string;
+        version?: number;
+        request_id?: string;
+      };
+      const moderationStatus = raw.moderation_status ?? raw.moderation?.[0]?.status;
+      const moderationKind = raw.moderation_kind ?? raw.moderation?.[0]?.kind;
+      const assetId = raw.asset_id ?? payload.asset_id;
+      const version = raw.version ?? payload.version;
+      const requestId = raw.request_id ?? payload.request_id;
+      if (!assetId || !moderationStatus) {
+        console.warn("[cloudinary/webhook] moderation missing asset_id or status", { assetId, moderationStatus });
+        return NextResponse.json({ ok: true, ignored: "moderation-missing-fields" });
+      }
+      const statusMap: Record<string, string> = { pending: "pending", approved: "approved", rejected: "rejected" };
+      const nextStatus = statusMap[moderationStatus] ?? "pending";
+      const eventKindMap: Record<string, string> = { pending: "moderated", approved: "approved", rejected: "rejected" };
+      const eventKind = eventKindMap[moderationStatus] ?? "moderated";
+
+      // Update exact version if version present, else per-asset. Capture count to avoid phantom audit for non-existent asset.
+      let updateQuery = db.from("cloudinary_assets").update({ moderation_status: nextStatus }).eq("cloudinary_asset_id", assetId);
+      if (typeof version === "number") updateQuery = updateQuery.eq("version", version);
+      const { data: updatedRows, error: updErr, count: updCount } = await updateQuery.select("id");
+      if (updErr) {
+        console.error("[cloudinary/webhook] moderation update failed:", updErr.message);
+        // Transient DB failure — let Cloudinary retry via 503, don't create audit
+        return NextResponse.json({ error: "Transient moderation update failure" }, { status: 503 });
+      }
+      const updatedCount = Array.isArray(updatedRows) ? updatedRows.length : (updCount ?? 0);
+      if (updatedCount === 0) {
+        console.warn("[cloudinary/webhook] moderation update touched 0 rows — phantom asset, skip audit", { assetId, version });
+        return NextResponse.json({ ok: true, ignored: "moderation-no-mirror" });
+      }
+
+      // Lookup canonical asset_id for audit — version-bound when version provided, else per-asset
+      let mirrorQuery = db.from("cloudinary_assets").select("asset_id, version, public_id").eq("cloudinary_asset_id", assetId);
+      if (typeof version === "number") mirrorQuery = mirrorQuery.eq("version", version);
+      const { data: mirror, error: mirrorErr } = await mirrorQuery.limit(1).maybeSingle();
+      if (mirrorErr) {
+        console.error("[cloudinary/webhook] moderation mirror lookup failed:", mirrorErr.message);
+        return NextResponse.json({ error: "Transient mirror lookup failure" }, { status: 503 });
+      }
+      const canonicalAssetId = (mirror as { asset_id?: string } | null)?.asset_id;
+      const canonicalVersion = (mirror as { version?: number | null } | null)?.version ?? version;
+      if (!canonicalAssetId) {
+        console.warn("[cloudinary/webhook] moderation no canonical asset after update", { assetId, version });
+        return NextResponse.json({ ok: true, ignored: "moderation-no-asset" });
+      }
+
+      // Brand ownership check (reuse existing helper) + audit log
+      const brandIdForAudit = await (async () => {
+        const { data: assetRow } = await db.from("assets").select("brand_id").eq("id", canonicalAssetId).maybeSingle();
+        return (assetRow as { brand_id?: string } | null)?.brand_id ?? null;
+      })();
+      if (brandIdForAudit) {
+        const brandCheck = await isBrandAccessible(db as unknown as SupabaseClient, brandIdForAudit);
+        if (!brandCheck.ok) {
+          console.warn("[cloudinary/webhook] moderation brand not accessible, skip audit", { brandId: brandIdForAudit });
+        }
+      }
+      await logNonFatal(db, {
+        brandId: brandIdForAudit,
+        input: { notification_type: "moderation", public_id: raw.public_id ?? payload.public_id ?? null, moderation_status: nextStatus, cloudinary_asset_id: assetId, version: canonicalVersion ?? null },
+        output: { asset_id: canonicalAssetId },
+      });
+
+      const fallback = `${assetId}:${canonicalVersion ?? version ?? 0}:${eventKind}`;
+      const inserted = await insertAssetEvent(db, {
+        assetId: canonicalAssetId,
+        cloudinaryAssetId: assetId,
+        version: canonicalVersion ?? version ?? undefined,
+        kind: eventKind,
+        reason: moderationKind ?? null,
+        metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : { public_id: raw.public_id ?? payload.public_id ?? null },
+        requestId: requestId ?? fallback,
+      });
+      if (!inserted.ok && inserted.retryable) {
+        return NextResponse.json({ error: "Transient asset_events insert failure" }, { status: 503 });
+      }
     } else {
-      // Unsupported/unknown event (moderation, analysis, etc.) — ack, no write.
+      // Unsupported/unknown event (analysis, etc.) — ack, no write.
       return NextResponse.json({ ok: true, ignored: notificationType ?? "unknown" });
     }
   } catch (e) {

@@ -241,6 +241,8 @@ export function sanitizeWidgetParamsToSign(
     workType,
     workId: opts.workId,
   });
+  // IPI-64 — force manual moderation server-side, never trust client
+  out.moderation = "manual";
 
   return out;
 }
