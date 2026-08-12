@@ -4,10 +4,27 @@
  * Single source of truth for determining whether network/console events
  * should be treated as critical failures or tolerated transients.
  * 
- * IPI-967 · COPILOT-GATE-003
+ * IPI-967 · COPILOT-GATE-003 · IPI-972
  */
 
 const MAX_INFO_503_RETRIES = 1; // Allows 1 retry = 2 total attempts
+
+// IPI-972: Transient AI provider error signals that are safe to tolerate even
+// when the stack trace passes through a *.workers.dev preview URL. These match
+// the actual retryable conditions emitted by the AI SDK / Workers AI gateway.
+// Permanently non-retryable provider errors (e.g. 401 invalid-key, 400
+// invalid-model, 403 forbidden) do NOT match this set and remain blocking.
+const RETRYABLE_AI_PROVIDER_PATTERNS = [
+  /high demand/i,
+  /spikes in demand are usually temporary/i,
+  /temporar/i, // "temporarily", "temporary"
+  /rate.?limit/i,
+  /INCOMPLETE_STREAM/i,
+  /Service unavailable/i,
+  /Too many requests/i,
+  /503/i,
+  /502/i,
+];
 
 /**
  * Classify a console error as blocking or tolerated
@@ -20,21 +37,63 @@ const MAX_INFO_503_RETRIES = 1; // Allows 1 retry = 2 total attempts
 export function classifyConsoleError(error) {
   const t = error.text || "";
   
-  // Ignore documented retryable /api/copilotkit/info 503 errors (IPI-955)
+  // --- Tolerated: documented retryable transients ---
+  
+  // Documented retryable /api/copilotkit/info 503 errors (IPI-955)
   if (/Runtime info request failed with status 503/i.test(t)) return false;
   if (/Failed to load resource.*503.*copilotkit\/info/i.test(t)) return false;
   
-  // Blocking error patterns
+  // IPI-972: Classify AI provider errors explicitly so that transient provider
+  // conditions (high demand, rate-limited, INCOMPLETE_STREAM) carrying a
+  // *.workers.dev URL are tolerated, while permanent provider errors (401
+  // invalid-key, 400 invalid-model, 403 forbidden) remain blocking.
+  if (/AI_APICallError|agent_run_error_event/i.test(t)) {
+    return !isRetryableAiProviderError(t);
+  }
+  
+  // --- Blocking: genuine runtime failures ---
+  
   if (/hydration|Hydration/i.test(t)) return true;
   if (/Uncaught|uncaught/i.test(t)) return true;
-  if (/Worker|Miniflare|Cloudflare/i.test(t) && /error/i.test(t)) return true;
+  
+  // Cloudflare Worker / Miniflare runtime failures. Match explicit runtime
+  // wording, NOT the bare substring "Worker" inside deployment URLs like
+  // "*.workers.dev" (false positive, IPI-972). Real Worker runtime errors say
+  // things like "Worker threw", "Worker exceeded", "Worker failed",
+  // "Miniflare: ...", "Cloudflare Workers runtime", "Cloudflare Error 1102",
+  // "Cloudflare error: Worker failed to start".
+  if (
+    /Worker (threw|exited|crashed|runtime|exceeded|failed|errored|timed out)/i.test(t) ||
+    /Cloudflare (Error \d+|error|Workers runtime|Worker .* exceeded|Worker .* failed)/i.test(t) ||
+    /Miniflare/i.test(t)
+  ) {
+    return true;
+  }
   if (/ChunkLoadError|Script error/i.test(t)) return true;
   
-  // Ignore known noisy third-party
+  // --- Tolerated: known noisy third-party ---
   if (/favicon|Download the React DevTools/i.test(t)) return false;
   if (/Failed to load resource.*favicon/i.test(t)) return false;
   
   return error.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
+}
+
+/**
+ * Determine whether a console error text represents a retryable AI provider
+ * error — one caused by transient provider-side conditions (high demand, rate
+ * limiting, 5xx) rather than a permanent client-side configuration problem
+ * (invalid key, invalid model, forbidden).
+ *
+ * IPI-972: Called only after the caller has confirmed the text contains an
+ * AI_APICallError / agent_run_error_event marker. This function returns the
+ * final verdict: true (tolerate) only when the message explicitly signals a
+ * retryable transient condition; false (block) for permanent provider errors.
+ *
+ * @param {string} text - Console error text
+ * @returns {boolean} - True if the error is a retryable AI provider condition
+ */
+function isRetryableAiProviderError(text) {
+  return RETRYABLE_AI_PROVIDER_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /**
