@@ -4,6 +4,7 @@
 -- 2. Preserve moderation_status + moderation_kind in metadata (audit can distinguish approved vs rejected)
 -- 3. Consistent search_path=public (was public,pg_temp in 54304)
 -- 4. ON CONFLICT WHERE request_id IS NOT NULL (already correct, preserved)
+-- 5. Grant before revoke to avoid transient inaccessible window + explicit note on NULL version handling
 
 drop function if exists public.handle_moderation_event(text, bigint, text, text, text, text);
 
@@ -27,6 +28,11 @@ declare
 begin
   v_kind := 'moderated';
 
+  -- SELECT exact asset/version FOR UPDATE
+  -- When p_version IS NULL, we select by cloudinary_asset_id only.
+  -- cloudinary_assets has UNIQUE index cloudinary_assets_cloudinary_asset_id_uidx WHERE cloudinary_asset_id IS NOT NULL,
+  -- so at most one row exists per cloudinary_asset_id. Version is informational for audit, not for disambiguating multiple rows.
+  -- This prevents unintended multi-row updates.
   if p_version is not null then
     select moderation_status, asset_id, version into v_current_status, v_asset_id, v_version
       from public.cloudinary_assets
@@ -78,7 +84,9 @@ begin
 end;
 $$;
 
-revoke all on function public.handle_moderation_event(text, bigint, text, text, text, text) from public, anon, authenticated;
+-- Grant to service_role FIRST, then revoke from public/anon/authenticated to avoid transient inaccessible window during deployment.
+-- New function has no grants by default (owner only), so granting service_role first ensures it is accessible immediately after creation.
 grant execute on function public.handle_moderation_event(text, bigint, text, text, text, text) to service_role;
+revoke all on function public.handle_moderation_event(text, bigint, text, text, text, text) from public, anon, authenticated;
 
 comment on function public.handle_moderation_event is 'IPI-639 atomic: moderation_status update + asset_events moderated (provider, not business approval). Business approval uses separate asset_approvals with actorId.';
