@@ -19,20 +19,35 @@ declare
   v_kind text;
   v_current_status text;
 begin
-  -- Same-status retry no-op: if already in desired status for that version, skip (idempotent, no new audit)
+  -- Provider moderation audit is always kind moderated (business approved is separate)
+  v_kind := 'moderated';
+
+  -- SELECT exact asset/version FOR UPDATE to lock row before same-status check and update
   if p_version is not null then
-    select moderation_status into v_current_status from public.cloudinary_assets where cloudinary_asset_id = p_cloudinary_asset_id and version = p_version limit 1;
+    select moderation_status, asset_id, version into v_current_status, v_asset_id, v_version
+      from public.cloudinary_assets
+      where cloudinary_asset_id = p_cloudinary_asset_id and version = p_version
+      for update
+      limit 1;
   else
-    select moderation_status into v_current_status from public.cloudinary_assets where cloudinary_asset_id = p_cloudinary_asset_id limit 1;
+    select moderation_status, asset_id, version into v_current_status, v_asset_id, v_version
+      from public.cloudinary_assets
+      where cloudinary_asset_id = p_cloudinary_asset_id
+      for update
+      limit 1;
   end if;
+
+  if not found then
+    -- Phantom asset — no mirror, skip audit (do not create false history)
+    return;
+  end if;
+
+  -- Same-status retry no-op: if already in desired status for that exact version, skip (idempotent, no new audit)
   if v_current_status = p_moderation_status then
     return;
   end if;
 
-  -- Provider moderation audit is always kind moderated (business approved is separate)
-  v_kind := 'moderated';
-
-  -- Update exact version if version present, else per-asset
+  -- For a real transition, update status and insert atomically (single transaction, already in function)
   if p_version is not null then
     update public.cloudinary_assets
       set moderation_status = p_moderation_status
@@ -44,32 +59,12 @@ begin
   end if;
 
   if not found then
-    -- Phantom asset — no mirror, skip audit (do not create false history)
     return;
   end if;
 
-  -- Lookup canonical asset_id/version for audit — version-bound when version present
-  if p_version is not null then
-    select asset_id, version into v_asset_id, v_version
-      from public.cloudinary_assets
-      where cloudinary_asset_id = p_cloudinary_asset_id and version = p_version
-      limit 1;
-  else
-    select asset_id, version into v_asset_id, v_version
-      from public.cloudinary_assets
-      where cloudinary_asset_id = p_cloudinary_asset_id
-      limit 1;
-  end if;
-
-  if v_asset_id is null then
-    return;
-  end if;
-
-  -- Deterministic request_id for idempotency: use provided Cloudinary request_id when present.
-  -- Same-status retries (same request_id) are no-ops via ON CONFLICT; repeated transitions must have new request_id from Cloudinary to be recorded.
-  -- Fallback distinguishes provider status: assetId:version:moderated:moderationStatus (no timestamp per 914 fix)
+  -- Use Cloudinary request ID when present; when absent, generate UUID only after locked row confirms real transition
   if p_request_id is null then
-    p_request_id := p_cloudinary_asset_id || ':' || coalesce(p_version::text, '0') || ':' || v_kind || ':' || p_moderation_status;
+    p_request_id := gen_random_uuid()::text;
   end if;
 
   insert into public.asset_events (asset_id, cloudinary_asset_id, version, kind, request_id, reason, metadata)
