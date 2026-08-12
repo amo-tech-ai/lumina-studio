@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils";
 import type { TalentResult } from "@/lib/talent/types";
 import type { MatchScore } from "@/lib/talent/match-score";
 
+import styles from "./talent-card.module.css";
+
 function fitScoreColor(score: number): string {
-  if (score >= 90) return "#059669";
-  if (score >= 80) return "#D97706";
-  return "#94A3B8";
+  if (score >= 80) return "var(--color-dna-high)";
+  if (score >= 60) return "var(--color-dna-mid)";
+  return "var(--color-dna-low)";
 }
 
 function repLabel(talent: TalentResult): string {
@@ -45,13 +47,13 @@ export function TalentSwipeCard({
     <div
       className={cn(
         "flex flex-col overflow-hidden rounded-2xl border bg-white transition-shadow hover:shadow-md",
-        selected ? "border-[#111]" : "border-[#E5E7EB]",
+        selected ? styles.cardSelected : styles.card,
       )}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="relative block aspect-[3/4] w-full bg-[#F4F4F5] text-left"
+        className={`relative block aspect-[3/4] w-full text-left ${styles.thumbMuted}`}
         aria-label={`View match details for ${talent.display_name}`}
       >
         <span
@@ -62,10 +64,8 @@ export function TalentSwipeCard({
         </span>
       </button>
       <div className="flex flex-col gap-1.5 p-3">
-        <p className="truncate font-sans text-sm font-semibold text-[#111]">
-          {talent.display_name}
-        </p>
-        <p className="truncate font-sans text-xs text-[#6B7280]">
+        <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
+        <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
           {repLabel(talent)} · {talent.rate_tier ?? "—"}
         </p>
         <Badge variant={talent.is_available ? "default" : "secondary"} className="w-fit">
@@ -117,15 +117,13 @@ export function TalentRow({
       aria-label={`View match details for ${talent.display_name}`}
       className={cn(
         "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 py-3 text-left transition-shadow hover:shadow-sm",
-        selected ? "border-[#111]" : "border-[#E5E7EB]",
+        selected ? styles.cardSelected : styles.card,
       )}
     >
-      <div className="h-12 w-12 shrink-0 rounded-full bg-[#F4F4F5]" aria-hidden />
+      <div className={`h-12 w-12 shrink-0 rounded-full ${styles.thumbMuted}`} aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-sans text-sm font-semibold text-[#111]">
-          {talent.display_name}
-        </p>
-        <p className="truncate font-sans text-xs text-[#6B7280]">
+        <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
+        <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
           {repLabel(talent)} · {talent.rate_tier ?? "—"} ·{" "}
           {talent.is_available ? "Available" : "Availability unconfirmed"}
         </p>
