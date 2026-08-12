@@ -98,6 +98,7 @@ describe("sanitizeWidgetParamsToSign", () => {
     expect(Object.keys(sanitized).sort()).toEqual([
       "context",
       "folder",
+      "moderation",
       "source",
       "timestamp",
       "upload_preset",
@@ -129,19 +130,21 @@ describe("sanitizeWidgetParamsToSign", () => {
     expect(cloudinary.utils.api_sign_request(sanitized, SECRET)).toBe(widgetSig);
   });
 
-  it("includes moderation manual in signed params", async () => {
+  it("forces moderation manual regardless of caller value", async () => {
     const { sanitizeWidgetParamsToSign } = await importSignUpload();
-    const sanitized = sanitizeWidgetParamsToSign(
-      {
-        timestamp: 1_784_000_000,
-        upload_preset: "ipix-signed-upload",
-        context: { brand_id: VALID_BRAND_ID },
-        moderation: "manual",
-      },
-      VALID_BRAND_ID,
-      { orgId: VALID_ORG_ID },
-    );
-    expect(sanitized.moderation).toBe("manual");
+    for (const moderation of [undefined, "aws_rek", "webpurify", "manual"] as const) {
+      const sanitized = sanitizeWidgetParamsToSign(
+        {
+          timestamp: 1_784_000_000,
+          upload_preset: "ipix-signed-upload",
+          context: { brand_id: VALID_BRAND_ID },
+          ...(moderation !== undefined ? { moderation } : {}),
+        },
+        VALID_BRAND_ID,
+        { orgId: VALID_ORG_ID },
+      );
+      expect(sanitized.moderation).toBe("manual");
+    }
   });
 });
 

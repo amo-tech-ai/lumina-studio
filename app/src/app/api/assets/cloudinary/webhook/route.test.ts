@@ -32,12 +32,14 @@ const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsSelectMaybeSingle = vi.fn();
 const cloudinaryAssetsUpdateIs = vi.fn();
 const cloudinaryAssetsUpdateEq = vi.fn();
-/** `.eq()` is awaitable and chainable with `.is()` (legacy delete null-identity path). */
-function mockUpdateEqResult(result: { data: null; error: unknown }) {
+/** `.eq()` is awaitable and chainable with `.is()` and `.select()` (moderation update needs select id). */
+function mockUpdateEqResult(result: { data: null; error: unknown } | { data: Array<{ id: string }>; error: null; count: number }) {
   cloudinaryAssetsUpdateEq.mockImplementation(() => {
-    const pending = Promise.resolve(result);
+    const pending = Promise.resolve(result as never);
     return Object.assign(pending, {
       is: (...args: unknown[]) => cloudinaryAssetsUpdateIs(...args),
+      eq: cloudinaryAssetsUpdateEq,
+      select: (..._args: unknown[]) => Promise.resolve(result as never),
     });
   });
 }
@@ -62,8 +64,9 @@ const mockFrom = vi.fn((table: string) => {
         const base: Record<string, unknown> = { maybeSingle: cloudinaryAssetsSelectMaybeSingle };
         // support .is() chaining for legacy null-identity lookup
         (base as Record<string, unknown>).is = vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle }));
-        // support .limit() chaining for moderation lookup
+        // support .limit() and second .eq() chaining for moderation version-bound lookup
         (base as Record<string, unknown>).limit = vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle }));
+        (base as Record<string, unknown>).eq = eqFn;
         return base;
       });
       return { eq: eqFn };
@@ -1309,14 +1312,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
     it("moderation approved updates moderation_status and inserts approved event", async () => {
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
-      // Ensure update with two eqs (cloudinary_asset_id + version) chains correctly
-      cloudinaryAssetsUpdateEq.mockImplementation(() => {
-        const pending = Promise.resolve({ data: null, error: null });
-        return Object.assign(pending, {
-          is: (...args: unknown[]) => cloudinaryAssetsUpdateIs(...(args as [string, unknown])),
-          eq: cloudinaryAssetsUpdateEq,
-        });
-      });
+      mockUpdateEqResult({ data: [{ id: "m1" }], error: null, count: 1 });
       const { POST } = await importRoute();
       assetEventsInsert.mockClear();
       const res = await POST(

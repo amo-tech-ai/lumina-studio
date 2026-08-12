@@ -165,7 +165,6 @@ const WIDGET_SIGN_ALLOWLIST = new Set([
   "context",
   "source",
   "format",
-  "moderation",
 ]);
 
 const WIDGET_SIGN_BLOCKLIST = new Set([
@@ -242,6 +241,8 @@ export function sanitizeWidgetParamsToSign(
     workType,
     workId: opts.workId,
   });
+  // IPI-64 — force manual moderation server-side, never trust client
+  out.moderation = "manual";
 
   return out;
 }
