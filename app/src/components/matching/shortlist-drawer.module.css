@@ -1,0 +1,12 @@
+/* IPI-405 · drawer token styles */
+.emptyText {
+  color: var(--color-text-secondary);
+}
+
+.row {
+  border-color: var(--color-border);
+}
+
+.nameText {
+  color: var(--color-text-primary);
+}

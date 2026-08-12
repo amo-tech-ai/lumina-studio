@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import type { TalentResult } from "@/lib/talent/types";
 
+import styles from "./shortlist-drawer.module.css";
+
 export function ShortlistDrawer({
   open,
   onOpenChange,
@@ -29,16 +31,11 @@ export function ShortlistDrawer({
         </SheetHeader>
         <div className="mt-4 flex flex-col gap-2">
           {talents.length === 0 ? (
-            <p className="font-sans text-sm text-[#6B7280]">
-              No talent shortlisted yet — swipe right or tap Shortlist on a card.
-            </p>
+            <p className={`font-sans text-sm ${styles.emptyText}`}>No talent shortlisted yet — swipe right or tap Shortlist on a card.</p>
           ) : (
             talents.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] px-3 py-2"
-              >
-                <span className="truncate font-sans text-sm text-[#111]">{t.display_name}</span>
+              <div key={t.id} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${styles.row}`}>
+                <span className={`truncate font-sans text-sm ${styles.nameText}`}>{t.display_name}</span>
                 <Button type="button" variant="outline" size="sm" onClick={() => onRemove(t.id)}>
                   Remove
                 </Button>
