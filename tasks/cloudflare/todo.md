@@ -4,6 +4,15 @@
 **SSOT hierarchy:** **Linear status** → this file (**evidence + open work**) → root [`todo.md`](../../todo.md) (pointer only) → dated audits  
 **Doc map:** [`index.md`](./index.md) · **Audit:** [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) · J22 token: [`audit/j22-cloudflare-token.md`](./audit/j22-cloudflare-token.md) · **Hosting migration:** [`prime/j24-cloudflare-plan.md`](./prime/j24-cloudflare-plan.md) + [`prime/j24-progress-tracker.md`](./prime/j24-progress-tracker.md) · **Changelog:** [`changelog.md`](./changelog.md)
 
+### Hosting cutover tracker (2026-08-01) — read this first
+
+SSOT: **[`prime/01-cloudflare-hosting.md` § Progress tracker](./prime/01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)** · scores [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md) · docs PR [#736](https://github.com/amo-tech-ai/lumina-studio/pull/736).
+
+- 🔴 **HOLD** on **IPI-631** — prod Vercel; hosting lane **~72%** / cutover readiness **~20%**.
+- 🟡 **IPI-849** — #716 merged; #722 OPEN merge-ready (7.677 MiB in PR body).
+- Critical path: **IPI-848 → IPI-734 → prod bootstrap → IPI-707 → IPI-708 → (709 re-verify) → 627 re-proof → IPI-794 → IPI-631 → 48h soak** (734∥848 after 849; 850∥848; 847 deferred).
+- Rows below (2026-07-24) are **stale** (8.985 MiB / 595 In Progress / 709 Backlog) — use the 01 tracker.
+
 | Lane | Progress | Bar |
 |------|---------|-----|
 | Native AI | Creative Director native (IPI-751 ✅, PR #896); Production Planner next (IPI-752 ready) | `██░░░░░░░░` |

@@ -19,6 +19,59 @@ IPI-606
 
 Hyperdrive, native Workers AI routing, and legacy-worker retirement are listed as later platform phases rather than first-preview blockers. 
 
+## Progress tracker — Vercel → Cloudflare Workers cutover (2026-08-01)
+
+**Probed:** 2026-08-01 against `origin/main` @ `c63aa348` · lean pass — **no** `build:cf` / `npm ci`  
+**Companion plan scores:** [`04-plan-hosting.md`](04-plan-hosting.md) · **Lane pointer:** [`../todo.md`](../todo.md) · Docs PR: [#736](https://github.com/amo-tech-ai/lumina-studio/pull/736)
+
+### Executive summary
+
+| Metric | Value |
+|--------|------:|
+| **Hosting lane (architecture + preview + secrets + bundle under warn)** | **~72%** |
+| **Production cutover readiness (DNS / prod Worker / safety gates)** | **~20%** |
+| **GO/HOLD** | 🔴 **HOLD** |
+
+Production `www.ipix.co` still serves from **Vercel** (`server: Vercel`, rechecked 2026-08-01). Preview Worker `ipix-operator-preview` → `200` + `x-opennext: 1` on `https://ipix-operator-preview.sk-498.workers.dev`. Prod Worker hostname `ipix-operator.sk-498.workers.dev` → HTTP **404**; `wrangler deployments list` **NOT VERIFIED** (no API token) — treat prod bootstrap as missing until confirmed. Bundle: [#716](https://github.com/amo-tech-ai/lumina-studio/pull/716) **MERGED** (web-inspector stub on main); [#722](https://github.com/amo-tech-ai/lumina-studio/pull/722) **OPEN / MERGEABLE** with local CF gzip **7.677 MiB** in PR body (plus ~7.68 / 7.674 MiB from #716 CI) — fresh `build:cf` skipped. Size gate today is still **WARN @ 8.5 / FAIL @ 9.0** only — metafile ban-list hard-fail is **IPI-848** (not done). `verify:copilot` → **NO_VERIFY_COPILOT**. `MASTRA_STORAGE_MODE=noop` (report only).
+
+**Verdict:** 🔴 **HOLD** production cutover · next serial gate after #722 merges: **IPI-848** (WARN→FAIL + metafile ban-list).
+
+### Critical path
+
+```text
+IPI-848 → IPI-734 → approved prod Worker bootstrap → IPI-707 → IPI-708 → (IPI-709 done — re-verify alerts on prod Worker) → IPI-627 re-proof on prod → IPI-794 → IPI-631 → 48h soak
+```
+
+**Parallel OK:** **IPI-734** with **IPI-848** after **IPI-849** lands · **IPI-850** parallel with **IPI-848** · **IPI-847** deferred.  
+**Note:** **IPI-632** / **IPI-627** Done for **preview**; prod path still needs bootstrap + **IPI-707** / **IPI-708**.
+
+### Status table
+
+| Area | Full task name | Status | % | Evidence | Blocker | Next action |
+|------|----------------|--------|--:|----------|---------|-------------|
+| Bundle headroom (parent) | **IPI-706 · CF-BUNDLE-220 — Restore OpenNext Worker Bundle Headroom** | 🟢 Done | 100 | Linear Done; under 8.5 MiB warn via stubs (#716 CI ~7.68 MiB) | — | Keep gate; no fresh `build:cf` this audit |
+| Web-inspector stub | **IPI-849 · CF-BUNDLE-222 — Remove CopilotKit web-inspector from Worker** | 🟡 In Progress | 90 | #716 MERGED; stub **STUB_OK**; #722 OPEN merge-ready (`enableInspector` + contract; gzip **7.677 MiB** in PR body) | Await #722 merge | Merge #722 → Linear Done |
+| Metafile / WARN→FAIL | **IPI-848 · CF-BUNDLE-223 — Metafile regression gate + Worker bundle composition CI** | ⚪ Backlog | 0 | `check-worker-bundle-size.mjs` has WARN/FAIL MiB only — **no** metafile `banList` hard-fail | After 849 | Land ban-list FAIL + composition CI |
+| Bundle follow-up | **IPI-850** — title **NOT VERIFIED** in repo | ⚪ Backlog | 0 | Linear Backlog (parent); no local H1 | — | Parallel with 848 OK; confirm title in Linear |
+| Copilot verify wrapper | **IPI-734 · COPILOT-VERIFY-001 — `npm run verify:copilot` wrapper** | ⚪ Backlog | 0 | `rg verify:copilot` → **NO_VERIFY_COPILOT** | After 849 | Thin wrapper; parallel with 848 OK |
+| Preview smoke automation | **IPI-707 · CF-SMOKE-001 — Automate IPI-632 smoke in CI** | ⚪ Backlog | 0 | No automated remote Playwright gate | Prod bootstrap | Automate against preview URL |
+| Rollback rehearsal | **IPI-708 · CF-ROLLBACK-001 — Rollback rehearsal** | ⚪ Backlog | 0 | No dated rehearsal log | After smoke | One previous-% `versions deploy` |
+| Observability / alerts | **IPI-709 · CF-OBS-001 — Observability baseline** | 🟢 Done | 100* | Linear Done; cutover-alert re-proof on **prod** Worker **NOT VERIFIED** | Re-verify on prod | Confirm alerts before 631 |
+| Branch / ruleset | **IPI-794 · CF-GOV-001** (Linear title may still say **IPI-TBD · CF-GOV-001**) | ⚪ Backlog | 0 | Protection API **403** this run (NOT VERIFIED) | Admin | Required checks / ruleset before DNS |
+| Deploy security proof | **IPI-627 · CF-SEC-020 — Deployment Security Proof** | 🟢 Done (preview) | 100* | Linear Done; prod re-proof pending | Prod Worker | Re-proof after bootstrap |
+| Preview runtime smoke | **IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation** | 🟢 Done | 100 | Linear Done; preview `200` + `x-opennext: 1` today | — | Baseline for 707 |
+| OpenNext pipeline | **IPI-472 · INFRA-001 — OpenNext CI and Deployment Pipeline** | 🟢 Done | 100 | Linear Done; `cloudflare-secrets-sync.yml`; preview live | — | Drive approved prod bootstrap |
+| Infisical → CF secrets | **IPI-606 · CF-SEC-010 — Connect Infisical Secrets to Cloudflare Deployment** | 🟢 Done | 100 | Linear Done; secrets sync workflow present | — | Reuse for prod bootstrap |
+| AI Gateway auth | **IPI-595 · CF-GW-010 — Configure AI Gateway Authentication** | 🟢 Done | 100 | Linear Done (parent); prior PR #616 evidence | — | No cutover blocker |
+| DNS cutover | **IPI-631 · CF-MIG-810 — Production DNS Cutover and Rollback** | 🔴 HARD HOLD | 0 | Linear Backlog; prod still Vercel | Full critical path | Do not start |
+| Runtime storage (report) | `MASTRA_STORAGE_MODE` in `app/wrangler.jsonc` | ⚪ noop | — | `"noop"` top-level + preview + production | Out of scope | Do not flip here |
+| Prod host | `ipix.co` / `www.ipix.co` | 🔴 Vercel until 631 | — | `curl` → `server: Vercel` (2026-08-01) | IPI-631 HOLD | Stay on Vercel |
+| Preview Worker | `ipix-operator-preview` | 🟢 Live | — | `*.sk-498.workers.dev` 200; `*.amo-tech-ai.workers.dev` NXDOMAIN | — | Prefer `sk-498` in runbooks |
+| Prod Worker | `ipix-operator` | 🔴 Missing / NOT VERIFIED via wrangler | 0 | HTTP 404 on `*.sk-498.workers.dev`; deployments list no token | Approved bootstrap | Bootstrap after 848→734 GO |
+| Deferred | **IPI-847** | ⚪ Deferred | — | Explicitly deferred this pass | — | Do not pull into cutover critical path |
+
+\*Done in Linear for preview/ops slice; do not treat as production-cutover complete.
+
 # Cloudflare hosting migration tasks
 
 ## Phase 1 — Get the Next.js application hosted on Cloudflare
