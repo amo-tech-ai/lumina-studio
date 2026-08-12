@@ -1,0 +1,20 @@
+/* IPI-405 · token-only card styles */
+.card {
+  border-color: var(--color-border);
+}
+
+.cardSelected {
+  border-color: var(--color-text-primary);
+}
+
+.thumbMuted {
+  background: var(--color-bg-muted);
+}
+
+.titleText {
+  color: var(--color-text-primary);
+}
+
+.subtitleText {
+  color: var(--color-text-secondary);
+}

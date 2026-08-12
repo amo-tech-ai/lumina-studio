@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import type { TalentResult } from "@/lib/talent/types";
 import type { MatchScore } from "@/lib/talent/match-score";
 
+import styles from "./talent-card.module.css";
+
 function fitScoreColor(score: number): string {
   if (score >= 80) return "var(--color-dna-high)";
   if (score >= 60) return "var(--color-dna-mid)";
@@ -45,14 +47,13 @@ export function TalentSwipeCard({
     <div
       className={cn(
         "flex flex-col overflow-hidden rounded-2xl border bg-white transition-shadow hover:shadow-md",
+        selected ? styles.cardSelected : styles.card,
       )}
-      style={{ borderColor: selected ? "var(--color-text-primary)" : "var(--color-border)" }}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="relative block aspect-[3/4] w-full text-left"
-        style={{ background: "var(--color-bg-muted)" }}
+        className={`relative block aspect-[3/4] w-full text-left ${styles.thumbMuted}`}
         aria-label={`View match details for ${talent.display_name}`}
       >
         <span
@@ -63,16 +64,8 @@ export function TalentSwipeCard({
         </span>
       </button>
       <div className="flex flex-col gap-1.5 p-3">
-        <p
-          className="truncate font-sans text-sm font-semibold"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          {talent.display_name}
-        </p>
-        <p
-          className="truncate font-sans text-xs"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
+        <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
+        <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
           {repLabel(talent)} · {talent.rate_tier ?? "—"}
         </p>
         <Badge variant={talent.is_available ? "default" : "secondary"} className="w-fit">
@@ -124,25 +117,13 @@ export function TalentRow({
       aria-label={`View match details for ${talent.display_name}`}
       className={cn(
         "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 py-3 text-left transition-shadow hover:shadow-sm",
+        selected ? styles.cardSelected : styles.card,
       )}
-      style={{ borderColor: selected ? "var(--color-text-primary)" : "var(--color-border)" }}
     >
-      <div
-        className="h-12 w-12 shrink-0 rounded-full"
-        style={{ background: "var(--color-bg-muted)" }}
-        aria-hidden
-      />
+      <div className={`h-12 w-12 shrink-0 rounded-full ${styles.thumbMuted}`} aria-hidden />
       <div className="min-w-0 flex-1">
-        <p
-          className="truncate font-sans text-sm font-semibold"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          {talent.display_name}
-        </p>
-        <p
-          className="truncate font-sans text-xs"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
+        <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
+        <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
           {repLabel(talent)} · {talent.rate_tier ?? "—"} ·{" "}
           {talent.is_available ? "Available" : "Availability unconfirmed"}
         </p>

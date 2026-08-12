@@ -114,9 +114,9 @@ describe("TalentTab — shortlist rehydration", () => {
       c.resolve({ data: [talent("c", "Casey Vance")], error: null }),
     );
 
-    await waitFor(() => expect(screen.getByText(/Shortlist \(1\)/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: /shortlist.*1/i })).toBeTruthy());
 
-    fireEvent.click(screen.getByText(/Shortlist \(1\)/));
+    fireEvent.click(screen.getByRole("button", { name: /shortlist.*1/i }));
     expect(await screen.findByText("Casey Vance")).toBeTruthy();
   });
 });

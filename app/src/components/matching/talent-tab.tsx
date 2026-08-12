@@ -20,14 +20,17 @@ import type { TalentResult, TalentSearchFilters } from "@/lib/talent/types";
 import { TalentSwipeCard, TalentRow } from "./talent-card";
 import { ShortlistDrawer } from "./shortlist-drawer";
 
+import styles from "./talent-tab.module.css";
+
 type ViewMode = "swipe" | "list";
+type SortBy = "match" | "name" | "role" | "availability";
 
 const ANY = "any";
 
 export function TalentTab() {
   const [filters, setFilters] = useState<TalentSearchFilters>({});
   const [view, setView] = useState<ViewMode>("swipe");
-  const [sortBy, setSortBy] = useState<"match" | "name">("match");
+  const [sortBy, setSortBy] = useState<SortBy>("match");
   const [talents, setTalents] = useState<TalentResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -206,6 +209,8 @@ export function TalentTab() {
     if (!visibleRaw) return null;
     if (view !== "list") return visibleRaw;
     if (sortBy === "name") return [...visibleRaw].sort((a, b) => a.display_name.localeCompare(b.display_name));
+    if (sortBy === "role") return [...visibleRaw].sort((a, b) => Number(b.is_agency_represented) - Number(a.is_agency_represented));
+    if (sortBy === "availability") return [...visibleRaw].sort((a, b) => Number(b.is_available) - Number(a.is_available));
     const scoreById = new Map<string, number>();
     for (const t of visibleRaw) {
       scoreById.set(t.id, computeMatchScore({ talent: t, shootType: filters.shootType, representationPreferred: filters.representation }).score);
@@ -262,16 +267,12 @@ export function TalentTab() {
           </SelectContent>
         </Select>
 
-        <div
-          className="flex items-center gap-1.5 font-sans text-xs"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
+        <div className={`flex items-center gap-1.5 font-sans text-xs ${styles.secondaryText}`}>
           <span aria-hidden>Available</span>
           <input
             type="date"
             aria-label="Available from"
-            className="rounded-md border px-2 py-1 text-xs"
-            style={{ borderColor: "var(--color-border)" }}
+            className={`rounded-md border px-2 py-1 text-xs ${styles.dateInput}`}
             value={filters.dateStart ?? ""}
             onChange={(e) => setFilters((f) => ({ ...f, dateStart: e.target.value || undefined }))}
           />
@@ -279,8 +280,7 @@ export function TalentTab() {
           <input
             type="date"
             aria-label="Available until"
-            className="rounded-md border px-2 py-1 text-xs"
-            style={{ borderColor: "var(--color-border)" }}
+            className={`rounded-md border px-2 py-1 text-xs ${styles.dateInput}`}
             value={filters.dateEnd ?? ""}
             onChange={(e) => setFilters((f) => ({ ...f, dateEnd: e.target.value || undefined }))}
           />
@@ -288,18 +288,26 @@ export function TalentTab() {
 
         <div className="ml-auto flex flex-wrap items-center gap-2 min-w-0">
           {visible !== null ? (
-            <span className="font-mono text-xs" style={{ color: "var(--color-text-muted)" }} data-testid="result-count">
+            <span
+              className={`font-mono text-xs ${styles.mutedText}`}
+              data-testid="result-count"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {visible.length} models
             </span>
           ) : null}
           {visible !== null && view === "list" && visible.length > 1 ? (
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "match" | "name")}>
-              <SelectTrigger className="w-[132px]" aria-label="Sort by">
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+              <SelectTrigger className="w-[172px]" aria-label="Sort by">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="match">Sort: Best match</SelectItem>
                 <SelectItem value="name">Sort: Name A–Z</SelectItem>
+                <SelectItem value="role">Sort: Agency first</SelectItem>
+                <SelectItem value="availability">Sort: Available first</SelectItem>
               </SelectContent>
             </Select>
           ) : null}
@@ -309,14 +317,9 @@ export function TalentTab() {
             onClick={() => setShortlistOpen(true)}
             aria-label={`Open shortlist, ${shortlistedIds.size} items`}
           >
-            Shortlist <span className="font-mono" style={{ color: "var(--color-text-muted)" }}>({shortlistedIds.size})</span>
+            Shortlist <span className={`font-mono ${styles.mutedText}`}>({shortlistedIds.size})</span>
           </Button>
-          <div
-            className="flex overflow-hidden rounded-md border"
-            style={{ borderColor: "var(--color-border)" }}
-            role="group"
-            aria-label="View mode"
-          >
+          <div className={`flex overflow-hidden rounded-md border ${styles.bordered}`} role="group" aria-label="View mode">
             <Button
               type="button"
               variant={view === "swipe" ? "default" : "ghost"}
