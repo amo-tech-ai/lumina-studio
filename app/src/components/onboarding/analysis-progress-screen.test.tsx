@@ -36,12 +36,31 @@ vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({ mocked: true }),
 }));
 
+let capturedOnRestart: ReturnType<typeof vi.fn> | undefined;
+
 vi.mock("@/components/brand-hub/restart-analysis-button", () => ({
-  RestartAnalysisButton: ({ brandId }: { brandId: string }) => (
-    <button type="button" data-testid="restart-analysis-button" data-brand-id={brandId}>
-      Restart analysis
-    </button>
-  ),
+  RestartAnalysisButton: ({
+    brandId,
+    onRestart,
+    errorRole,
+  }: {
+    brandId: string;
+    onRestart?: () => void;
+    errorRole?: "alert" | "status";
+  }) => {
+    capturedOnRestart = onRestart;
+    return (
+      <button
+        type="button"
+        data-testid="restart-analysis-button"
+        data-brand-id={brandId}
+        data-error-role={errorRole ?? "none"}
+        onClick={onRestart}
+      >
+        Restart analysis
+      </button>
+    );
+  },
 }));
 
 import { AnalysisProgressScreen } from "./analysis-progress-screen";
@@ -55,6 +74,7 @@ const answers = {
 describe("AnalysisProgressScreen — IPI-835 · C", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnRestart = undefined;
     mockKickoff.mockResolvedValue({
       kind: "crawl_started",
       crawlId: "crawl-1",
@@ -332,6 +352,103 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(screen.getByTestId("restart-analysis-button").getAttribute("data-brand-id")).toBe(
       "brand-1",
     );
+    expect(screen.getByTestId("restart-analysis-button").getAttribute("data-error-role")).toBe(
+      "alert",
+    );
+  });
+
+  it("invoking onRestart from the probe button exits failed when status changes to crawl_running", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "listen_only",
+      intakeStatus: "failed",
+    });
+    mockProgress = {
+      intakeStatus: "failed",
+      crawl: null,
+      phase: "failed",
+      reconnect: mockReconnect,
+    };
+
+    const { rerender } = render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+    expect(capturedOnRestart).toBeDefined();
+
+    capturedOnRestart!();
+    expect(mockReconnect).toHaveBeenCalledTimes(1);
+
+    mockProgress = {
+      intakeStatus: "crawl_running",
+      crawl: { pages_crawled: 3, pages_found: 10 },
+      phase: "live",
+      reconnect: mockReconnect,
+    };
+    rerender(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Crawling your website/i)).toBeTruthy();
+    expect(screen.queryByText(/Analysis failed/i)).toBeNull();
+    expect(screen.queryByTestId("restart-analysis-button")).toBeNull();
+  });
+
+  it("invoking onRestart from the probe button exits failed when status changes to draft_ready", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "listen_only",
+      intakeStatus: "failed",
+    });
+    mockProgress = {
+      intakeStatus: "failed",
+      crawl: null,
+      phase: "failed",
+      reconnect: mockReconnect,
+    };
+
+    const onComplete = vi.fn();
+    const { rerender } = render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={onComplete}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+    capturedOnRestart!();
+    expect(mockReconnect).toHaveBeenCalledTimes(1);
+
+    mockProgress = {
+      intakeStatus: "draft_ready",
+      crawl: null,
+      phase: "idle",
+      reconnect: mockReconnect,
+    };
+    rerender(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={onComplete}
+        quietGapMs={0}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it("transitions from failed to running when server status updates after restart", async () => {
