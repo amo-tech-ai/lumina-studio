@@ -108,16 +108,21 @@ export const RestartAnalysisButton = ({
         return;
       }
 
-      // Realtime already carries live progress; refresh so the server-rendered
-      // page (and this banner's initialStatus) reflect the new intake_status.
-      // After onRestart + refresh, reset the lock so a second click can fire
-      // another POST if the Realtime listener missed the transition (e.g.
-      // connection dropped on a pure-client caller where router.refresh is a
-      // no-op). Brand Hub callers are replaced by the refresh anyway.
+      // Success path — clear any stale error (P2: error state reset), then
+      // refresh / callback / re-enable for retry.
+      //
+      // P2 double-POST guard: router.refresh() is fire-and-forget (no completion
+      // promise). On Brand Hub (SSR parent) the refresh replaces this component
+      // before the cooldown elapses. On pure-client onboarding (router.refresh is
+      // a no-op), the 1s cooldown window blocks a second POST from a double-click
+      // while still allowing a manual retry after the cooldown expires.
+      setError(null);
       router.refresh();
       onRestart?.();
-      inFlight.current = false;
-      setPending(false);
+      setTimeout(() => {
+        inFlight.current = false;
+        setPending(false);
+      }, 1000);
     } catch {
       setError(RESTART_ERROR_FALLBACK);
       inFlight.current = false;

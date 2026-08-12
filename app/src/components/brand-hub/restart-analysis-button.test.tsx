@@ -30,11 +30,14 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 const clickRestart = () =>
   fireEvent.click(screen.getByRole("button", { name: /Restart analysis/i }));
+
+const FAKE_TIMER_OPTIONS = { doNotFake: ["nextTick", "microtask"] } as const;
 
 describe("RestartAnalysisButton", () => {
   it("POSTs once to the restart route with same-origin credentials", async () => {
@@ -69,7 +72,6 @@ describe("RestartAnalysisButton", () => {
     expect((button as HTMLButtonElement).disabled).toBe(true);
 
     release(jsonResponse(200, { ok: true }));
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
   it("sends only one request when clicked twice in a row", async () => {
@@ -147,7 +149,9 @@ describe("RestartAnalysisButton", () => {
     expect(await screen.findByText(/Try again in a minute/i)).toBeTruthy();
   });
 
-  it("re-enables the button after a successful restart (onRestart reset)", async () => {
+  it("re-enables the button after a successful restart + 1s cooldown", async () => {
+    vi.useFakeTimers(FAKE_TIMER_OPTIONS);
+
     fetchMock.mockResolvedValue(
       jsonResponse(200, { ok: true, mode: "crawl_restarted", intakeStatus: "crawl_running" }),
     );
@@ -155,11 +159,14 @@ describe("RestartAnalysisButton", () => {
     render(<RestartAnalysisButton brandId={BRAND_ID} />);
     clickRestart();
 
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Restart analysis/i })).toBeTruthy(),
-    );
-    expect((screen.getByRole("button", { name: /Restart analysis/i }) as HTMLButtonElement).disabled).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /Restarting/i })).toBeTruthy();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    const button = screen.getByRole("button", { name: /Restart analysis/i });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("calls onRestart after a successful restart (for client-only callers)", async () => {
@@ -173,12 +180,30 @@ describe("RestartAnalysisButton", () => {
 
     await waitFor(() => expect(onRestart).toHaveBeenCalledTimes(1));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Restart analysis/i })).toBeTruthy(),
-    );
   });
 
-  it("allows a second retry after a missed Realtime event (button stays clickable)", async () => {
+  it("clears stale error text when a retry succeeds", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(409, { ok: false, code: "already_running", message: "in progress" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { ok: true, mode: "crawl_restarted", intakeStatus: "crawl_running" }),
+      );
+
+    render(<RestartAnalysisButton brandId={BRAND_ID} />);
+
+    clickRestart();
+    expect(await screen.findByText(/Analysis is already running/i)).toBeTruthy();
+
+    clickRestart();
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/Analysis is already running/i)).toBeNull();
+  });
+
+  it("blocks a second POST during the cooldown after a successful restart", async () => {
+    vi.useFakeTimers(FAKE_TIMER_OPTIONS);
+
     fetchMock.mockResolvedValue(
       jsonResponse(200, { ok: true, mode: "bi_restarted", intakeStatus: "analysis_running" }),
     );
@@ -186,12 +211,24 @@ describe("RestartAnalysisButton", () => {
     render(<RestartAnalysisButton brandId={BRAND_ID} onRestart={vi.fn()} />);
     clickRestart();
 
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
 
-    const button = await screen.findByRole("button", { name: /Restart analysis/i });
-    expect((button as HTMLButtonElement).disabled).toBe(false);
+    const button = screen.getByRole("button", { name: /Restarting/i });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(button);
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(500);
+    fireEvent.click(button);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(0);
+    const enabledButton = screen.getByRole("button", { name: /Restart analysis/i });
+    expect((enabledButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(enabledButton);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
