@@ -6,12 +6,12 @@
 
 | Lane | Progress | Bar |
 |------|---------|-----|
-| Native AI | Creative Director native (IPI-751 ✅, PR #896); Production Planner next (IPI-752 ready) | `██░░░░░░░░` |
+| Native AI | Early implementation stage (~10–15%) — only the first milestone (IPI-586) is complete; treat the % as a rough estimate, not a measured value | `██░░░░░░░░` |
 | Hosting (Vercel→Cloudflare cutover) | ~70% — architecture + preview proven; four cutover-safety gates (rollback, observability, automated smoke, branch protection) at 0% for 6 days. See `prime/j24-progress-tracker.md` for the row-by-row breakdown | `███████░░░` |
 | Edge | ~95% | `█████████░` |
 
 ```text
-Native:  586 ✅ → 607 🟡 → 750 → W1(753) → W2(751 ✅) → W3(752 ready) → 591 → W4(754) → 609 → 592
+Native:  586 ✅ → 607 🟡 → 750 → W1–W3 → 591 → W4–W6 → 609 → 592
 Hosting: 472 ✅ → 632 ✅ → 788 ✅ (Vercel unblocked) → 706 🟡 (bundle, In Progress) → 708+709+707+763 (all 🔴 0%) → 631 (DNS, blocked on those four)
 Edge:    695 ✅ → 697 ✅ → 699 ✅ → 742 ✅ · 698 parked
 ```
@@ -57,10 +57,10 @@ Keep `BI_PROVIDER` **ABSENT** until product flips Brand Hub.
 | 1 | [IPI-607](https://linear.app/amo100/issue/IPI-607) FLAGS | Per-agent routing switches | 🟡 | 85 | PR #565 — merge |
 | 2 | [IPI-750](https://linear.app/amo100/issue/IPI-750) W0 | `cfEnv` + resolver; no flips | ⚪ | 0 | After #565 |
 | 3 | [IPI-753](https://linear.app/amo100/issue/IPI-753) W1 | Marketing canary | ⚪ | 0 | After W0 |
-| 4 | [IPI-751](https://github.com/amo-tech-ai/lumina-studio/pull/896) W2 | Creative Director native | ✅ | 100 | PR #896 merged 2026-08-12; build + tests + TS green |
-| 5 | [IPI-752](https://linear.app/amo100/issue/IPI-752) W3 | Production Planner | ⚪ | 0 | Ready — Creative Director proven; next agent, same harness |
+| 4 | [IPI-751](https://linear.app/amo100/issue/IPI-751) W2 | Four simple agents | ⚪ | 0 | After W1 |
+| 5 | [IPI-752](https://linear.app/amo100/issue/IPI-752) W3 | Production Planner | ⚪ | 0 | Unblocks 591 |
 | 6 | [IPI-591](https://linear.app/amo100/issue/IPI-591) tools | Multi-turn on CF | ⛔ | 0 | After W3 |
-| 7 | [IPI-754](https://linear.app/amo100/issue/IPI-754) W4 | Brand intelligence | ⛔ | 0 | After 591 — Creative Director now done, narrows IPI-754 scope to brand-intelligence only |
+| 7 | [IPI-754](https://linear.app/amo100/issue/IPI-754) W4 | Structured output | ⛔ | 0 | After 591 |
 | 8 | [IPI-755](https://linear.app/amo100/issue/IPI-755) W5 | CRM + privacy | ⚪ | 0 | Needs 596/605 |
 | 9 | [IPI-756](https://linear.app/amo100/issue/IPI-756) W6 | 100% rollout | ⚪ | 0 | Unblocks 609 |
 | 10 | [IPI-609](https://linear.app/amo100/issue/IPI-609) soak | Zero legacy | ⛔ | 0 | After W6 |
@@ -137,16 +137,6 @@ Source: the standard canary gate already defined per-wave in [IPI-594](https://l
 
 </details>
 
-<details>
-<summary><strong>Native AI agents — click for evidence</strong></summary>
-
-| Done | Plain English | Evidence |
-|------|---------------|----------|
-| **IPI-769** | Routing harness (agent-migration contract) | PR #886, merged 2026-08-09. `agent-migration.contract.test.ts` with 23 test cases covering W1-W5 + planned agents. Provides the contract IPI-751 implements. |
-| **IPI-751** | Creative Director → Cloudflare-native routing | PR #896 merged 2026-08-12. `.nvmrc` fix (remove `# debug`) → Node 24.19.0 on Cloudflare Builds. `resolveAgentModel` + structured tier + nested `draftCampaignBrief` routing. Build `49e091c6` success, Worker version `94c19cac` deployed. 65 focused tests pass (creative-director.routing 4/4, agent-migration.contract 29/29, agents/index 17/17, draftCampaignBrief 15/15). `npx tsc --noEmit` clean. |
-
-</details>
-
 ---
 
 ## Verified facts (`origin/main` · 2026-07-22)
@@ -196,7 +186,7 @@ Source: the standard canary gate already defined per-wave in [IPI-594](https://l
 | CF-M1 Native proof | One `ipix-prod` call | Smoke + log id | IPI-586 ✅ |
 | CF-M1b Preview | Remote SSE + agent turn | Preview smoke | IPI-632 ✅ |
 | CF-EDGE-M1 | BI via Gateway + rollback ≤5 min | Canary suite | IPI-699 ✅ |
-| CF-M3 Agent migration | Waves behind flags; tools work | 607→W6 + IPI-591 | **Creative Director native** (IPI-751 ✅, PR #896) |
+| CF-M3 Agent migration | Waves behind flags; tools work | 607→W6 + IPI-591 | In progress |
 | CF-M4 Cutover | Zero legacy; Worker deleted | IPI-609 + 592 | Not started |
 
 ---
@@ -212,7 +202,7 @@ Source: the standard canary gate already defined per-wave in [IPI-594](https://l
 - [ ] IPI-592 custom Worker deleted
 - [ ] IPI-631 DNS (not next)
 
-**Creative Director is on the native CF path** (IPI-751, PR #896) — first agent flipped. `brand-intelligence` (IPI-754) is now the remaining W4 agent. Do not claim full production AI cutover until W6 completes.
+**Do not claim production AI cutover** — foundation + Edge proven; agent flips still 0%.
 
 ---
 
