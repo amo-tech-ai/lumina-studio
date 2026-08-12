@@ -14,7 +14,6 @@
  */
 import { createWorkersAI } from "workers-ai-provider";
 import type { RequestContext } from "@mastra/core/request-context";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { resolveAgentRoutingOutcome } from "./agent-routing";
 import { AGENT_ROUTING_ENV_KEYS } from "./agent-routing-keys.mjs";
@@ -92,13 +91,12 @@ function readCfEnv(requestContext: RequestContext): CfEnvLike | undefined {
 }
 
 /**
- * IPI-752 · CF-MIG-230-W3 — restores `cfEnv` on a RequestContext when it is
- * missing. Covers the durable-resume gap: when Mastra's run-registry expires
- * during a long HITL suspension (>10 min), the resume path in
- * @mastra/core/agent/durable creates a fresh, empty RequestContext. Without
- * this restoration the model callback silently selects legacy for the next
- * LLM step. Rehydrates from the live Cloudflare runtime only (never
- * process.env — IPI-607); silent no-op outside Cloudflare.
+ * IPI-750 · CF-MIG-230-W0-HARDEN — Make Shared Cloudflare Model Resolution Resume-Safe
+ * Restores `cfEnv` on a RequestContext when it is missing. Covers the durable-resume gap:
+ * when Mastra's run-registry expires during a long HITL suspension (>10 min), the resume path in
+ * @mastra/core/agent/durable creates a fresh, empty RequestContext. Without this restoration
+ * the model callback silently selects legacy for the next LLM step. Rehydrates from the live
+ * Cloudflare runtime only (never process.env — IPI-607); silent no-op outside Cloudflare.
  */
 export async function ensureCfEnvOnContext(requestContext: RequestContext): Promise<void> {
   if (readCfEnv(requestContext)) return;
