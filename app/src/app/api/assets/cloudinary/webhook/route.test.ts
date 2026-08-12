@@ -1337,29 +1337,24 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
 
     it("approved legacy public-ID mirror → newer version resets to pending", async () => {
-      // Simulate existing mirror at version 5 approved, incoming version 6 with same public_id (overwrite)
-      cloudinaryAssetsSelectMaybeSingle.mockResolvedValueOnce({
-        data: { id: "mirror-1", asset_id: "asset-1", version: 5, public_id: "ipix/a.jpg", secure_url: "https://..." },
-        error: null,
-      });
-      // Second lookup for overwrite check will find same mirror, but isNewerVersion true (6 > 5)
+      // Verify actual update payload includes moderation_status pending for newer version (isNewerVersion true)
+      cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "mirror-1", asset_id: "asset-1", version: 5, public_id: "ipix/old.jpg", secure_url: "https://..." }, error: null });
+      mockUpdateEqResult({ data: [{ id: "mirror-1" }], error: null, count: 1 });
       const { POST } = await importRoute();
       const res = await POST(
         makeRequest({
           ...UPLOAD_PAYLOAD,
-          public_id: "ipix/a.jpg",
+          public_id: "ipix/new.jpg",
           version: 6,
           asset_id: "new-asset-id",
         }),
       );
       expect(res.status).toBe(200);
-      // Verify that the update included moderation_status pending reset is handled via RPC path tested above
-      expect(mockRpc).not.toHaveBeenCalled(); // upload path, not moderation, but version handling proven via stale test
+      expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(expect.objectContaining({ moderation_status: "pending" }));
     });
 
-    it("approved → rejected → approved without request_id creates two approved events (not deduped)", async () => {
-      // First approved with request_id null → fallback assetId:version:moderated:approved
-      mockRpc.mockResolvedValue({ data: null, error: null });
+    it("moderation without request_id forwards p_request_id null to RPC (UUID generated after lock)", async () => {
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
       const { POST } = await importRoute();
       await POST(
@@ -1371,13 +1366,14 @@ describe("POST /api/assets/cloudinary/webhook", () => {
           request_id: null as unknown as string,
         } as unknown as Record<string, unknown>),
       );
-      // Second approved after reject, same version, no request_id → fallback same as first, but should be considered duplicate per current fallback (no timestamp) — this test documents current behavior: second will be deduped
-      // After fix to use UUID fallback, second will be distinct
-      expect(mockRpc).toHaveBeenCalled();
+      expect(mockRpc).toHaveBeenCalledWith(
+        "handle_moderation_event",
+        expect.objectContaining({ p_request_id: null, p_moderation_status: "approved" }),
+      );
     });
 
-    it("concurrent same-status retry with same request_id creates no duplicate", async () => {
-      mockRpc.mockResolvedValue({ data: null, error: null });
+    it("sequential same-status deliveries both reach RPC (idempotency via ON CONFLICT in DB)", async () => {
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
       const { POST } = await importRoute();
       const payload = {
@@ -1389,8 +1385,23 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       } as unknown as Record<string, unknown>;
       await POST(makeRequest(payload));
       await POST(makeRequest(payload));
-      // Second should be no-op via ON CONFLICT (request_id, asset_id)
       expect(mockRpc).toHaveBeenCalledTimes(2);
+      // Duplicate-row verification moved to supabase/tests/database/handle_moderation_event.test.ts (real DB, counts asset_events)
+    });
+
+    it("unchanged RPC result produces no ai_agent_logs insert", async () => {
+      mockRpc.mockResolvedValue({ data: "unchanged", error: null });
+      const { POST } = await importRoute();
+      await POST(
+        makeRequest({
+          notification_type: "moderation",
+          asset_id: "asset-id-1",
+          version: 5,
+          moderation_status: "approved",
+          request_id: "same-req-id",
+        } as unknown as Record<string, unknown>),
+      );
+      expect(aiAgentLogsInsert).not.toHaveBeenCalled();
     });
   });
 });
