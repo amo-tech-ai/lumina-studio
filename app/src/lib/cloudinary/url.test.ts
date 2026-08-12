@@ -28,6 +28,26 @@ describe("cloudinaryImageUrl", () => {
     const url = cloudinaryImageUrl("some-public-id", { w: 100, h: 100, crop: "thumb" });
     expect(url).toContain("c_thumb,w_100,h_100,g_auto");
   });
+
+  it("returns empty string for forbidden chars, invalid dimensions, or newline-contaminated IDs", async () => {
+    const { cloudinaryImageUrl } = await importUrl();
+    expect(cloudinaryImageUrl("", { w: 100, h: 100 })).toBe("");
+    expect(cloudinaryImageUrl("   ", { w: 100, h: 100 })).toBe("");
+    expect(cloudinaryImageUrl("invalid id", { w: 100, h: 100 })).toBe("");
+    expect(cloudinaryImageUrl("valid-id", { w: 0, h: 100 })).toBe("");
+    expect(cloudinaryImageUrl("valid-id", { w: 100, h: -1 })).toBe("");
+    expect(cloudinaryImageUrl("valid-id", { w: Number.NaN, h: 100 })).toBe("");
+    expect(cloudinaryImageUrl("valid-id", { w: 100, h: Number.POSITIVE_INFINITY })).toBe("");
+    expect(cloudinaryImageUrl("valid\ninvalid id!", { w: 100, h: 100 })).toBe("");
+  });
+
+  it("accepts public IDs containing dots, @, ~, and non-ASCII Unicode (valid Cloudinary chars)", async () => {
+    const { cloudinaryImageUrl } = await importUrl();
+    expect(cloudinaryImageUrl("folder/image.jpg", { w: 100, h: 100 })).toContain("folder/image.jpg");
+    expect(cloudinaryImageUrl("user@domain.jpg", { w: 100, h: 100 })).toContain("user@domain.jpg");
+    expect(cloudinaryImageUrl("path~with~tilde.jpg", { w: 100, h: 100 })).toContain("path~with~tilde.jpg");
+    expect(cloudinaryImageUrl("café/look", { w: 100, h: 100 })).toContain("caf%C3%A9/look");
+  });
 });
 
 describe("presetTransformString / cropTransformString", () => {

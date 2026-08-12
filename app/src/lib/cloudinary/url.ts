@@ -59,10 +59,16 @@ export function cloudinaryImageUrl(
   publicId: string,
   { w, h, crop = "fill" }: { w: number; h: number; crop?: "fill" | "thumb" },
 ): string {
-  return getCldImageUrl(
-    { src: publicId, width: w, height: h, crop, gravity: "auto" },
-    { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
-  );
+  if (!publicId || typeof publicId !== "string" || !publicId.trim() || /[\s?&#%{}\[\]\\:*"<>|]/.test(publicId)) return "";
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return "";
+  try {
+    return getCldImageUrl(
+      { src: publicId, width: w, height: h, crop, gravity: "auto" },
+      { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
+    );
+  } catch {
+    return "";
+  }
 }
 
 // IPI-257 074e / IPI-430 — transform presets (single source of truth per MEDIA-MAP §5).
