@@ -5,14 +5,16 @@
 import { TalentMatchTabs } from "@/components/matching/talent-match-tabs";
 import { TalentTab } from "@/components/matching/talent-tab";
 
+import styles from "./matching.module.css";
+
 export default function MatchingPage() {
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <div>
-        <h1 className="font-sans text-lg font-semibold text-[#111]">Matching</h1>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Matching</h1>
       </div>
       <TalentMatchTabs />
-      <div className="flex-1 overflow-hidden">
+      <div className={styles.content}>
         <TalentTab />
       </div>
     </div>
