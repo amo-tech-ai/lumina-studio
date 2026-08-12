@@ -1267,7 +1267,7 @@ export async function POST(request: Request) {
 
       // IPI-639 P1/P2: atomic moderation update + audit via single RPC (provider moderation, not business approval)
       // Business approval remains separate (asset_approvals with actorId), moderation audit is kind moderated
-      const { error: rpcErr } = await db.rpc("handle_moderation_event", {
+      const { data: rpcData, error: rpcErr } = await db.rpc("handle_moderation_event", {
         p_cloudinary_asset_id: assetId,
         p_version: typeof version === "number" ? version : null,
         p_moderation_status: nextStatus,
@@ -1280,7 +1280,10 @@ export async function POST(request: Request) {
         // 23505 is handled inside function via ON CONFLICT DO NOTHING, so any other error is transient
         return NextResponse.json({ error: "Transient moderation persistence failure" }, { status: 503 });
       }
-      // Brand-aware audit log (non-fatal, after atomic RPC)
+      if (rpcData === "unchanged") {
+        return NextResponse.json({ ok: true, ignored: "moderation-no-change" });
+      }
+      // Brand-aware audit log (non-fatal, only when changed)
       const { data: mirrorForLog } = await db
         .from("cloudinary_assets")
         .select("asset_id")

@@ -1313,11 +1313,12 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
 
     it("moderation approved updates moderation_status and inserts approved event", async () => {
-      mockRpc.mockResolvedValue({ data: null, error: null });
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: { id: "m1", asset_id: "asset-1", version: 5 }, error: null });
       const { POST } = await importRoute();
       assetEventsInsert.mockClear();
       mockRpc.mockClear();
+      mockRpc.mockResolvedValue({ data: "changed", error: null });
       const res = await POST(
         makeRequest({
           notification_type: "moderation",

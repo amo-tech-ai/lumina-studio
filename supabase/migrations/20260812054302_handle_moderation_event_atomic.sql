@@ -8,10 +8,10 @@ create or replace function public.handle_moderation_event(
   p_request_id text,
   p_moderation_kind text,
   p_public_id text
-) returns void
+) returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   v_asset_id uuid;
@@ -39,12 +39,12 @@ begin
 
   if not found then
     -- Phantom asset — no mirror, skip audit (do not create false history)
-    return;
+    return 'unchanged';
   end if;
 
   -- Same-status retry no-op: if already in desired status for that exact version, skip (idempotent, no new audit)
   if v_current_status = p_moderation_status then
-    return;
+    return 'unchanged';
   end if;
 
   -- For a real transition, update status and insert atomically (single transaction, already in function)
@@ -59,17 +59,22 @@ begin
   end if;
 
   if not found then
-    return;
+    return 'unchanged';
   end if;
 
   -- Use Cloudinary request ID when present; when absent, generate UUID only after locked row confirms real transition
+  -- ponytail: generated UUIDs intentionally prevent ON CONFLICT deduplication for notifications without Cloudinary request ID.
+  -- Known limitation: only same-status early returns prevent duplicates; retries after intervening status changes (approved→rejected→approved same version, no request_id) can create duplicate audit rows.
+  -- Upgrade path: persist stable provider delivery ID (e.g., X-Cld-Notification-Id header) and use it as request_id instead of random fallback.
   if p_request_id is null then
     p_request_id := gen_random_uuid()::text;
   end if;
 
   insert into public.asset_events (asset_id, cloudinary_asset_id, version, kind, request_id, reason, metadata)
     values (v_asset_id, p_cloudinary_asset_id, coalesce(v_version, p_version), v_kind, p_request_id, p_moderation_kind, jsonb_build_object('public_id', p_public_id))
-    on conflict (request_id, asset_id) do nothing;
+    on conflict (request_id, asset_id) where request_id is not null do nothing;
+
+  return 'changed';
 end;
 $$;
 
