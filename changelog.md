@@ -17,6 +17,12 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-11 — Onboarding: require website URL, remove dead-end labeling (IPI-989)
+
+**IPI-989 · ONBOARD-001 — Require website URL in brand onboarding**
+
+- **Require website URL field** (`bdebba44a`, [#899](https://github.com/amo-tech-ai/lumina-studio/pull/899)) — brand onboarding now requires a website URL before proceeding, removing the optional labeling field and a dead-end path that allowed onboarding without critical brand identity data.
+
 ### 2026-08-09 — App quality: test coverage + OAuth preview host trust
 
 **APP QUALITY — Add tests for notifications, uploads, AI routing, and dashboard data**
