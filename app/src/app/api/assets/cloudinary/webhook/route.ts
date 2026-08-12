@@ -45,6 +45,8 @@ type CloudinaryNotification = {
   context?: unknown;
   /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
   signature_key?: string;
+  /** Cloudinary request id for idempotency — top-level request_id or header X-Cld-Request-Id. */
+  request_id?: string;
   /** Delete notifications often omit top-level public_id and use resources[]. */
   resources?: Array<{ public_id?: string; asset_id?: string }>;
 };
@@ -255,6 +257,60 @@ async function logNonFatal(
     if (error) console.error("[cloudinary/webhook] audit log (non-fatal):", error.message);
   } catch (e) {
     console.error("[cloudinary/webhook] audit log (non-fatal):", e);
+  }
+}
+
+function resolveAssetEventKind(
+  payload: CloudinaryNotification,
+  priorLookup: MirrorLookup,
+  publicId: string,
+): "upload" | "rename" | "overwrite" {
+  if (payload.notification_type === "rename") return "rename";
+  if (priorLookup.kind === "found") {
+    const stored = priorLookup.mirror.public_id;
+    if (stored != null && stored === publicId) return "overwrite";
+    if (stored != null && stored !== publicId) return "rename";
+  }
+  return "upload";
+}
+
+async function insertAssetEvent(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  fields: {
+    assetId: string;
+    cloudinaryAssetId?: string;
+    version?: number;
+    kind: string;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+    requestId?: string | null;
+  },
+): Promise<{ ok: boolean; retryable?: boolean }> {
+  try {
+    const row: Record<string, unknown> = {
+      asset_id: fields.assetId,
+      cloudinary_asset_id: fields.cloudinaryAssetId ?? null,
+      version: fields.version ?? null,
+      kind: fields.kind,
+      reason: fields.reason ?? null,
+      metadata: fields.metadata ?? {},
+    };
+    if (fields.requestId) row.request_id = fields.requestId;
+    const { error } = await db.from("asset_events").insert(row as never);
+    if (error) {
+      // 23505 = unique violation on request_id — duplicate delivery, treat as success (idempotent)
+      const code = (error as { code?: string }).code;
+      if (code === "23505") {
+        console.warn("[cloudinary/webhook] asset_events duplicate request_id ignored (idempotent):", fields.requestId);
+        return { ok: true };
+      }
+      console.error("[cloudinary/webhook] asset_events insert (non-fatal):", error.message);
+      return { ok: false, retryable: true };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("[cloudinary/webhook] asset_events insert (non-fatal):", e);
+    return { ok: false, retryable: true };
   }
 }
 
@@ -889,6 +945,31 @@ async function handleUpload(
     output: { asset_id: canonicalAssetId },
   });
 
+  // IPI-441 — append-only timeline (non-fatal, exact version binding)
+  // Eager notifications are derived-image callbacks after upload — not a new version, so skip timeline.
+  if (payload.notification_type === "eager") {
+    // No asset_events row for eager; upload already logged the version.
+  } else {
+    // request_id may come from body or X-Cld-Request-Id header (injected into payload)
+    const requestId = payload.request_id?.trim() || undefined;
+    // Deterministic fallback for idempotency when header/body absent: bind to provider identity+version
+    const fallbackRequestId =
+      identity.cloudinary_asset_id && identity.version != null
+        ? `${identity.cloudinary_asset_id}:${identity.version}:${resolveAssetEventKind(payload, priorLookup, publicId)}`
+        : undefined;
+    const inserted = await insertAssetEvent(db, {
+      assetId: canonicalAssetId,
+      cloudinaryAssetId: identity.cloudinary_asset_id,
+      version: identity.version,
+      kind: resolveAssetEventKind(payload, priorLookup, publicId),
+      metadata: payload.from_public_id ? { from_public_id: payload.from_public_id } : {},
+      requestId: requestId ?? fallbackRequestId,
+    });
+    if (!inserted.ok && inserted.retryable) {
+      return { retryable: true };
+    }
+  }
+
   // Renames do not change bytes — skip DNA re-score.
   if (
     payload.notification_type !== "rename" &&
@@ -964,18 +1045,41 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
   const providerIds = deleteProviderAssetIds(payload);
   const publicIds = deletePublicIds(payload);
   if (providerIds.length === 0 && publicIds.length === 0) return;
+  const deleteRequestId = payload.request_id?.trim() || undefined;
 
   if (providerIds.length > 0) {
     for (const providerId of providerIds) {
+      const { data: mirror, error: lookupErr } = await db
+        .from("cloudinary_assets")
+        .select("id, asset_id, version")
+        .eq("cloudinary_asset_id", providerId)
+        .maybeSingle();
       const { error } = await db
         .from("cloudinary_assets")
         .update({ status: "archived" })
         .eq("cloudinary_asset_id", providerId);
       if (error) console.error("[cloudinary/webhook] delete->archive by provider id failed:", error.message);
+      else if (!lookupErr && mirror?.asset_id) {
+        const fallback = `${providerId}:${(mirror as { version?: number | null }).version ?? "0"}:archived`;
+        await insertAssetEvent(db, {
+          assetId: mirror.asset_id,
+          cloudinaryAssetId: providerId,
+          version: (mirror as { version?: number | null }).version ?? undefined,
+          kind: "archived",
+          metadata: { public_id: publicIds[0] ?? null },
+          requestId: deleteRequestId ?? fallback,
+        });
+      }
     }
     // Also archive legacy mirrors (null cloudinary_asset_id) that still match this public_id.
     // Scoped to null identity so a reused public_id on a different asset is not archived.
     for (const publicId of publicIds) {
+      const { data: legacyMirror } = await db
+        .from("cloudinary_assets")
+        .select("id, asset_id, version")
+        .eq("public_id", publicId)
+        .is("cloudinary_asset_id", null)
+        .maybeSingle();
       const { error } = await db
         .from("cloudinary_assets")
         .update({ status: "archived" })
@@ -983,14 +1087,40 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
         .is("cloudinary_asset_id", null);
       if (error) {
         console.error("[cloudinary/webhook] delete->archive legacy null-identity failed:", error.message);
+      } else if (legacyMirror?.asset_id) {
+        const fallback = `${publicId}:${(legacyMirror as { version?: number | null }).version ?? "0"}:archived`;
+        await insertAssetEvent(db, {
+          assetId: (legacyMirror as { asset_id: string }).asset_id,
+          cloudinaryAssetId: undefined,
+          version: (legacyMirror as { version?: number | null }).version ?? undefined,
+          kind: "archived",
+          metadata: { public_id: publicId },
+          requestId: deleteRequestId ?? fallback,
+        });
       }
     }
     return;
   }
 
   for (const publicId of publicIds) {
+    const { data: mirror } = await db
+      .from("cloudinary_assets")
+      .select("id, asset_id, version")
+      .eq("public_id", publicId)
+      .maybeSingle();
     const { error } = await db.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
     if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);
+    else if (mirror?.asset_id) {
+      const fallback = `${publicId}:${(mirror as { version?: number | null }).version ?? "0"}:archived`;
+      await insertAssetEvent(db, {
+        assetId: (mirror as { asset_id: string }).asset_id,
+        cloudinaryAssetId: undefined,
+        version: (mirror as { version?: number | null }).version ?? undefined,
+        kind: "archived",
+        metadata: { public_id: publicId },
+        requestId: deleteRequestId ?? fallback,
+      });
+    }
   }
 }
 
@@ -1067,6 +1197,12 @@ export async function POST(request: Request) {
     payload = JSON.parse(verification.rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  // IPI-441 — inject X-Cld-Request-Id header for idempotent dedup when body omits request_id
+  const headerRequestId = request.headers.get("x-cld-request-id")?.trim();
+  if (headerRequestId && !payload.request_id) {
+    payload.request_id = headerRequestId;
   }
 
   const db = createSupabaseAdminClient();
