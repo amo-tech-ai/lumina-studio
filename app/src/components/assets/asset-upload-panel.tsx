@@ -310,7 +310,7 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
   const uploadConfigured = isCloudinaryUploadConfigured();
   const { cloudName, apiKey } = cloudinaryUploadWidgetConfig();
 
-  const uploadOptions: CloudinaryUploadWidgetOptions = {
+  const uploadOptions: CloudinaryUploadWidgetOptions & { moderation: string } = {
     sources: ["local"],
     multiple: true,
     maxFiles: 10,
