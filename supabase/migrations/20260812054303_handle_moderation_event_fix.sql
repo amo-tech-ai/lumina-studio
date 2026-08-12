@@ -1,5 +1,4 @@
--- IPI-639 P2: atomic moderation update + audit (provider moderation, not business approval)
--- Business approval remains separate via asset_approvals or asset_events with actorId (UI), not this webhook
+-- IPI-639 fix: atomic moderation, version-bound FOR UPDATE, same-status no-op, UUID after lock, returns void (remote ledger)
 
 create or replace function public.handle_moderation_event(
   p_cloudinary_asset_id text,
