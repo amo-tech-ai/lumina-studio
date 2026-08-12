@@ -310,13 +310,14 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
   const uploadConfigured = isCloudinaryUploadConfigured();
   const { cloudName, apiKey } = cloudinaryUploadWidgetConfig();
 
-  const uploadOptions: CloudinaryUploadWidgetOptions = {
+  const uploadOptions: CloudinaryUploadWidgetOptions & { moderation: string } = {
     sources: ["local"],
     multiple: true,
     maxFiles: 10,
     maxFileSize: 50_000_000,
     clientAllowedFormats: ["jpg", "jpeg", "png", "webp", "mp4", "mov"],
     resourceType: "auto",
+    moderation: "manual",
     context: { brand_id: brandId },
     // Server (/api/assets/cloudinary-sign) is the sole authority for taxonomy folder.
     prepareUploadParams: (cb: (result: unknown) => void, params: unknown) => {
