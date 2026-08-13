@@ -122,7 +122,7 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
           <Link href="/app/matching">Matching</Link> <span>›</span> Talent <span>›</span> <span className={styles.breadcrumbActive}>{handle}</span>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="outline" size="sm" className={styles.actionBtn} onClick={() => {}} disabled title="Add to shortlist not yet available">
+          <Button variant="outline" size="sm" className={styles.actionBtn} disabled title="Add to shortlist not yet available">
             <Bookmark className={styles.actionIcon} /> Add to shortlist
           </Button>
           <Link href={`/app/matching/talent/${profile.id}/book`}>
