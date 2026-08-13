@@ -19,6 +19,7 @@ const OPERATOR_SECTIONS = [
   "onboarding",
   "planner",
   "preview",
+  "talent",
 ] as const;
 
 // Top-level (operator)/app directories that are detail-only entry points

@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { User } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
@@ -58,11 +59,11 @@ export function TalentSwipeCard({
         selected ? styles.cardSelected : styles.card,
       )}
     >
-      <button
-        type="button"
+      <Link
+        href={`/app/talent/profile?talent=${talent.id}`}
         onClick={onSelect}
         className={`relative block aspect-[3/4] w-full overflow-hidden text-left ${styles.thumbMuted}`}
-        aria-label={`View match details for ${talent.display_name}`}
+        aria-label={`View profile for ${talent.display_name}`}
       >
         {showImage ? (
           <img
@@ -85,7 +86,7 @@ export function TalentSwipeCard({
         >
           {match.score}%
         </span>
-      </button>
+      </Link>
       <div className="flex flex-col gap-1.5 p-3">
         <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
         <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
@@ -132,17 +133,10 @@ export function TalentRow({
   // another <button> (invalid HTML, inconsistent a11y/browser behavior); the
   // shortlist toggle needs its own independent interactive control.
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <Link
+      href={`/app/talent/profile?talent=${talent.id}`}
       onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      aria-label={`View match details for ${talent.display_name}`}
+      aria-label={`View profile for ${talent.display_name}`}
       className={cn(
         "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 py-3 text-left transition-shadow hover:shadow-sm",
         selected ? styles.cardSelected : styles.card,
@@ -189,6 +183,6 @@ export function TalentRow({
       >
         {shortlisted ? "★" : "☆"}
       </Button>
-    </div>
+    </Link>
   );
 }
