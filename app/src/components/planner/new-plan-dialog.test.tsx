@@ -304,4 +304,90 @@ describe("NewPlanDialog", () => {
     renderDialog({ variant: "empty" });
     expect(screen.getByTestId("new-plan-trigger-empty")).toBeDefined();
   });
+
+  // IPI-716 Finding B — auto-fill ownership: A→B updates while owned, custom name survives
+  it("updates auto-filled name when switching entity A→B without manual edit", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "shoot:shoot-1");
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Summer Lookbook");
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "campaign:camp-1");
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Q3 Retail Push");
+  });
+
+  it("preserves manually edited custom name when switching entity", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "shoot:shoot-1");
+    await user.clear(screen.getByLabelText("Plan name"));
+    await user.type(screen.getByLabelText("Plan name"), "My Custom Plan");
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "campaign:camp-1");
+
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("My Custom Plan");
+  });
+
+  it("preserves manual edit even when it matches the auto-filled label", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "shoot:shoot-1");
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Summer Lookbook");
+    // User clears and retypes the same string manually — must be treated as manual
+    await user.clear(screen.getByLabelText("Plan name"));
+    await user.type(screen.getByLabelText("Plan name"), "Summer Lookbook");
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "campaign:camp-1");
+
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Summer Lookbook");
+  });
+
+  it("re-enables auto-fill after clearing custom name then switching entity", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "shoot:shoot-1");
+    await user.clear(screen.getByLabelText("Plan name"));
+    await user.type(screen.getByLabelText("Plan name"), "Custom");
+    await user.clear(screen.getByLabelText("Plan name"));
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "campaign:camp-1");
+
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Q3 Retail Push");
+  });
+
+  // IPI-716 Finding C — local date default
+  it("defaults planned start to local YYYY-MM-DD (not UTC slice)", async () => {
+    const { todayIsoDate } = await import("./new-plan-dialog");
+    // Simulate Colombia late-night: UTC 2026-08-12T02:00:00Z is still 2026-08-11 in UTC-5
+    // By mocking local getters we prove the helper uses getFullYear/getMonth/getDate
+    const fakeNow = {
+      getFullYear: () => 2026,
+      getMonth: () => 7, // 0-indexed August
+      getDate: () => 11,
+      getUTCFullYear: () => 2026,
+      getUTCMonth: () => 7,
+      getUTCDate: () => 12,
+      toISOString: () => "2026-08-12T02:00:00.000Z",
+    } as unknown as Date;
+    expect(todayIsoDate(fakeNow)).toBe("2026-08-11");
+    expect(todayIsoDate(fakeNow)).not.toBe(fakeNow.toISOString().slice(0, 10));
+  });
+
+  it("renders planned start as an editable date input with local default", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+    const dateInput = screen.getByLabelText("Planned start") as HTMLInputElement;
+    expect(dateInput.type).toBe("date");
+    expect(dateInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // editable
+    await user.clear(dateInput);
+    await user.type(dateInput, "2026-09-01");
+    expect(dateInput.value).toBe("2026-09-01");
+  });
 });
