@@ -8,6 +8,10 @@ Project memory for AI coding agents working in this repository.
 
 One concern per PR **and** per commit: docs-only, code-only, migration-only, CI/config-only — each in its own PR. If a change set spans docs + code (or two tasks), STOP and split along the seam before staging. This is the most-enforced rule in the repo (it exists because of the PR #99 mega-bundle). Violating it is a blocking error, not a style preference. When asked to fix/merge an already-mixed PR, flag the bundling and split it — do not push more changes into it.
 
+## 🗣️ #0 RULE — ALWAYS EXPLAIN WITH REAL IPix EXAMPLES
+
+**Every response must be easy for a non-technical teammate.** Start with 1–2 sentences of plain English, then a real-world **iPix/fashion** example (talent lookbook, Matching, shoot planning, Brand Hub, asset ingestion, Cloudinary pipeline — never warehouses or generic stores), then the short technical bit. This is **always on** — see `.opencode/instructions/explain-ipix.md` for the full pattern and checks.
+
 ## Project Overview
 
 **iPix / Lumina Studio** — AI-powered content planning & commerce platform for fashion and DTC brands.
