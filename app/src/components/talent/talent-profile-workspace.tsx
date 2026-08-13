@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
-import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
 import { fetchTalentProfile, fetchTalentAvailability, getTalentHandle, type TalentProfileDetail, type TalentAvailabilitySlot } from "@/lib/talent/profile";
 
 import styles from "./talent-profile.module.css";
@@ -37,17 +36,26 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
     async function load() {
       setLoading(true);
       setError(null);
-      const { profile: p, error: e } = await fetchTalentProfile(talentId);
-      if (cancelled) return;
-      if (e || !p) {
-        setError(e ?? "Not found");
-        setLoading(false);
-        return;
+      try {
+        const { profile: p, error: e } = await fetchTalentProfile(talentId);
+        if (cancelled) return;
+        if (e || !p) {
+          setError(e ?? "Not found");
+          return;
+        }
+        setProfile(p);
+        const { slots: s, error: e2 } = await fetchTalentAvailability(talentId);
+        if (cancelled) return;
+        if (e2) {
+          setError(e2);
+          return;
+        }
+        setSlots(s);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setProfile(p);
-      const { slots: s } = await fetchTalentAvailability(talentId);
-      if (!cancelled) setSlots(s);
-      setLoading(false);
     }
     load();
     return () => {
@@ -107,6 +115,28 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
   const fitScore = profile.verification_status === "verified" ? 94 : profile.verification_status === "pending" ? 82 : 68;
   const fitPct = `${fitScore}%`;
 
+  const [shortlistPending, setShortlistPending] = useState(false);
+  const [shortlistFeedback, setShortlistFeedback] = useState<string | null>(null);
+
+  async function handleShortlist() {
+    setShortlistPending(true);
+    setShortlistFeedback(null);
+    try {
+      const { createSupabaseBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.rpc("toggle_shortlist_item" as never, {
+        p_talent_profile_id: talentId,
+      } as never);
+      if (error) throw new Error(error.message);
+      setShortlistFeedback("Shortlist updated");
+    } catch (err) {
+      setShortlistFeedback(err instanceof Error ? err.message : "Shortlist unavailable");
+    } finally {
+      setShortlistPending(false);
+      setTimeout(() => setShortlistFeedback(null), 3000);
+    }
+  }
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -114,9 +144,10 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
           <Link href="/app/matching">Matching</Link> <span>›</span> Talent <span>›</span> <span className={styles.breadcrumbActive}>{handle}</span>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="outline" size="sm" className={styles.actionBtn}>
-            <Bookmark className={styles.actionIcon} /> Add to shortlist
+          <Button variant="outline" size="sm" className={styles.actionBtn} onClick={handleShortlist} disabled={shortlistPending}>
+            <Bookmark className={styles.actionIcon} /> {shortlistPending ? "Saving…" : "Add to shortlist"}
           </Button>
+          {shortlistFeedback && <span className={styles.feedback} role="status">{shortlistFeedback}</span>}
           <Link href={`/app/matching/talent/${profile.id}/book`}>
             <Button size="sm" className={styles.primaryBtn}>
               <CalendarPlus className={styles.actionIcon} /> Request booking
@@ -186,12 +217,12 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
               </div>
 
               <div className={styles.heroActions}>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" disabled title="Messaging not yet available via authorized channel">
                   <MessageSquare className={styles.actionIcon} /> Message
                 </Button>
                 <div className={styles.rating}>
-                  <Star className={styles.starIcon} /> <span className={styles.ratingValue}>4.9</span>
-                  <span className={styles.ratingMuted}>(23 reviews)</span>
+                  <Star className={styles.starIcon} /> <span className={styles.ratingValue}>—</span>
+                  <span className={styles.ratingMuted}>(no live rating source)</span>
                 </div>
               </div>
             </div>
@@ -211,10 +242,10 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
           </nav>
 
           <div className={styles.panel}>
-            {tab === "portfolio" && <PortfolioPanel avatarUrl={avatarUrl} />}
+            {tab === "portfolio" && <PortfolioPanel />}
             {tab === "details" && <DetailsPanel profile={profile} />}
             {tab === "measurements" && <MeasurementsPanel profile={profile} />}
-            {tab === "availability" && <AvailabilityPanel slots={slots} />}
+            {tab === "availability" && <AvailabilityPanel slots={slots} isAvailable={profile.is_available} />}
             {tab === "bookings" && <BookingsPanel talentId={profile.id} />}
             {tab === "reviews" && <ReviewsPanel />}
             {tab === "activity" && <ActivityPanel />}
@@ -231,8 +262,8 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
             </span>
           </div>
           <div className={styles.chatInputRow}>
-            <input placeholder={`Ask about ${handle}…`} className={styles.chatInput} />
-            <Button size="icon" className={styles.chatSend}>
+            <input placeholder={`Ask about ${handle}…`} className={styles.chatInput} disabled title="Chat not yet available via authorized channel" />
+            <Button size="icon" className={styles.chatSend} disabled title="Chat not yet available">
               ↑
             </Button>
           </div>
@@ -242,22 +273,8 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
   );
 }
 
-function PortfolioPanel({ avatarUrl }: { avatarUrl: string | null }) {
-  const items = avatarUrl
-    ? [avatarUrl, avatarUrl, avatarUrl, avatarUrl, avatarUrl, avatarUrl]
-    : [];
-  if (items.length === 0) {
-    return <EmptyState heading="No portfolio yet" body="This talent hasn't added portfolio images." />;
-  }
-  return (
-    <div className={styles.portfolioGrid}>
-      {items.map((src, i) => (
-        <div key={i} className={styles.portfolioItem}>
-          <img src={cloudinaryImageUrl(src.includes("http") ? src.split("/").pop()!.split(".")[0] : src, { w: 400, h: 533, crop: "fill" }) ?? src} alt="" className={styles.portfolioImg} />
-        </div>
-      ))}
-    </div>
-  );
+function PortfolioPanel() {
+  return <EmptyState heading="Portfolio unavailable" body="No portfolio images available via an authorized data source for this profile." />;
 }
 
 function DetailsPanel({ profile }: { profile: TalentProfileDetail }) {
@@ -301,9 +318,20 @@ function MeasurementsPanel({ profile }: { profile: TalentProfileDetail }) {
   );
 }
 
-function AvailabilityPanel({ slots }: { slots: TalentAvailabilitySlot[] }) {
+function AvailabilityPanel({ slots, isAvailable }: { slots: TalentAvailabilitySlot[]; isAvailable?: boolean }) {
   if (slots.length === 0) {
-    return <EmptyState heading="No availability yet" body="This talent hasn't set availability windows." />;
+    return (
+      <EmptyState
+        heading="Availability unavailable"
+        body={
+          isAvailable === undefined
+            ? "No availability windows available via an authorized data source for this profile."
+            : isAvailable
+              ? "Live check shows available — detailed calendar not yet available via authorized source."
+              : "Live check shows unavailable — detailed calendar not yet available via authorized source."
+        }
+      />
+    );
   }
   return (
     <div className={styles.availList}>
@@ -328,8 +356,8 @@ function BookingsPanel({ talentId }: { talentId: string }) {
   return (
     <div className={styles.bookingsWrap}>
       <EmptyState
-        heading="No bookings yet"
-        body="Bookings for this talent will appear here."
+        heading="Booking history unavailable"
+        body="No booking history available via an authorized data source for this profile."
         action={<Link href={`/app/matching/talent/${talentId}/book`}><Button size="sm">Request booking</Button></Link>}
       />
     </div>
@@ -337,46 +365,9 @@ function BookingsPanel({ talentId }: { talentId: string }) {
 }
 
 function ReviewsPanel() {
-  const reviews = [
-    { brand: "Nike", date: "Feb 2026", rating: "5.0", text: "Kara was completely professional — overperformed benchmark by 30%." },
-    { brand: "On Running", date: "Nov 2025", rating: "4.8", text: "Great energy and reliability. Delivered ahead of schedule." },
-  ];
-  return (
-    <div className={styles.reviewsStack}>
-      {reviews.map((r) => (
-        <div key={r.brand} className={styles.reviewCard}>
-          <div className={styles.reviewHead}>
-            <div className={styles.reviewBrand}>{r.brand}</div>
-            <div className={styles.reviewDate}>{r.date}</div>
-            <span className={styles.reviewRating}>
-              <Star className={styles.starIcon} /> {r.rating}
-            </span>
-          </div>
-          <p className={styles.reviewText}>{r.text}</p>
-        </div>
-      ))}
-    </div>
-  );
+  return <EmptyState heading="Reviews unavailable" body="No reviews available via an authorized data source for this profile." />;
 }
 
 function ActivityPanel() {
-  const items = [
-    { text: "Availability updated", cat: "Availability", when: "1d", dot: "var(--warning)" },
-    { text: "Portfolio: 2 shots added", cat: "Profile", when: "5d", dot: "var(--color-text-muted)" },
-  ];
-  return (
-    <div className={styles.activityList}>
-      {items.map((a) => (
-        <div key={a.text} className={styles.activityRow}>
-          <span className={styles.activityDot} style={{ background: a.dot }} />
-          <div>
-            <div className={styles.activityText}>{a.text}</div>
-            <div className={styles.activityMeta}>
-              {a.cat} · {a.when}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <EmptyState heading="Activity unavailable" body="No activity log available via an authorized data source for this profile." />;
 }

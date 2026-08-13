@@ -133,56 +133,56 @@ export function TalentRow({
   // another <button> (invalid HTML, inconsistent a11y/browser behavior); the
   // shortlist toggle needs its own independent interactive control.
   return (
-    <Link
-      href={`/app/talent/profile?talent=${talent.id}`}
-      onClick={onSelect}
-      aria-label={`View profile for ${talent.display_name}`}
+    <div
       className={cn(
-        "flex w-full cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 py-3 text-left transition-shadow hover:shadow-sm",
+        "flex w-full items-center gap-4 rounded-xl border bg-white px-4 py-3 text-left transition-shadow hover:shadow-sm",
         selected ? styles.cardSelected : styles.card,
       )}
     >
-      <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full ${styles.thumbMuted} flex items-center justify-center`} aria-hidden>
-        {showImage ? (
-          <img
-            src={avatarUrl}
-            alt={`Portrait of ${talent.display_name}`}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <User className="h-5 w-5 opacity-30" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
-        <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
-          {repLabel(talent)} · {talent.rate_tier ?? "—"} ·{" "}
-          {talent.is_available ? "Available" : "Availability unconfirmed"}
-        </p>
-      </div>
-      <span
-        className="shrink-0 font-mono text-sm font-bold"
-        style={{ color: fitScoreColor(match.score) }}
+      <Link
+        href={`/app/talent/profile?talent=${talent.id}`}
+        onClick={onSelect}
+        aria-label={`View profile for ${talent.display_name}`}
+        className="flex min-w-0 flex-1 items-center gap-4"
       >
-        {match.score}%
-      </span>
+        <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full ${styles.thumbMuted} flex items-center justify-center`} aria-hidden>
+          {showImage ? (
+            <img
+              src={avatarUrl}
+              alt={`Portrait of ${talent.display_name}`}
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <User className="h-5 w-5 opacity-30" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`truncate font-sans text-sm font-semibold ${styles.titleText}`}>{talent.display_name}</p>
+          <p className={`truncate font-sans text-xs ${styles.subtitleText}`}>
+            {repLabel(talent)} · {talent.rate_tier ?? "—"} ·{" "}
+            {talent.is_available ? "Available" : "Availability unconfirmed"}
+          </p>
+        </div>
+        <span
+          className="shrink-0 font-mono text-sm font-bold"
+          style={{ color: fitScoreColor(match.score) }}
+        >
+          {match.score}%
+        </span>
+      </Link>
       <Button
         type="button"
         variant={shortlisted ? "default" : "outline"}
         size="sm"
         disabled={pending}
         aria-label={shortlisted ? `Remove ${talent.display_name} from shortlist` : `Add ${talent.display_name} to shortlist`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onShortlist();
-        }}
-        onKeyDown={(e) => e.stopPropagation()}
+        onClick={onShortlist}
       >
         {shortlisted ? "★" : "☆"}
       </Button>
-    </Link>
+    </div>
   );
 }
