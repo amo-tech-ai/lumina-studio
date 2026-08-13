@@ -336,9 +336,9 @@ describe("draftCampaignBrief routing — IPI-751 nested canary", () => {
   it("resolver failure logs sanitized warning and uses legacy model", async () => {
     const cloudflareModels = await import("@/lib/ai/cloudflare-models");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const modelSpy = vi.spyOn(cloudflareModels, "resolveAgentModel").mockImplementation(async () => {
-      throw new Error("secret config leak: token=abc123\nstack: at foo");
-    });
+    const modelSpy = vi.spyOn(cloudflareModels, "resolveAgentModel").mockRejectedValue(
+      new Error("secret config leak: token=abc123\nstack: at foo"),
+    );
     const { RequestContext } = await import("@mastra/core/request-context");
     const rc = new RequestContext();
     (rc as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
