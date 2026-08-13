@@ -8,6 +8,12 @@ Project memory for AI coding agents working in this repository.
 
 One concern per PR **and** per commit: docs-only, code-only, migration-only, CI/config-only — each in its own PR. If a change set spans docs + code (or two tasks), STOP and split along the seam before staging. This is the most-enforced rule in the repo (it exists because of the PR #99 mega-bundle). Violating it is a blocking error, not a style preference. When asked to fix/merge an already-mixed PR, flag the bundling and split it — do not push more changes into it.
 
+**Merge regression detection:** After any `git merge` into a feature branch, immediately run `git diff <last-good-commit>..HEAD --stat` to detect silently reverted changes. The merge `4d89393a6` on IPI-750 silently reverted 17 files by resolving conflicts against a stale base (`f71824774`). Always verify that merge results did not clobber in-progress work — a green merge can still hide file-level regressions.
+
+**Branch verification before operations:** Always run `git branch --show-current` before `git checkout`, `git commit`, or `git push`. When switching branches, verify the target branch is correct before staging. If a checkout lands on an unexpected branch (e.g., due to background hooks like graphify), abort and retry. Never stage/commit/push without confirming the correct branch.
+
+**Git checkout safety:** When restoring files from a specific commit (`git checkout <commit> -- <files>`), always verify with `git diff HEAD --stat` afterward to confirm the changes are on the intended branch. If the diff is empty or unexpected, the checkout landed on the wrong branch — abort and retry.
+
 ## Project Overview
 
 **iPix / Lumina Studio** — AI-powered content planning & commerce platform for fashion and DTC brands.
