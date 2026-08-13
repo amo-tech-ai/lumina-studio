@@ -1,0 +1,81 @@
+---
+title: "Master PRD + Roadmap"
+description: "Authoritative CopilotKit master PRD, architecture, and 9-phase roadmap for iPix."
+---
+
+> **Status:** Authoritative — generated 2026-08-13 from live `app/src` on `HEAD e1b637802`. Patched 2026-08-13 for DOCS-001/002 \+ GATE-005. Full 1272-line source lives in `docs/copilotkit/COPILOTKIT-MASTER-PRD-ROADMAP.md` (repo) — this page is the Mintlify mirror.
+
+## Verification
+
+```bash
+npx vitest run src/app/api/copilotkit src/lib/copilotkit src/lib/ai src/mastra # 45 files 546 passed
+npx vitest run src/app/api/copilotkit/[[...slug]]/route.threads-matrix.test.ts # 28 passed (GATE-005)
+# installed: @copilotkit/react-core 1.61.0 @copilotkit/runtime 1.61.0 @ag-ui/client 0.0.57 @ag-ui/mastra 1.1.1 @mastra/core 1.41.0
+```
+
+## Current Codebase (file:line)
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Provider/runtime | ✅ | `app/src/app/api/copilotkit/[[...slug]]/route.ts:20` `CopilotRuntime` `MastraAgent.getLocalAgents` |
+| Chat dock | ✅ | `app/src/components/operator-panel/operator-panel.tsx:49` `operator-chat-dock.tsx:3` `CopilotChat` |
+| Route agent | ✅ | `app/src/lib/route-agent-map.ts:14` `resolveAgentId` |
+| useAgentContext | ✅ | `operator-panel.tsx:153` `brand-context.tsx:28` |
+| useFrontendTool | ✅ | `operator-panel.tsx:164` `navigateTo` |
+| HITL hooks | 🔵 | `0` uses in `app/src` — planned, see HITL § |
+| Mastra suspend/resume | ✅ | `workflows/shoot-wizard.ts:89` 4 suspends |
+| Cloudflare | 🟡 | `app/wrangler.jsonc:3` `AI` `HYPERDRIVE_FRESH` |
+| Auth | ✅ | `route.ts:462` 401 `route.ts:102` ownership 403 |
+
+## HITL — Corrected (DOCS-001)
+
+Installed `app/node_modules/@copilotkit/react-core/dist/v2/headless.d.mts` `1.61.0`:
+
+- **useHumanInTheLoop** (`:386` `ReactHumanInTheLoop<T>`) — tool-driven; agent declares HITL tool.
+- **useInterrupt** (`:483` `UseInterruptConfig {render,handler?,enabled?,renderInChat?}` \+ `InterruptEvent`) — backend `on_interrupt` (AG-UI).
+- **Mastra suspend/resume** (`workflows/shoot-wizard.ts:89,154,169,247`, `storage.ts:402`) — **shipped** via `ApprovalCard`. iPix today = Mastra `suspend/resume`, not frontend hooks.
+
+`CopilotRuntime` auto-detects (not `CopilotSseRuntime`) — `develop.md:34`.
+
+## AI Routing — Two Orthogonal Gates (DOCS-002)
+
+```text
+Agent execution: native|legacy  ← AI_ROUTING_AGENT_<AGENT> in cfEnv (pickCfEnv)
+Provider transport: AI_ROUTING_MODE=gateway|other  ← AI_GATEWAY_URL
+↕ orthogonal — e.g. production-planner native while still via AI Gateway
+```
+
+## Architecture
+
+```mermaid
+flowchart LR
+Browser --> CopilotKit --> AG-UI --> Mastra --> Agent --> Tools --> Supabase --> ApprovalCard --> Stream
+```
+
+Route → `resolveAgentId` → `CopilotChatConfigurationProvider` → `useAgentContext` → `getCurrentPageContext` → shared state (planned) → HITL `suspend` → `callEdgeFunction` RLS.
+
+## Roadmap (9 phases)
+
+| Phase | % |
+| --- | --- |
+| 1 Runtime | 85% |
+| 2 Route context | 70% |
+| 3 Frontend tools | 90% |
+| 4 HITL | 55% |
+| 5 Generative UI | 10% |
+| 6 Shared state | 0% |
+| 7 Multi-agent UX | 40% |
+| 8 Observability | 35% |
+| 9 Hardening | 20% |
+
+Overall 64 → 72 after GATE-005 `route.threads-matrix.test.ts` 28/28.
+
+## Scorecard
+
+Runtime 85 Chat 75 Context 70 Shared 15 Tools 90 GenUI 20 HITL 55 Mastra 85 AG-UI 80 Cloudflare 40 Security 90 Observability 35 Testing 72 Reuse 88 **Overall 64**.
+
+## Source
+
+Repo: `docs/copilotkit/COPILOTKIT-MASTER-PRD-ROADMAP.md` (1272 lines pre-stub) \+ `docs/copilotkit/COPILOTKIT-FAST-REPORT-2026-08-13.md` \+ `app/src/app/api/copilotkit/[[...slug]]/route.threads-matrix.test.ts`.
+
+Editor: `admin-mcp/add-copilotkit-docs-a0edf7c`
