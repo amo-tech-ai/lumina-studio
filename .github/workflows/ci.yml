@@ -11,6 +11,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # IPI-750-POSTMORTEM — Prevent docs/docs.json from leaking into code PRs.
+  # AGENTS.md rule #1 (one concern per PR) was violated when PR #921's docs.json
+  # merge contaminated IPI-750 (PR #919) and IPI-752 (PR #918). This gate fails
+  # any PR that touches docs/docs.json unless the branch is docs/* (docs-only).
+  docs-json-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prevent docs/docs.json in code PRs
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check-docs-json-contamination.mjs
+
+  # IPI-750-POSTMORTEM — Detect files silently reverted by a merge.
+  # Merge commit 4d89393a6 on IPI-750 resolved conflicts against stale f71824774,
+  # wiping out 17 files of IPI-750 + IPI-769 work (ensureCfEnvOnContext, etc.).
+  # This gate walks merge commits and flags files whose HEAD content matches the
+  # merge-base despite being changed by feature commits — the signature of a
+  # bad conflict resolution.
+  merge-regression-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect merge regressions
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags origin "${GITHUB_BASE_REF:-main}"
+          node scripts/detect-merge-regressions.mjs
+
   # Keeps changelog.md from drifting. Exists because it went 39 commits and 32 days
   # without covering anything new: the release-notes skill worked fine, nothing asked.
   #
