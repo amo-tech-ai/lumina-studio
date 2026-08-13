@@ -8,8 +8,235 @@
   "navigation": {
     "groups": [
       {
-        "group": "iPix Documentation",
+        "group": "Overview",
         "pages": ["index-docs"]
+      },
+      {
+        "group": "Architecture",
+        "pages": ["architecture/sitemap-ai-native"]
+      },
+      {
+        "group": "Cloudflare",
+        "pages": [
+          "cloudflare/pr-342-architecture",
+          "cloudflare/pr-342-implementation-plan",
+          "cloudflare/pr-342-task-breakdown"
+        ]
+      },
+      {
+        "group": "Audits",
+        "pages": [
+          "audit/2026-06-25-comprehensive-audit-roadmap"
+        ]
+      },
+      {
+        "group": "Audit Reports",
+        "pages": [
+          "audits/cloudflare-hosting-implementation-audit",
+          "audits/cloudflare-migration-audit",
+          "audits/opennext-worker-bundle-audit",
+          "audits/planner-security-audit-session-2026-07-14",
+          "audits/secrets-classification-verification"
+        ]
+      },
+      {
+        "group": "Brand",
+        "pages": ["brand/16-url-structure"]
+      },
+      {
+        "group": "Brand Intelligence",
+        "pages": ["brand-intelligence/tests/16-test-report"]
+      },
+      {
+        "group": "Changelog",
+        "pages": ["changelog/PRACTICE"]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/worktree-tracker",
+          "dev/fast-dev-mode",
+          "dev/pr-review-process"
+        ]
+      },
+      {
+        "group": "Ecommerce",
+        "pages": "ecommerce/evidence"
+      },
+      {
+        "group": "Engineering",
+        "pages": [
+          "engineering/pr-agent/cloudflare",
+          "engineering/pr-agent/commerce",
+          "engineering/pr-agent/copilotkit",
+          "engineering/pr-agent/github-actions",
+          "engineering/pr-agent/mastra",
+          "engineering/pr-agent/supabase"
+        ]
+      },
+      {
+        "group": "Intelligence",
+        "pages": "intelligence"
+      },
+      {
+        "group": "Linear Issues",
+        "pages": "linear/issues"
+      },
+      {
+        "group": "Media",
+        "pages": "media"
+      },
+      {
+        "group": "Operations",
+        "pages": ["ops/IPI-230-production-auth-copilotkit-config"]
+      },
+      {
+        "group": "Planning",
+        "pages": [
+          "plan/01-foundation/06-brand-dashboards",
+          "plan/19-brand-lifecycle",
+          "plan/tasks/2026-07-04-crm-assistant-wave1"
+        ]
+      },
+      {
+        "group": "PRD",
+        "pages": [
+          "prd/campaign-prd",
+          "prd/openclaw-prd",
+          "prd/postiz-prd",
+          "prd/prd-chatwoot",
+          "prd/prd-ecommerce",
+          "prd/prd-event-contest",
+          "prd/prd-intelligence",
+          "media/prd-media",
+          "prd/shoot-prd",
+          "prd/README"
+        ]
+      },
+      {
+        "group": "Process",
+        "pages": [
+          "process/01-development-standards",
+          "process/01-harness-audit-results",
+          "process/02-task-template",
+          "process/03-ai-research-playbook",
+          "process/04-testing-qa-playbook",
+          "process/05-ui-user-journey",
+          "process/06-tech-stack-playbook",
+          "process/07-ai-agents-strategy",
+          "process/08-architecture-review",
+          "process/09-mvp-roadmap",
+          "process/10-continuous-improvement",
+          "process/README"
+        ]
+      },
+      {
+        "group": "Tech Stack",
+        "pages": [
+          "process/tech-stack/claude-cursor",
+          "process/tech-stack/cloudflare",
+          "process/tech-stack/copilotkit",
+          "process/tech-stack/ecosystem",
+          "process/tech-stack/mastra",
+          "process/tech-stack/models",
+          "process/tech-stack/pgvector-rag",
+          "process/tech-stack/supabase"
+        ]
+      },
+      {
+        "group": "Templates",
+        "pages": [
+          "process/templates/README",
+          "process/templates/LINEAR-DEFAULT-INSTALL",
+          "process/templates/linear-issue-body",
+          "process/templates/linear-task-example",
+          "process/templates/qa-evidence-template",
+          "process/templates/task-execution-prompt"
+        ]
+      },
+      {
+        "group": "PR Reviews",
+        "pages": [
+          "pr-review-experts",
+          "pr-reviews/PR-23_checklist",
+          "pr-reviews/PR23-POST-MERGE-VERIFY-2026-06-22",
+          "pr-reviews/PR-678-MERGE-RECORD-2026-07-30"
+        ]
+      },
+      {
+        "group": "QA",
+        "pages": ["qa/design-parity-checklist"]
+      },
+      {
+        "group": "Reference",
+        "pages": "reference/claude-code-official"
+      },
+      {
+        "group": "Runbooks",
+        "pages": ["runbooks/connection-pool"]
+      },
+      {
+        "group": "Screenshots",
+        "pages": [
+          "screenshots/soona/soona",
+          "screenshots/squareshot/shotlists",
+          "screenshots/squareshot/squareshot",
+          "screenshots/studiodock/studio-dock"
+        ]
+      },
+      {
+        "group": "Shoots",
+        "pages": [
+          "shoot/02-shoot-detail-page",
+          "shoot/design-review",
+          "shoot/ipi-148-shoot-planner-agent",
+          "shoot/prompt-plan",
+          "shoot/SHOOT-PRE-001-schema-decision",
+          "shoot/shoot-research",
+          "shoot/shoot-system-plan"
+        ]
+      },
+      {
+        "group": "Stack Reports",
+        "pages": [
+          "stack/reports/00-agents",
+          "stack/reports/01-mastra",
+          "stack/reports/02-copilotkit",
+          "stack/reports/03-cloudflare",
+          "stack/reports/04-supabase",
+          "stack/reports/05-cloudinary",
+          "stack/reports/06-observability",
+          "stack/reports/07-stripe-payments",
+          "stack/reports/08-linear-process",
+          "stack/reports/09-dev-system"
+        ]
+      },
+      {
+        "group": "Website Planning",
+        "pages": [
+          "stack/BUILD-VS-BUY",
+          "stack/PROMPTS",
+          "stack/README",
+          "stack/TEMPLATE"
+        ]
+      },
+      {
+        "group": "Website v01",
+        "pages": "website/01"
+      },
+      {
+        "group": "Website v02",
+        "pages": [
+          "website/02/linear-tasks-web-001-to-014",
+          "website/02/marketing-next-plan",
+          "website/02/pages-inventory",
+          "website/02/plan-vite-to-next",
+          "website/02/web-tasks-audit-checklist"
+        ]
+      },
+      {
+        "group": "Website Next.js",
+        "pages": ["website/nextjs/from-vite"]
       }
     ]
   }
