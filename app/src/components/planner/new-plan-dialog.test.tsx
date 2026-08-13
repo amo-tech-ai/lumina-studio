@@ -331,6 +331,21 @@ describe("NewPlanDialog", () => {
     expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("My Custom Plan");
   });
 
+  it("preserves manual edit even when it matches the auto-filled label", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await openDialog(user);
+
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "shoot:shoot-1");
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Summer Lookbook");
+    // User clears and retypes the same string manually — must be treated as manual
+    await user.clear(screen.getByLabelText("Plan name"));
+    await user.type(screen.getByLabelText("Plan name"), "Summer Lookbook");
+    await user.selectOptions(screen.getByLabelText("What is this plan for?"), "campaign:camp-1");
+
+    expect((screen.getByLabelText("Plan name") as HTMLInputElement).value).toBe("Summer Lookbook");
+  });
+
   it("re-enables auto-fill after clearing custom name then switching entity", async () => {
     const user = userEvent.setup();
     renderDialog();
