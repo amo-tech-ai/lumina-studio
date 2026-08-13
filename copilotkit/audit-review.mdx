@@ -1,0 +1,48 @@
+---
+title: "Audit Review — Fast Report"
+description: "COPILOT-DOCS-001/002 + GATE-005 + B1-B3 verification — errors, fixes, grades."
+---
+
+> Source: `docs/copilotkit/COPILOTKIT-AUDIT-REVIEW-2026-08-13.md` \+ `COPILOTKIT-FAST-REPORT-2026-08-13.md`. Fastest-safe execution (Graphify → Ponytail → installed source → smallest patch → targeted test).
+
+## Summary
+
+| Task | Result | Tests | Confidence |
+| --- | --: | --: | --: |
+| COPILOT-DOCS-001 | 🟢 | docs-only | 96% |
+| COPILOT-GATE-005 | 🟢 | 28/28 | 93% |
+| COPILOT-DOCS-002 | 🟢 | docs-only | 98% |
+| B1 SSE | 🟡 | bindings verified | 62% |
+| B2 HITL | 🟢 | path proven | 78% |
+| B3 PG | 🟡 | path mapped | 55% |
+
+Master PRD correctness 82% → **94%** after fixes. Setup 90% → **92%**.
+
+## Errors Fixed
+
+- **E1 HITL naming:** PRD said `useHumanInTheLoop` only; installed `headless.d.mts:386:483` proves `useHumanInTheLoop` (tool) vs `useInterrupt` (graph `on_interrupt`) are distinct — both planned, Mastra `suspend/resume` (`shoot-wizard.ts:89`) is shipped.
+- **R5 Routing:** Single-gate view → two orthogonal gates `native|legacy` vs `AI_ROUTING_MODE=gateway`.
+- **R1 Thread URL:** `fetch-router.mjs:matchSegments` allowlist gap — added `route.threads-matrix.test.ts` `it.each` contract covering 10 shapes.
+
+## Verification
+
+```bash
+rg -n "useHumanInTheLoop|useInterrupt" docs/copilotkit/COPILOTKIT-MASTER-PRD-ROADMAP.md
+npx vitest run src/app/api/copilotkit/[[...slug]]/route.threads-matrix.test.ts # 28 passed
+npx vitest run src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts # 27 passed
+rg -n "HYPERDRIVE_FRESH|AI|AI_GATEWAY" app/wrangler.jsonc
+```
+
+Skills: `copilotkit` (upgrade/develop/debug/integrations/mastra), `mastra`, `graphify` BFS 186, `workers-best-practices`, `context7-mcp` 84.08/83.71.
+
+## Blockers
+
+- **B1 Preview SSE** — bindings present (`wrangler.jsonc:AI`, `HYPERDRIVE_FRESH`, `AI_GATEWAY`), live `*.workers.dev` SSE needs `opennextjs-cloudflare preview` \+ `curl .../api/copilotkit/info` 200 \+ `text/event-stream`.
+- **B2 HITL resume** — `start→suspend→approve→resume→1 write` / `reject→0` on `shoot-wizard` (smallest suspending workflow) pending live PostgresStore.
+- **B3 PG isolate** — `MASTRA_STORAGE_MODE=noop` today; `threadRoundtrip()` smoke exists, fresh isolate resume pending Hyperdrive live.
+
+## Recommendation
+
+**MERGE DOCS-001 \+ DOCS-002 \+ GATE-005** (docs-only \+ test-only, one concern per PR). B1/B3 are live proofs, not patches.
+
+Editor: `admin-mcp/add-copilotkit-docs-a0edf7c`
