@@ -9,14 +9,9 @@ import { useHideInternalToolCalls } from "./copilot-tool-presentation";
  * Centralizes all useRenderTool/useRenderToolCall registrations for iPix.
  * One hook, one place — avoids scattered useRenderTool calls across pages.
  *
- * Current: draftFollowUp (HITL) + internal hide.
- * Next (after runtime restore): lookupShotReferences, searchTalentByFilters, getAssetDnaEvidence
- * Each entry is a useRenderTool with zod parameters and a card component.
- *
- * Usage: call useGenerativeUIRegistry() once inside OperatorPanel (alongside useHideInternalToolCalls).
+ * Usage: call useGenerativeUIRegistry() once inside OperatorPanel.
  */
 export function useGenerativeUIRegistry() {
   useHideInternalToolCalls();
   useCrmDraftFollowUpRender();
-  // future: useLookupShotReferencesRender(); etc.
 }
