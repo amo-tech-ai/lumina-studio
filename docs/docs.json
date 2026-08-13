@@ -1,1 +1,16 @@
-
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "iPix",
+  "colors": {
+    "primary": "#000000"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "iPix Documentation",
+        "pages": ["index-docs"]
+      }
+    ]
+  }
+}
