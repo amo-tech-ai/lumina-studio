@@ -588,6 +588,21 @@
 }
 
 @media (max-width: 768px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .breadcrumb {
+    flex: 1 1 100%;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .hero {
     grid-template-columns: 1fr;
   }
@@ -616,4 +631,10 @@
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
+}
+
+.fitUnavailable {
+  font-size: 13px;
+  color: #6b7280;
+  padding: 8px 0;
 }

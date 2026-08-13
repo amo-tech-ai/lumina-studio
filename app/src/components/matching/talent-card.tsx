@@ -61,7 +61,6 @@ export function TalentSwipeCard({
     >
       <Link
         href={`/app/talent/profile?talent=${talent.id}`}
-        onClick={onSelect}
         className={`relative block aspect-[3/4] w-full overflow-hidden text-left ${styles.thumbMuted}`}
         aria-label={`View profile for ${talent.display_name}`}
       >
@@ -141,7 +140,6 @@ export function TalentRow({
     >
       <Link
         href={`/app/talent/profile?talent=${talent.id}`}
-        onClick={onSelect}
         aria-label={`View profile for ${talent.display_name}`}
         className="flex min-w-0 flex-1 items-center gap-4"
       >

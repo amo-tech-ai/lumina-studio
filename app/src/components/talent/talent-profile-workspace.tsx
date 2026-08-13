@@ -73,7 +73,7 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
             <Skeleton className={styles.skeletonBtn} />
           </div>
         </header>
-        <div className={styles.body}>
+        <div className={styles.scrollBody}>
           <div className={styles.loadingHero}>
             <Skeleton className={styles.heroImageSkeleton} />
             <div className={styles.heroTextSkeleton}>
@@ -115,28 +115,6 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
   const fitScore = profile.verification_status === "verified" ? 94 : profile.verification_status === "pending" ? 82 : 68;
   const fitPct = `${fitScore}%`;
 
-  const [shortlistPending, setShortlistPending] = useState(false);
-  const [shortlistFeedback, setShortlistFeedback] = useState<string | null>(null);
-
-  async function handleShortlist() {
-    setShortlistPending(true);
-    setShortlistFeedback(null);
-    try {
-      const { createSupabaseBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.rpc("toggle_shortlist_item" as never, {
-        p_talent_profile_id: talentId,
-      } as never);
-      if (error) throw new Error(error.message);
-      setShortlistFeedback("Shortlist updated");
-    } catch (err) {
-      setShortlistFeedback(err instanceof Error ? err.message : "Shortlist unavailable");
-    } finally {
-      setShortlistPending(false);
-      setTimeout(() => setShortlistFeedback(null), 3000);
-    }
-  }
-
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -144,10 +122,9 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
           <Link href="/app/matching">Matching</Link> <span>›</span> Talent <span>›</span> <span className={styles.breadcrumbActive}>{handle}</span>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="outline" size="sm" className={styles.actionBtn} onClick={handleShortlist} disabled={shortlistPending}>
-            <Bookmark className={styles.actionIcon} /> {shortlistPending ? "Saving…" : "Add to shortlist"}
+          <Button variant="outline" size="sm" className={styles.actionBtn} onClick={() => {}} disabled title="Add to shortlist not yet available">
+            <Bookmark className={styles.actionIcon} /> Add to shortlist
           </Button>
-          {shortlistFeedback && <span className={styles.feedback} role="status">{shortlistFeedback}</span>}
           <Link href={`/app/matching/talent/${profile.id}/book`}>
             <Button size="sm" className={styles.primaryBtn}>
               <CalendarPlus className={styles.actionIcon} /> Request booking
@@ -167,7 +144,7 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
               )}
               <div className={styles.availBadge}>
                 <span className={styles.availDot} data-status={profile.travel_ready ? "available" : "unavailable"} />
-                {profile.travel_ready ? "Available" : "Unavailable"}
+                {profile.travel_ready ? "Travel ready" : "Not travel ready"}
               </div>
             </div>
             <div className={styles.heroText}>
@@ -249,23 +226,6 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
             {tab === "bookings" && <BookingsPanel talentId={profile.id} />}
             {tab === "reviews" && <ReviewsPanel />}
             {tab === "activity" && <ActivityPanel />}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.chatDock}>
-        <div className={styles.chatCenter}>
-          <div className={styles.chatPrompt}>
-            <Sparkles className={styles.chatIcon} />
-            <span>
-              <b>{handle}</b> scores {fitScore}% against Nike DNA — want me to start a booking for the Spring shoot?
-            </span>
-          </div>
-          <div className={styles.chatInputRow}>
-            <input placeholder={`Ask about ${handle}…`} className={styles.chatInput} disabled title="Chat not yet available via authorized channel" />
-            <Button size="icon" className={styles.chatSend} disabled title="Chat not yet available">
-              ↑
-            </Button>
           </div>
         </div>
       </div>

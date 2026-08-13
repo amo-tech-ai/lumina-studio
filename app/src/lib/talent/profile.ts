@@ -72,5 +72,5 @@ export async function fetchTalentAvailability(talentId: string): Promise<{ slots
 }
 
 export function getTalentHandle(profile: TalentProfileDetail): string {
-  return `@${profile.display_name.toLowerCase().replace(/\s+/g, "")}`;
+  return profile.display_name;
 }
