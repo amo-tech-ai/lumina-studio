@@ -257,6 +257,93 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.detail).toBe("agent factory down");
   });
 
+  it("exposes safe error detail on Cloudflare preview Workers via WORKER_ENV (P1 CF-001)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("WORKER_ENV", "preview");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const upstream = Response.json(
+      { message: "agent factory down" },
+      { status: 500, headers: { "content-type": "application/json" } },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => upstream),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { code?: string; detail?: string };
+    expect(body.code).toBe("runtime_error");
+    expect(body.detail).toBe("agent factory down");
+  });
+
+  it("redacts unsafe internals even when WORKER_ENV=preview (unsafe label never exposed)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("WORKER_ENV", "preview");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const upstream = Response.json(
+      { error: "ERR_REQUIRE_ESM: require() of ES Module p-map" },
+      { status: 500, headers: { "content-type": "application/json" } },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => upstream),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as {
+      error?: string;
+      code?: string;
+      detail?: string;
+      message?: string;
+    };
+    expect(body.code).toBe("runtime_error");
+    expect(body.error).toBe("CopilotKit runtime unavailable");
+    expect(body.detail).toBeUndefined();
+    expect(body.message).toBeUndefined();
+    expect(JSON.stringify(body)).not.toMatch(/ERR_REQUIRE_ESM|p-map/);
+  });
+
+  it("does not expose detail on production Workers (WORKER_ENV unset)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const upstream = Response.json(
+      { message: "agent factory down" },
+      { status: 500, headers: { "content-type": "application/json" } },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => upstream),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { code?: string; detail?: string };
+    expect(body.code).toBe("runtime_error");
+    expect(body.detail).toBeUndefined();
+  });
+
   it("cancels a 5xx SSE body when normalizing to 503 JSON", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
