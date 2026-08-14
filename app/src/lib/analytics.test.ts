@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AnalyticsPayload } from "./analytics";
+import type { AnalyticsPayload, CampaignPerformancePayload } from "./analytics";
 import { isUnavailableMetricsNull } from "./analytics";
 
 describe("analytics contract null semantics", () => {
@@ -57,5 +57,17 @@ describe("analytics contract null semantics", () => {
     expect(p.reach).toBeNull();
     expect(p.cpe).toBeNull();
     expect(p.reach !== 0).toBe(true);
+  });
+
+  it("models campaign performance as per-campaign rows with identity", () => {
+    const payload: CampaignPerformancePayload = {
+      campaigns: [
+        { campaignId: "111", name: "Spring", status: "live", brandId: "b1", orgId: "o1" },
+        { campaignId: "222", name: "Air Max", status: "planning", brandId: "b1", orgId: "o1" },
+      ],
+    };
+    expect(payload.campaigns).toHaveLength(2);
+    expect(payload.campaigns[0].campaignId).toBe("111");
+    expect(payload.campaigns[1].status).toBe("planning");
   });
 });
