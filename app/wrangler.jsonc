@@ -119,6 +119,9 @@
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "staging",
+        // P1: explicit preview-only Worker variable for shouldExposeRuntimeErrorDetail() — Workers lack VERCEL_ENV
+        // (see .github/workflows/cloudflare-secrets-sync.yml preview vars note + route.ts:350).
+        "WORKER_ENV": "preview",
         // OAuth callback redirectOrigin() — preview workers.dev is excluded from SITE_URL by design.
         "TRUSTED_OAUTH_FORWARDED_HOSTS": "ipix-operator-preview.sk-498.workers.dev"
       },

@@ -205,17 +205,9 @@ async function extractThreadIdFromBody(
  */
 function stripOperatorAuthorization(request: Request): Request {
   if (!request.headers.has("authorization")) return request;
-  try {
-    request.headers.delete("authorization");
-    return request;
-  } catch {
-    const headers = new Headers(request.headers);
-    headers.delete("authorization");
-    return new Request(request.url, {
-      method: request.method,
-      headers,
-    });
-  }
+  const headers = new Headers(request.headers);
+  headers.delete("authorization");
+  return new Request(request, { headers });
 }
 
 if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
@@ -352,10 +344,12 @@ function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): s
 
 function shouldExposeRuntimeErrorDetail(): boolean {
   if (process.env.NODE_ENV !== "production") return true;
+  // Preview should expose safe detail so 503 `runtime_error` for /info is diagnosable.
+  // Workers lack VERCEL_ENV (see app/wrangler.jsonc preview vars note) — check explicit WORKER_ENV.
+  if (process.env.WORKER_ENV === "preview") return true;
   const vercelEnv = process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV;
   if (vercelEnv === "preview" || vercelEnv === "development") return true;
   if (process.env.CF_PAGES === "1") return true;
-  if (process.env.WORKER_ENV === "preview" || process.env.WORKER_ENV === "development") return true;
   return false;
 }
 
@@ -369,7 +363,10 @@ function isUnsafeClientErrorText(text: string): boolean {
 function clientSafeErrorLabel(raw: unknown, fallback: string): string {
   if (typeof raw !== "string" || !raw.trim()) return fallback;
   const trimmed = raw.trim();
-  if (!shouldExposeRuntimeErrorDetail() && isUnsafeClientErrorText(trimmed)) {
+  // Unsafe client error labels must always be redacted — preview mode
+  // exposes safe diagnostic `detail`, but the `error` field itself must
+  // never leak raw Node/bundler internals regardless of environment.
+  if (isUnsafeClientErrorText(trimmed)) {
     return fallback;
   }
   return trimmed;
@@ -418,7 +415,7 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
       {
         error,
         code,
-        ...(detail && exposeDetail ? { detail } : {}),
+        ...(detail && exposeDetail && !isUnsafeClientErrorText(detail) ? { detail } : {}),
         ...(parsed.degraded === true ? { degraded: true } : {}),
       },
       { status: 503 },
@@ -447,7 +444,7 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
     {
       error: "CopilotKit runtime unavailable",
       code: "runtime_error",
-      ...(detail && exposeDetail ? { detail } : {}),
+      ...(detail && exposeDetail && !isUnsafeClientErrorText(detail) ? { detail } : {}),
     },
     { status: 503 },
   );
@@ -660,16 +657,20 @@ const handler = async (request: Request): Promise<Response> => {
       return storageUnavailableResponse(err);
     }
     console.error("[copilotkit] runtime handler failed", err);
-    const exposeDetail = shouldExposeRuntimeErrorDetail();
-    const detail = exposeDetail ? clientSafeErrorLabel(err instanceof Error ? err.message : String(err), "") : undefined;
-    return Response.json(
-      {
-        error: "CopilotKit runtime unavailable",
-        code: "runtime_error",
-        ...(detail ? { detail } : {}),
-      },
-      { status: 503 },
-    );
+    {
+      const exposeDetail = shouldExposeRuntimeErrorDetail();
+      const rawDetail = err instanceof Error ? err.message : String(err);
+      const safeDetail = rawDetail.trim().slice(0, 500);
+      const detailForClient = isUnsafeClientErrorText(safeDetail) ? undefined : safeDetail;
+      return Response.json(
+        {
+          error: "CopilotKit runtime unavailable",
+          code: "runtime_error",
+          ...(exposeDetail && detailForClient ? { detail: detailForClient } : {}),
+        },
+        { status: 503 },
+      );
+    }
   }
 };
 
