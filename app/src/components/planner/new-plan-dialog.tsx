@@ -48,8 +48,11 @@ function entityKey(entity: Pick<EligibleEntity, "entityType" | "entityId">): str
   return `${entity.entityType}:${entity.entityId}`;
 }
 
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
+export function todayIsoDate(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 type Props = {
@@ -71,6 +74,8 @@ export function NewPlanDialog({ orgId, eligibleEntities, workflowTemplates, vari
   const [error, setError] = useState<{ message: string; existingInstanceId?: string } | null>(null);
   const [isSaving, startTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const lastAutoFilledRef = useRef<string | null>(null);
+  const hasManuallyEditedRef = useRef(false);
   // Generated once per open dialog (not per submit) so a retry of the same
   // logical attempt — network failure, double-click on Submit — reuses the
   // same key, matching createInstanceAction's documented replay contract
@@ -85,6 +90,8 @@ export function NewPlanDialog({ orgId, eligibleEntities, workflowTemplates, vari
     setPlannedStart(todayIsoDate());
     setError(null);
     idempotencyKeyRef.current = null;
+    lastAutoFilledRef.current = null;
+    hasManuallyEditedRef.current = false;
   }
 
   function handleOpen() {
@@ -95,12 +102,18 @@ export function NewPlanDialog({ orgId, eligibleEntities, workflowTemplates, vari
   function handleEntityChange(nextKey: string) {
     setEntitySelection(nextKey);
     const entity = eligibleEntities.find((e) => entityKey(e) === nextKey);
-    // Only ever fills a still-empty field — never overwrites a name the
-    // caller already typed (CLAUDE.md "smart defaults, never ask for the
-    // same info twice", not "override what I already told you").
-    if (entity && name.trim() === "") {
+    if (!entity) return;
+    const isOwned = name.trim() === "" || !hasManuallyEditedRef.current;
+    if (isOwned) {
+      lastAutoFilledRef.current = entity.label;
+      hasManuallyEditedRef.current = false;
       setName(entity.label);
     }
+  }
+
+  function handleNameChange(value: string) {
+    hasManuallyEditedRef.current = value.trim() !== "";
+    setName(value);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -234,7 +247,7 @@ export function NewPlanDialog({ orgId, eligibleEntities, workflowTemplates, vari
                 type="text"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="e.g. Summer Lookbook"
                 autoFocus
               />

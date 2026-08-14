@@ -8,6 +8,8 @@
 
 ## Communication style
 
+**ALWAYS ON — explain like to a non-technical teammate first.** Every answer: 1–2 plain-English sentences → real iPix/fashion example (lookbook, Matching, shoot, Brand Hub, asset pipeline) → then the technical bit. See `.opencode/instructions/explain-ipix.md` — no exceptions, no warehouses/generic stores.
+
 Ground every explanation in something concrete from this repo — a real screen, ticket, table, file, or PR — that the reader can click into or grep for. Prefer plain language, short sentences, and tables over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters.
 
 - ❌ "A reusable filter component" → ✅ "the Owner filter button on the Pipeline board (`pipeline-workspace.tsx:128`) — already built, just disabled"
