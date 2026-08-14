@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -32,6 +32,7 @@ export function CampaignsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CampaignFilter>("all");
+  const loadGen = useRef(0);
 
   const supabase = useMemo(() => {
     try {
@@ -42,20 +43,27 @@ export function CampaignsWorkspace() {
   }, []);
 
   async function load() {
+    const gen = ++loadGen.current;
     if (!supabase) {
       setError("Supabase is not configured.");
+      return;
+    }
+    if (!activeBrandId) {
+      setCampaigns([]);
+      setDeliverablesByCampaign(new Map());
+      setError(null);
       return;
     }
     setError(null);
     setCampaigns(null);
     try {
-      let q = supabase.from("campaigns").select("*").order("created_at", { ascending: false });
-      if (activeBrandId) q = q.eq("brand_id", activeBrandId);
+      const q = supabase.from("campaigns").select("*").eq("brand_id", activeBrandId).order("created_at", { ascending: false });
       const { data: camps, error: cErr } = await q;
       if (cErr) throw new Error(cErr.message);
       const rows = (camps ?? []) as CampaignRow[];
-      setCampaigns(rows);
+      if (loadGen.current !== gen) return;
       if (rows.length === 0) {
+        setCampaigns(rows);
         setDeliverablesByCampaign(new Map());
         return;
       }
@@ -65,14 +73,17 @@ export function CampaignsWorkspace() {
         .select("*")
         .in("campaign_id", ids);
       if (dErr) throw new Error(dErr.message);
+      if (loadGen.current !== gen) return;
       const map = new Map<string, DeliverableRow[]>();
       for (const d of (delivs ?? []) as DeliverableRow[]) {
         const arr = map.get(d.campaign_id) ?? [];
         arr.push(d);
         map.set(d.campaign_id, arr);
       }
+      setCampaigns(rows);
       setDeliverablesByCampaign(map);
     } catch (e) {
+      if (loadGen.current !== gen) return;
       setError(e instanceof Error ? e.message : "Failed to load campaigns.");
       setCampaigns([]);
     }
@@ -97,10 +108,11 @@ export function CampaignsWorkspace() {
     return campaignCountLabel(campaigns);
   }, [campaigns]);
 
-  const isLoading = campaigns === null && !error;
-  const isEmpty = campaigns !== null && campaigns.length === 0 && !error;
-  const isError = !!error;
-  const isFilteredEmpty = filtered !== null && filtered.length === 0 && !isLoading && !isError && !isEmpty;
+  const needsBrand = !activeBrandId;
+  const isLoading = !needsBrand && campaigns === null && !error;
+  const isEmpty = !needsBrand && campaigns !== null && campaigns.length === 0 && !error;
+  const isError = !!error && !needsBrand;
+  const isFilteredEmpty = !needsBrand && filtered !== null && filtered.length === 0 && !isLoading && !isError && !isEmpty;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: "var(--color-bg-page, #fff)" }}>
@@ -111,7 +123,7 @@ export function CampaignsWorkspace() {
             <div>
               <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-.01em" }}>Campaigns</h1>
               <p style={{ margin: "5px 0 0", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-                {isLoading ? "Loading campaigns…" : isError ? "Couldn’t load campaigns" : countLabel}
+                {needsBrand ? "Select a brand to view campaigns" : isLoading ? "Loading campaigns…" : isError ? "Couldn’t load campaigns" : countLabel}
               </p>
             </div>
             <button
@@ -139,7 +151,7 @@ export function CampaignsWorkspace() {
             </button>
           </div>
 
-          {!isEmpty && !isError ? (
+          {!needsBrand && !isEmpty && !isError ? (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <label
@@ -157,9 +169,11 @@ export function CampaignsWorkspace() {
                     padding: "0 13px",
                   }}
                 >
-                  <Search size={16} strokeWidth={2} color="var(--color-text-muted)" aria-hidden />
+                  <Search size={16} strokeWidth={2} color="var(--color-text-muted)" aria-hidden="true" />
+                  <span className="sr-only">Search campaigns</span>
                   <input
                     id="campaign-search"
+                    aria-label="Search campaigns"
                     placeholder="Search campaigns…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -208,7 +222,12 @@ export function CampaignsWorkspace() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 40px 24px" }}>
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
-          {isLoading ? (
+          {needsBrand ? (
+            <EmptyState
+              heading="Select a brand"
+              body="Choose a brand above to view its campaigns. Campaigns are scoped to the active brand."
+            />
+          ) : isLoading ? (
             <div
               data-testid="campaigns-loading"
               style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}

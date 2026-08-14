@@ -30,7 +30,6 @@ export function CampaignCard({ campaign, deliverables }: Props) {
       }}
     >
       <div
-        aria-hidden
         style={{
           width: "100%",
           aspectRatio: "16 / 9",
@@ -44,12 +43,13 @@ export function CampaignCard({ campaign, deliverables }: Props) {
           <img
             src={campaign.cover_url!}
             alt=""
+            aria-hidden="true"
             onError={() => setCoverError(true)}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : null}
         <span
-          aria-hidden
+          aria-hidden="true"
           style={{
             position: "absolute",
             inset: 0,
@@ -57,6 +57,7 @@ export function CampaignCard({ campaign, deliverables }: Props) {
           }}
         />
         <span
+          aria-label={`Status: ${label}`}
           style={{
             position: "absolute",
             left: 11,
@@ -73,7 +74,7 @@ export function CampaignCard({ campaign, deliverables }: Props) {
             borderRadius: 999,
           }}
         >
-          <span style={{ width: 6, height: 6, borderRadius: 50, background: dot }} aria-hidden />
+          <span style={{ width: 6, height: 6, borderRadius: 50, background: dot }} aria-hidden="true" />
           {label}
         </span>
       </div>
