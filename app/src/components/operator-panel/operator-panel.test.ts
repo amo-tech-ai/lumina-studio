@@ -81,9 +81,14 @@ describe("OperatorPanel — navigateTo frontend tool (IPI2-82 / IPI-731)", () =>
 });
 
 describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
-  it("registers the internal-tool hiding hook", () => {
-    expect(PANEL_SRC).toMatch(/useHideInternalToolCalls\(\)/);
-    expect(PANEL_SRC).toMatch(/useCrmDraftFollowUpRender\(\)/);
+  it("registers the internal-tool hiding hook via registry (both registrations covered)", () => {
+    expect(PANEL_SRC).toMatch(/useGenerativeUIRegistry\(\)/);
+    const registrySrc = readFileSync(
+      resolve(fileURLToPath(new URL(".", import.meta.url)), "../copilot/generative-ui-registry.tsx"),
+      "utf8",
+    );
+    expect(registrySrc).toMatch(/useHideInternalToolCalls\(\)/);
+    expect(registrySrc).toMatch(/useCrmDraftFollowUpRender\(\)/);
   });
 
   it("mounts center chat dock with welcomeText (not right-panel CopilotSidebar)", () => {
