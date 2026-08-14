@@ -344,8 +344,9 @@ function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): s
 
 function shouldExposeRuntimeErrorDetail(): boolean {
   if (process.env.NODE_ENV !== "production") return true;
-  // Preview should expose safe detail so 503 `runtime_error` for /info is
-  // diagnosable without leaking prod internals (isUnsafeClientErrorText still redacts).
+  // Preview should expose safe detail so 503 `runtime_error` for /info is diagnosable.
+  // Workers lack VERCEL_ENV (see app/wrangler.jsonc preview vars note) — check explicit WORKER_ENV.
+  if (process.env.WORKER_ENV === "preview") return true;
   const vercelEnv = process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV;
   if (vercelEnv === "preview" || vercelEnv === "development") return true;
   if (process.env.CF_PAGES === "1") return true;
@@ -411,7 +412,7 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
       {
         error,
         code,
-        ...(detail && exposeDetail ? { detail } : {}),
+        ...(detail && exposeDetail && !isUnsafeClientErrorText(detail) ? { detail } : {}),
         ...(parsed.degraded === true ? { degraded: true } : {}),
       },
       { status: 503 },
@@ -440,7 +441,7 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
     {
       error: "CopilotKit runtime unavailable",
       code: "runtime_error",
-      ...(detail && exposeDetail ? { detail } : {}),
+      ...(detail && exposeDetail && !isUnsafeClientErrorText(detail) ? { detail } : {}),
     },
     { status: 503 },
   );
@@ -653,10 +654,20 @@ const handler = async (request: Request): Promise<Response> => {
       return storageUnavailableResponse(err);
     }
     console.error("[copilotkit] runtime handler failed", err);
-    return Response.json(
-      { error: "CopilotKit runtime unavailable", code: "runtime_error" },
-      { status: 503 },
-    );
+    {
+      const exposeDetail = shouldExposeRuntimeErrorDetail();
+      const rawDetail = err instanceof Error ? err.message : String(err);
+      const safeDetail = rawDetail.trim().slice(0, 500);
+      const detailForClient = isUnsafeClientErrorText(safeDetail) ? undefined : safeDetail;
+      return Response.json(
+        {
+          error: "CopilotKit runtime unavailable",
+          code: "runtime_error",
+          ...(exposeDetail && detailForClient ? { detail: detailForClient } : {}),
+        },
+        { status: 503 },
+      );
+    }
   }
 };
 
