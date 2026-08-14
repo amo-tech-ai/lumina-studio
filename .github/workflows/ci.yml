@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch PR base ref
+        run: git fetch --no-tags origin "${GITHUB_BASE_REF:-main}"
       - name: Prevent docs/docs.json in code PRs
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
@@ -28,8 +32,9 @@ jobs:
   # Merge commit 4d89393a6 on IPI-750 resolved conflicts against stale f71824774,
   # wiping out 17 files of IPI-750 + IPI-769 work (ensureCfEnvOnContext, etc.).
   # This gate walks merge commits and flags files whose HEAD content matches the
-  # merge-base despite being changed by feature commits — the signature of a
-  # bad conflict resolution.
+  # divergence point (where feature branched from base) despite being changed
+  # on the feature side — the signature of a bad conflict resolution.
+  # Uses `branch: docs/*` override in check-docs-json-contamination.mjs.
   merge-regression-gate:
     runs-on: ubuntu-latest
     steps:

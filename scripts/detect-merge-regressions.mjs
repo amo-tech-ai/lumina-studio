@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Detect files silently reverted by a merge into a feature branch.
+ * Detect files silently reverted by a merge from main into a feature branch.
  *
  * When a branch is merged into main and then merged BACK into the feature
  * branch (common pattern: "git merge main into feature"), git may resolve
@@ -10,13 +10,17 @@
  * This script walks the merge commits on the current branch, finds the last
  * commit on the feature side before each merge, and checks if any file that
  * was changed by the feature branch reverts to match main's version after
- * the merge.
+ * the merge. It also checks the final HEAD so that a follow-up repair commit
+ * can clear a previously detected regression.
+ *
+ * Fail-closed design: if the base ref is unavailable or the merge base cannot
+ * be determined, the check FAILS rather than skipping.
  *
  * Usage: node scripts/detect-merge-regressions.mjs
  * CI:    runs on pull_request events (post-merge into feature branch)
+ *        Requires full fetch-depth (fetch-depth: 0) and a git fetch of the base ref.
  */
-import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execSync, execFileSync } from "node:child_process";
 
 function run(cmd) {
   try {
@@ -26,8 +30,56 @@ function run(cmd) {
   }
 }
 
+function runOrFail(cmd, message) {
+  try {
+    return execSync(cmd, { encoding: "utf8", stdio: "pipe" }).trim();
+  } catch (err) {
+    console.error(`🔴 ${message}\nError: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+function getFileContent(sha, path) {
+  // Use execFileSync with array args to safely handle paths with
+  // spaces, parentheses, and other special characters.
+  // Returns null if the file doesn't exist at this ref.
+  try {
+    return execFileSync("git", ["cat-file", "-p", `${sha}:${path}`], {
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+  } catch {
+    return null;
+  }
+}
+
+function getChangedFiles(sha, parents) {
+  // For merge commits, `git diff-tree -r <sha>` returns nothing because git
+  // uses combined-diff semantics for merges by default. Instead, enumerate
+  // files changed relative to EACH parent and take the union.
+  const changed = new Set();
+
+  if (parents && parents.length >= 2) {
+    for (const parent of parents) {
+      const parentChanged = run(
+        `git diff --no-commit-id --name-only ${parent} ${sha}`
+      );
+      parentChanged
+        .split("\n")
+        .filter(Boolean)
+        .forEach((f) => changed.add(f.trim()));
+    }
+  } else {
+    run(`git diff-tree --no-commit-id --name-only -r ${sha}`)
+      .split("\n")
+      .filter(Boolean)
+      .forEach((f) => changed.add(f.trim()));
+  }
+
+  return Array.from(changed);
+}
+
 function getMergeCommits() {
-  // Get merge commits that merged main into this branch
   return run("git log --merges --pretty=format:%H^^^%H --no-merges")
     .split("\n")
     .filter(Boolean)
@@ -37,41 +89,54 @@ function getMergeCommits() {
     });
 }
 
-function getFileContent(sha, path) {
+function isAncestor(ancestor, descendant) {
   try {
-    return execSync(`git show ${sha}:${path}`, {
-      encoding: "utf8",
+    execSync(`git merge-base --is-ancestor ${ancestor} ${descendant}`, {
       stdio: "pipe",
     });
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-function getChangedFiles(sha) {
-  return run(`git diff-tree --no-commit-id --name-only -r ${sha}`)
-    .split("\n")
-    .filter(Boolean);
+/**
+ * Determine which parent of a merge commit is on the base side (main).
+ * A parent is on the base side if it is an ancestor of the merge base,
+ * OR if it IS the merge base.
+ */
+function findBaseParent(parents, mergeBase) {
+  for (const p of parents) {
+    if (p === mergeBase || isAncestor(p, mergeBase)) {
+      return p;
+    }
+  }
+  return null;
 }
 
-// Simpler approach: compare HEAD against the merge base with main
-// and flag files where HEAD content == main content but the file was
-// changed in intermediate commits on this branch
 function main() {
-  const currentBranch = run("git branch --show-current");
   const baseRef = process.env.GITHUB_BASE_REF || "main";
+  const baseRemote = `origin/${baseRef}`;
 
-  // Get the merge base
-  const mergeBase = run(`git merge-base origin/${baseRef} HEAD`);
+  // Fetch the base ref so origin/<base> is authoritative.
+  runOrFail(
+    `git fetch --no-tags origin "${baseRef}"`,
+    `merge-regression-gate: could not fetch origin/${baseRef}. ` +
+      `Fail-closed: base ref unavailable.`
+  );
+
+  // Get the merge base between the remote base and HEAD.
+  const mergeBase = run(`git merge-base ${baseRemote} HEAD`);
   if (!mergeBase) {
-    console.log("⚠️ Could not determine merge base — skipping merge regression check");
-    return;
+    console.error(
+      `🔴 merge-regression-gate: could not determine merge base between ` +
+        `${baseRemote} and HEAD. Fail-closed: refusing to pass.`
+    );
+    process.exit(1);
   }
 
-  // Get all commits on this branch since the merge base
-  const branchCommits = run(
-    `git rev-list --reverse ${mergeBase}..HEAD`
-  )
+  // Get all commits on this branch since the merge base.
+  const branchCommits = run(`git rev-list --reverse ${mergeBase}..HEAD`)
     .split("\n")
     .filter(Boolean);
 
@@ -80,43 +145,99 @@ function main() {
     return;
   }
 
-  // Find merge commits where one parent is on the base branch
+  const branchCommitsSet = new Set(branchCommits);
   let regressions = [];
 
-  for (let i = 0; i < branchCommits.length; i++) {
-    const sha = branchCommits[i];
-    const parents = run(`git rev-list --parents -n 1 ${sha}`).split(" ").slice(1);
+  for (const sha of branchCommits) {
+    const parentsStr = run(`git rev-list --parents -n 1 ${sha}`);
+    const parents = parentsStr.split(" ").slice(1);
 
-    if (parents.length === 2) {
-      // This is a merge commit — check if one parent is the merge base
-      const isMainMerge = parents.some(
-        (p) =>
-          p === mergeBase ||
-          run(`git merge-base --is-ancestor ${p} ${mergeBase} 2>/dev/null && echo yes`).trim() === "yes"
-      );
+    if (parents.length !== 2) {
+      continue; // not a merge commit
+    }
 
-      if (isMainMerge) {
-        // Check files changed by this merge
-        const changedFiles = getChangedFiles(sha);
-        const featureParent = parents.find((p) => p !== mergeBase && !changedFiles.includes("") ) || parents[0];
+    // Only consider merges where one parent is on the base side.
+    const baseParent = findBaseParent(parents, mergeBase);
+    if (!baseParent) {
+      continue;
+    }
 
-        for (const file of changedFiles) {
-          const mainContent = getFileContent(mergeBase, file);
-          const featureContent = getFileContent(featureParent, file);
-          const mergeContent = getFileContent(sha, file);
+    const featureParent = parents.find((p) => p !== baseParent) || parents[0];
 
-          // If main and merge content are identical, but feature had
-          // different content, the merge may have clobbered feature work
-          if (
-            mainContent !== null &&
-            mergeContent !== null &&
-            featureContent !== null &&
-            mainContent === mergeContent &&
-            mainContent !== featureContent
-          ) {
-            regressions.push({ file, mergeCommit: sha });
-          }
-        }
+    // The divergence point is where the feature branch split from base.
+    // Files added on base *after* this point are not "deleted by feature" —
+    // they're new files that the merge correctly brought in.
+    const divergencePoint = run(
+      `git merge-base ${baseParent} ${featureParent}`
+    );
+
+    const changedFiles = getChangedFiles(sha, parents);
+
+    for (const file of changedFiles) {
+      const divergenceContent = getFileContent(divergencePoint, file);
+      const featureContent = getFileContent(featureParent, file);
+      const mergeContent = getFileContent(sha, file);
+      const headContent = getFileContent("HEAD", file);
+
+      // Skip files that don't exist at either the feature parent or the merge
+      // (e.g., added+deleted edge cases where nobody has the file)
+      if (featureContent === null && mergeContent === null) {
+        continue;
+      }
+
+      // REGRESSION 1: merge clobbered feature work
+      // The feature branch modified a file (featureContent differs from
+      // divergenceContent), but the merge resolved it back to
+      // divergenceContent, and HEAD still has divergenceContent.
+      if (
+        divergenceContent !== null &&
+        featureContent !== null &&
+        divergenceContent !== featureContent &&
+        mergeContent === divergenceContent &&
+        headContent === divergenceContent
+      ) {
+        regressions.push({
+          file,
+          mergeCommit: sha,
+          reason: "merge clobbered feature modification",
+        });
+        continue;
+      }
+
+      // REGRESSION 2: feature-added file deleted by merge
+      // The feature branch added a file (file didn't exist at divergence,
+      // featureContent !== null), but the merge deleted it and HEAD
+      // doesn't have it either.
+      if (
+        divergenceContent === null &&
+        featureContent !== null &&
+        mergeContent === null &&
+        headContent === null
+      ) {
+        regressions.push({
+          file,
+          mergeCommit: sha,
+          reason: "feature-added file deleted by merge",
+        });
+        continue;
+      }
+
+      // REGRESSION 3: feature-deleted file restored by merge
+      // The feature branch deleted a file that existed at the divergence
+      // point (divergenceContent !== null, featureContent === null), but
+      // the merge restored it and HEAD still has the base version.
+      if (
+        divergenceContent !== null &&
+        featureContent === null &&
+        mergeContent === divergenceContent &&
+        headContent === divergenceContent
+      ) {
+        regressions.push({
+          file,
+          mergeCommit: sha,
+          reason: "feature-deleted file restored to base version by merge",
+        });
+        continue;
       }
     }
   }
@@ -125,10 +246,16 @@ function main() {
     console.error(`
 🔴 Merge regression detected in ${regressions.length} file(s):
 
-The following files were changed by this branch but their content at HEAD
-matches the merge-base (main), suggesting a merge silently reverted them:
+${regressions
+  .map(
+    (r) =>
+      `  ${r.file} (merge: ${r.mergeCommit.slice(0, 10)}) — ${r.reason}`
+  )
+  .join("\n")}
 
-${regressions.map((r) => `  ${r.file} (merge: ${r.mergeCommit.slice(0, 10)})`).join("\n")}
+The following files were changed by this branch but their content at HEAD
+matches the divergence point (where feature branched from base),
+suggesting a merge silently reverted them.
 
 This pattern occurred when PR #921 (Create docs.json) was merged into IPI-750:
 the merge resolved file conflicts against f71824774's stale version, wiping
@@ -137,6 +264,9 @@ out ensureCfEnvOnContext and other IPI-750 changes.
 Fix: After merging, always run:
   git diff <last-feature-commit>..HEAD --stat
 to verify no feature files were silently reverted.
+
+If a repair commit was applied after the merge, re-run this check — the
+final HEAD state is what matters.
 `);
     process.exit(1);
   }
