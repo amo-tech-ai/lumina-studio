@@ -17,6 +17,7 @@ const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/bookings", "booking"],  // IPI-348 · MODELGATE-10
   ["/app/model", "booking"],  // IPI-348
   ["/app/roster", "booking"],  // IPI-348
+  ["/app/talent", "model-match"],
   ["/app/matching", "model-match"],  // IPI-308 · MODEL-P2 (was social-discovery — a placeholder route, never functionally exercised)
   ["/app/preview", "visual-identity"],  // IPI-247
   ["/app/onboarding", "brand-intelligence"],  // IPI-247 — legacy path redirects (IPI-945)
