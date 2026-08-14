@@ -17,6 +17,7 @@ jobs:
   # any PR that touches docs/docs.json unless the branch is docs/* (docs-only).
   docs-json-gate:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +38,7 @@ jobs:
   # Uses `branch: docs/*` override in check-docs-json-contamination.mjs.
   merge-regression-gate:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
