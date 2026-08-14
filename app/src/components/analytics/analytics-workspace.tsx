@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -41,21 +40,20 @@ export function AnalyticsWorkspace() {
     setError(null);
     setData(null);
     try {
-      const [campaignsRes, assetsRes, scoresRes] = await Promise.all([
-        supabase.from("campaigns").select("id,status").eq("brand_id", activeBrandId),
-        supabase.from("assets").select("id,dna_score,status").eq("brand_id", activeBrandId).in("status", ["approved", "final"]),
+      const [liveRes, assetsRes, scoresRes] = await Promise.all([
+        supabase.from("campaigns").select("id", { count: "exact", head: true }).eq("brand_id", activeBrandId).eq("status", "live"),
+        supabase.from("assets").select("id,dna_score").eq("brand_id", activeBrandId).in("status", ["approved", "final"]),
         supabase.from("brand_scores").select("score_type,score").eq("brand_id", activeBrandId),
       ]);
-      if (campaignsRes.error) throw new Error(campaignsRes.error.message);
+      if (liveRes.error) throw new Error(liveRes.error.message);
       if (assetsRes.error) throw new Error(assetsRes.error.message);
       if (scoresRes.error) throw new Error(scoresRes.error.message);
       if (loadGen.current !== gen) return;
 
-      const campaigns = (campaignsRes.data ?? []) as { status: string }[];
-      const campaignsLive = campaigns.filter((c) => c.status === "live").length;
+      const campaignsLive = liveRes.count ?? 0;
 
-      const assets = (assetsRes.data ?? []) as { dna_score: number | null; status: string }[];
-      const assetsPublished = assets.length;
+      const assets = (assetsRes.data ?? []) as { dna_score: number | null }[];
+      const assetsPublished = assetsRes.count ?? assets.length;
       const avgAssetMatch =
         assets.length === 0
           ? null
@@ -66,8 +64,8 @@ export function AnalyticsWorkspace() {
             })();
 
       const scores = (scoresRes.data ?? []) as BrandScoreRow[];
-      const rawDna = computeDnaScore(scores);
-      const avgBrandDna = rawDna === 0 ? null : rawDna;
+      const hasAllBase = BASE_SCORE_TYPES.every((t) => scores.some((s) => s.score_type === t && typeof s.score === "number" && Number.isFinite(s.score)));
+      const avgBrandDna = hasAllBase ? computeDnaScore(scores) : null;
 
       const payload: AnalyticsPayload = {
         campaignsLive,
@@ -97,6 +95,15 @@ export function AnalyticsWorkspace() {
   const needsBrand = !activeBrandId;
   const isLoading = !needsBrand && data === null && !error;
   const isError = !!error && !needsBrand;
+  const isNoData =
+    !needsBrand &&
+    !isLoading &&
+    !isError &&
+    data !== null &&
+    data.campaignsLive === 0 &&
+    data.assetsPublished === 0 &&
+    data.avgBrandDna === null &&
+    data.avgAssetMatch === null;
 
   const kpis = data
     ? [
@@ -118,27 +125,29 @@ export function AnalyticsWorkspace() {
             <div>
               <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-.01em" }}>Analytics</h1>
               <p style={{ margin: "5px 0 0", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-                {needsBrand ? "Select a brand to view analytics" : isLoading ? "Loading analytics…" : isError ? "Couldn’t load analytics" : "Trusted overview · last 30 days"}
+                {needsBrand ? "Select a brand to view analytics" : isLoading ? "Loading analytics…" : isError ? "Couldn’t load analytics" : "Trusted overview"}
               </p>
             </div>
-            <Link
-              href="/app/analytics/campaigns"
+            <span
+              title="Campaign comparison — coming in IPI-297"
+              aria-disabled="true"
               style={{
                 height: 40,
                 padding: "0 14px",
                 border: "1px solid var(--color-border)",
                 borderRadius: "0.625rem",
-                background: "var(--color-bg-card)",
-                color: "var(--color-text-secondary)",
+                background: "var(--color-bg-muted)",
+                color: "var(--color-text-muted)",
                 fontSize: "0.875rem",
                 fontWeight: 500,
                 display: "inline-flex",
                 alignItems: "center",
-                textDecoration: "none",
+                cursor: "not-allowed",
+                opacity: 0.7,
               }}
             >
               Compare campaigns →
-            </Link>
+            </span>
           </div>
         </div>
       </div>
@@ -158,6 +167,8 @@ export function AnalyticsWorkspace() {
             </div>
           ) : isError ? (
             <ErrorState title="Couldn’t load analytics" message={error ?? "Check your connection and try again."} onRetry={load} />
+          ) : isNoData ? (
+            <EmptyState heading="No analytics yet" body="Publish a campaign and its assets to see performance, DNA trends, and AI activity here." />
           ) : !data ? (
             <EmptyState heading="No analytics yet" body="Publish a campaign and its assets to see performance, DNA trends, and AI activity here." />
           ) : (
@@ -190,12 +201,15 @@ export function AnalyticsWorkspace() {
 
               <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--card-radius)", padding: 16, background: "var(--color-bg-card)", marginBottom: 16 }}>
                 <div style={{ fontSize: "var(--fs-sm)", fontWeight: 600 }}>Campaign performance</div>
-                <div style={{ fontSize: "var(--fs-xs)", color: "var(--color-text-muted)", marginTop: 3 }}>Engagement rate by campaign — verified ranking</div>
+                <div style={{ fontSize: "var(--fs-xs)", color: "var(--color-text-muted)", marginTop: 3 }}>Campaign comparison</div>
                 <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <Link href="/app/analytics/campaigns" style={{ fontSize: "var(--fs-sm)", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                  <span
+                    title="Open Campaign Performance — coming in IPI-297"
+                    aria-disabled="true"
+                    style={{ fontSize: "var(--fs-sm)", fontWeight: 600, color: "var(--color-text-muted)", cursor: "not-allowed", opacity: 0.7 }}
+                  >
                     Open Campaign Performance →
-                  </Link>
-                  <span style={{ fontSize: "var(--fs-xs)", color: "var(--color-text-muted)" }}>single typed payload, no N+1</span>
+                  </span>
                 </div>
               </div>
 
@@ -203,7 +217,7 @@ export function AnalyticsWorkspace() {
                 <div style={{ fontSize: "var(--fs-sm)", fontWeight: 600 }}>Brand DNA over time</div>
                 <div style={{ fontSize: "var(--fs-xs)", color: "var(--color-text-muted)", marginTop: 3 }}>Overall score · last 7 periods — canonical computeDnaScore</div>
                 <div style={{ marginTop: 12, height: 112, background: "var(--color-bg-muted)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: "var(--fs-sm)" }}>
-                  Chart placeholder — reuse existing chart primitive
+                  No history yet — Brand DNA history unavailable
                 </div>
               </div>
             </>

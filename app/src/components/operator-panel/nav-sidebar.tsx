@@ -21,6 +21,7 @@ const NAV = [
   { href: "/app/brand",     icon: "◈",  label: "Brand" },
   { href: "/app/assets",    icon: "🖼", label: "Assets" },
   { href: "/app/campaigns", icon: "📣", label: "Campaigns" },
+  { href: "/app/analytics", icon: "📊", label: "Analytics" },
   { href: "/app/matching",  icon: "🤝", label: "Matching" },
   { href: "/app/inbox",     icon: "🔔", label: "Inbox" },
 ] as const;
