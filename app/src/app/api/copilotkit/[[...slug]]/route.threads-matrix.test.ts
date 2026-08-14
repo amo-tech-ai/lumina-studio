@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeMemoryResourceId } from "@/mastra/memory";
 
-// Hoisted mocks — configured per test via mockReturnValue, not re-doMock per test
-// This avoids vi.doMock leak across tests (review: Test mocks leak state)
-const mockGetCurrentOrgId = vi.fn();
-const mockGetThreadById = vi.fn();
-const mockWithOperatorAuth = vi.fn();
-const mockCreateUserScopedClient = vi.fn(() => ({}));
+const { mockGetCurrentOrgId, mockGetThreadById, mockWithOperatorAuth, mockCreateUserScopedClient } = vi.hoisted(() => ({
+  mockGetCurrentOrgId: vi.fn(),
+  mockGetThreadById: vi.fn(),
+  mockWithOperatorAuth: vi.fn(),
+  mockCreateUserScopedClient: vi.fn(() => ({})),
+}));
 
 vi.mock("@/lib/crm/queries", () => ({ getCurrentOrgId: mockGetCurrentOrgId }));
 vi.mock("@/mastra/memory", async () => {
@@ -51,7 +51,6 @@ const unprotectedRoutes: Array<{ name: string; path: string; method: "GET"|"POST
 ];
 describe("COPILOT-GATE-005 — thread ownership matrix (URL + body)", () => {
   beforeEach(async () => {
-    vi.resetModules();
     vi.clearAllMocks();
     vi.stubEnv("NODE_ENV", "development");
     // default scope — per-test configureOrgScope overrides
@@ -61,7 +60,6 @@ describe("COPILOT-GATE-005 — thread ownership matrix (URL + body)", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
-    vi.resetModules();
   });
   it.each(protectedUrlRoutes)("$name $path $method denies foreign (403)", async ({ path, method }) => {
     configureOrgScope({ orgId: "org-acme", threadResourceId: makeMemoryResourceId("org-widgets", "user-b") });
@@ -72,9 +70,7 @@ describe("COPILOT-GATE-005 — thread ownership matrix (URL + body)", () => {
     expect(response.status).toBe(403);
     const body = await response.json() as { code?: string };
     expect(body.code).toBe("thread_forbidden");
-    // org isolation: verify getCurrentOrgId was called with user-a's id via withOperatorAuth
-    // and that thread lookup used the foreign thread id
-    expect(mockGetThreadById).toHaveBeenCalled();
+    expect(mockGetThreadById).toHaveBeenCalledWith({ threadId: "foreign-thread" });
   });
   it.each(protectedUrlRoutes)("$name allows own (200)", async ({ path, method }) => {
     const resourceId = makeMemoryResourceId("org-acme", "user-a");
