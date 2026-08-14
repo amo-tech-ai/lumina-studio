@@ -3,6 +3,9 @@
 # P1: separate from GATE-005 (one-concern-per-commit, AGENTS.md)
 # P2 fixes: AG-UI RunAgentInput required fields, RUN_STARTED/RUN_FINISHED, 200 asserts, token not in argv
 set -euo pipefail
+umask 077
+CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-10}"
+MAX_TIME="${MAX_TIME:-60}"
 PREVIEW_URL="${PREVIEW_URL:-https://ipix-operator-preview.sk-498.workers.dev}"
 TOKEN="${QA_JWT:-${SUPABASE_JWT:-}}"
 OUT_DIR="${OUT_DIR:-/tmp/cf001-$(date -u +%Y%m%dT%H%M%SZ)}"
@@ -11,9 +14,9 @@ echo "Preview: $PREVIEW_URL"
 echo "Out: $OUT_DIR"
 # -- Token via file, not argv (P2: keep QA bearer out of ps)
 AUTH_HEADER_FILE="$OUT_DIR/auth.header"
+trap 'rm -f -- "$AUTH_HEADER_FILE"' EXIT
 if [[ -n "$TOKEN" ]]; then
   printf "Authorization: Bearer %s\n" "$TOKEN" > "$AUTH_HEADER_FILE"
-  chmod 600 "$AUTH_HEADER_FILE"
   AUTH_ARGS=(-H @"$AUTH_HEADER_FILE")
 else
   echo "WARN: QA_JWT empty — info will 401 (expected anon)"
@@ -22,10 +25,14 @@ fi
 # 1. GET /api/copilotkit/info → 200 authenticated (P2: require 200)
 echo "--- Step 1: GET /api/copilotkit/info ---"
 set +e
-curl -sS -D "$OUT_DIR/info.headers" -o "$OUT_DIR/info.json" "${AUTH_ARGS[@]}" \
+curl -sS --connect-timeout "$CONNECT_TIMEOUT" --max-time "$MAX_TIME" -D "$OUT_DIR/info.headers" -o "$OUT_DIR/info.json" "${AUTH_ARGS[@]}" \
   "$PREVIEW_URL/api/copilotkit/info" -w "%{http_code} %{time_total}s\n" | tee "$OUT_DIR/info.status"
 CURL_EXIT=$?
 set -e
+if [[ $CURL_EXIT -ne 0 ]]; then
+  echo "FAIL: curl for /info failed with exit $CURL_EXIT"
+  exit 1
+fi
 cat "$OUT_DIR/info.headers"
 head -c 800 "$OUT_DIR/info.json"; echo
 INFO_CODE=$(awk '{print $1}' "$OUT_DIR/info.status" 2>/dev/null || echo "000")
@@ -53,12 +60,16 @@ BODY=$(jq -n --arg tid "$TID" --arg rid "$RID" '{
 }')
 echo "$BODY" | tee "$OUT_DIR/run.body.json"
 set +e
-curl -sS -N -D "$OUT_DIR/run.headers" -o "$OUT_DIR/run.sse" "${AUTH_ARGS[@]}" \
+curl -sS -N --connect-timeout "$CONNECT_TIMEOUT" --max-time "$MAX_TIME" -D "$OUT_DIR/run.headers" -o "$OUT_DIR/run.sse" "${AUTH_ARGS[@]}" \
   -H "content-type: application/json" -X POST \
   "$PREVIEW_URL/api/copilotkit/agent/production-planner/run" \
   --data-binary @"$OUT_DIR/run.body.json" -w "\n%{http_code} %{time_total}s\n" | tee "$OUT_DIR/run.status"
 CURL_EXIT=$?
 set -e
+if [[ $CURL_EXIT -ne 0 ]]; then
+  echo "FAIL: curl for agent/run failed with exit $CURL_EXIT"
+  exit 1
+fi
 RUN_CODE=$(awk 'END{print $1}' "$OUT_DIR/run.status" 2>/dev/null || echo "000")
 cat "$OUT_DIR/run.headers"
 echo "--- SSE head (first 80 lines) ---"
@@ -91,5 +102,3 @@ echo "OK: RUN_FINISHED"
 echo "=== COPILOT-CF-001 PASS === Artifacts: $OUT_DIR"
 echo "  info.headers info.json info.status ($INFO_CODE)"
 echo "  run.body.json run.headers run.sse run.status ($RUN_CODE)"
-# cleanup auth header (contains token)
-shred -u "$AUTH_HEADER_FILE" 2>/dev/null || rm -f "$AUTH_HEADER_FILE"
