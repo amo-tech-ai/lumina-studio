@@ -343,7 +343,13 @@ function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): s
 }
 
 function shouldExposeRuntimeErrorDetail(): boolean {
-  return process.env.NODE_ENV !== "production";
+  if (process.env.NODE_ENV !== "production") return true;
+  // Preview should expose safe detail so 503 `runtime_error` for /info is
+  // diagnosable without leaking prod internals (isUnsafeClientErrorText still redacts).
+  const vercelEnv = process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (vercelEnv === "preview" || vercelEnv === "development") return true;
+  if (process.env.CF_PAGES === "1") return true;
+  return false;
 }
 
 /** True when a client-facing string looks like a raw Node/bundler internal. */
