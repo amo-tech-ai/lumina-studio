@@ -6,7 +6,7 @@
 | Authority | Where |
 |-----------|--------|
 | Status | [Linear](https://linear.app/amo100) first |
-| Open work + evidence | [`todo.md`](./todo.md) |
+| Open work + evidence | [`docs/cloudflare/todo.md`](../../docs/cloudflare/todo.md) |
 | Roadmap / PRD | [`PLAN.md`](./PLAN.md) |
 | Root board pointer | [`../../todo.md`](../../todo.md) |
 | This map | [`index.md`](./index.md) (you are here) |
@@ -20,7 +20,7 @@
 | Doc | Role |
 |-----|------|
 | [`README.md`](./README.md) | Folder entry + Linear links |
-| [`todo.md`](./todo.md) | **Progress tracker** — Do next, lanes, evidence |
+| [`docs/cloudflare/todo.md`](../../docs/cloudflare/todo.md) | **Progress tracker** — Do next, lanes, evidence |
 | [`PLAN.md`](./PLAN.md) | **Active roadmap / PRD** |
 | [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) | Latest todo accuracy audit (2026-07-21) |
 | [`user-journeys/00-index.md`](./user-journeys/00-index.md) | Journey test catalog (IPI-500) |
@@ -81,7 +81,7 @@ Root orphans + `plan/` + `draft/` + `notes/` + `prompts/` consolidated into `arc
 | [`index.md`](./index.md) | This map |
 | [`README.md`](./README.md) | Entry + Linear |
 | [`PLAN.md`](./PLAN.md) | Active roadmap |
-| [`todo.md`](./todo.md) | Progress tracker |
+| [`docs/cloudflare/todo.md`](../../docs/cloudflare/todo.md) | Progress tracker |
 | [`CLOUDFLARE-EPIC.md`](./CLOUDFLARE-EPIC.md) | Epic long-form |
 
 ### Historical (moved to `archive/root/` 2026-07-21 — do not treat as Do next)
@@ -110,7 +110,7 @@ Root orphans + `plan/` + `draft/` + `notes/` + `prompts/` consolidated into `arc
 
 | Doc | Path |
 |-----|------|
-| Progress tracker | [`todo.md`](./todo.md) |
+| Progress tracker | [`docs/cloudflare/todo.md`](../../docs/cloudflare/todo.md) |
 | Active plan | [`PLAN.md`](./PLAN.md) |
 | Epic narrative | [`CLOUDFLARE-EPIC.md`](./CLOUDFLARE-EPIC.md) |
 | Todo accuracy audit | [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) |
