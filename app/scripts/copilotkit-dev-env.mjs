@@ -40,6 +40,12 @@ export const COMMON_DEV_KEYS = [
     url: "https://supabase.com/docs/guides/database/connecting-to-postgres",
     example: "postgresql://...",
   },
+  {
+    key: "MASTRA_SCHEMA",
+    note: "Required by Mastra PostgresStore (IPI-1011). Use mastra in normal work; public only for the documented rollback.",
+    url: "https://mastra.ai/reference/storage/postgresql",
+    example: "mastra",
+  },
 ];
 
 export function readDotenvValue(envFileContent, key) {

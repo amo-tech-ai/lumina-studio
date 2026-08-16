@@ -71,7 +71,11 @@ describe("copilotkit-dev-env", () => {
 
   it("passes when GEMINI_API_KEY is set in process env", () => {
     const { vendorFailures } = collectDevEnvWarnings(
-      { GEMINI_API_KEY: "test-key", DATABASE_URL: "postgresql://localhost/test" },
+      {
+        GEMINI_API_KEY: "test-key",
+        DATABASE_URL: "postgresql://localhost/test",
+        MASTRA_SCHEMA: "mastra",
+      },
       "",
     );
     expect(vendorFailures).toHaveLength(0);
@@ -79,11 +83,21 @@ describe("copilotkit-dev-env", () => {
 
   it("requires DATABASE_URL for all providers", () => {
     const { vendorFailures } = collectDevEnvWarnings(
-      { GEMINI_API_KEY: "test-key" },
+      { GEMINI_API_KEY: "test-key", MASTRA_SCHEMA: "mastra" },
       "",
     );
     expect(vendorFailures.map(({ requirement }) => requirement.key)).toContain(
       "DATABASE_URL",
+    );
+  });
+
+  it("requires MASTRA_SCHEMA even when GEMINI_API_KEY and DATABASE_URL are set", () => {
+    const { vendorFailures } = collectDevEnvWarnings(
+      { GEMINI_API_KEY: "test-key", DATABASE_URL: "postgresql://localhost/test" },
+      "",
+    );
+    expect(vendorFailures.map(({ requirement }) => requirement.key)).toContain(
+      "MASTRA_SCHEMA",
     );
   });
 
