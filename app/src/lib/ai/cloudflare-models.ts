@@ -90,6 +90,25 @@ function readCfEnv(requestContext: RequestContext): CfEnvLike | undefined {
   return raw as CfEnvLike;
 }
 
+/**
+ * IPI-750 · CF-MIG-230-W0-HARDEN — Make Shared Cloudflare Model Resolution Resume-Safe
+ * Restores `cfEnv` on a RequestContext when it is missing. Covers the durable-resume gap:
+ * when Mastra's run-registry expires during a long HITL suspension (>10 min), the resume path in
+ * @mastra/core/agent/durable creates a fresh, empty RequestContext. Without this restoration
+ * the model callback silently selects legacy for the next LLM step. Rehydrates from the live
+ * Cloudflare runtime only (never process.env — IPI-607); silent no-op outside Cloudflare.
+ */
+export async function ensureCfEnvOnContext(requestContext: RequestContext): Promise<void> {
+  if (readCfEnv(requestContext)) return;
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const { env } = getCloudflareContext();
+    requestContext.set("cfEnv", pickCfEnv(env));
+  } catch {
+    // Not running on Cloudflare (Vercel/Node) — cfEnv stays unset.
+  }
+}
+
 export function resolveAgentModelOutcome({
   agentId,
   tier = "default",
@@ -129,8 +148,9 @@ export function resolveAgentModelOutcome({
 }
 
 /** Thin accessor for Mastra's `model: ({ requestContext }) => ...` callback. */
-export function resolveAgentModel(
+export async function resolveAgentModel(
   options: ResolveAgentModelOptions,
-): ResolveAgentModelOutcome["model"] {
+): Promise<ResolveAgentModelOutcome["model"]> {
+  await ensureCfEnvOnContext(options.requestContext);
   return resolveAgentModelOutcome(options).model;
 }
