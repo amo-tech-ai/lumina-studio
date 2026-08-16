@@ -173,6 +173,11 @@ describe("visual-identity model wiring (IPI-358 A6 — Groq cutover guard)", () 
     // this would attempt the Groq path and throw "GROQ_API_KEY is required" at import time.
     vi.stubEnv("AI_PROVIDER", "groq");
     vi.resetModules();
-    await expect(import("./visual-identity")).resolves.toBeDefined();
+    const mod = await import("./visual-identity");
+    expect(mod).toBeDefined();
+    const { RequestContext } = await import("@mastra/core/request-context");
+    await expect(
+      mod.visualIdentityAgent.getModel({ requestContext: new RequestContext() }),
+    ).resolves.toBeDefined();
   });
 });

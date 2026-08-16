@@ -4,13 +4,28 @@
 // IPI2-123's own gate: "do not start before MVP brand-intake + AIOR-003").
 
 import { Agent } from "@mastra/core/agent";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { agentTools } from "@/mastra/tools";
 import { resolveModel } from "@/mastra/models";
 
 export const modelMatchAgent = new Agent({
   id: "model-match",
   name: "Model Match",
-  model: resolveModel("default"),
+  // IPI-756 · CF-MIG-230-W6 — dynamic model via resolveAgentModel (reuse IPI-755/IPI-769 harness).
+  model: async ({ requestContext }) => {
+    try {
+      return await resolveAgentModel({
+        agentId: "model-match",
+        tier: "default",
+        requestContext,
+      });
+    } catch {
+      console.warn(
+        "[modelMatch] resolveAgentModel failed (agentId: model-match, tier: default); falling back to legacy model",
+      );
+      return resolveModel("default");
+    }
+  },
   tools: {
     searchTalentByFilters: agentTools.searchTalentByFilters,
     computeTalentMatchScore: agentTools.computeTalentMatchScore,
