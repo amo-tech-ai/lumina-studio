@@ -7,6 +7,7 @@ import {
   collectDevEnvWarnings,
   GEMINI_DEFAULT_MODEL,
   loadDotenvLayers,
+  resolveMastraSchemaPreflight,
 } from "./copilotkit-dev-env.mjs";
 
 const envFileContent = loadDotenvLayers([".env", ".env.local"]);
@@ -16,6 +17,21 @@ const { provider, vendorFailures, intelligenceFailures } = collectDevEnvWarnings
   process.env,
   envFileContent,
 );
+
+const schema = resolveMastraSchemaPreflight(process.env, envFileContent);
+if (!schema.ok) {
+  if (schema.reason === "unsupported") {
+    console.error(
+      `✗ MASTRA_SCHEMA=${schema.value} is not allowed. Use mastra (normal) or public (documented rollback only).`,
+    );
+  } else {
+    console.error(
+      "✗ MASTRA_SCHEMA is missing or empty. Set MASTRA_SCHEMA=mastra in .env.local (or public for the documented rollback). Unset/empty fails closed after IPI-1011 · MASTRA-PG-015 — Stop Residual Writes to public.mastra_*.",
+    );
+  }
+  console.error("Refusing to start Next.js / Mastra so Production Planner cannot write the wrong schema.");
+  process.exit(1);
+}
 
 if (vendorFailures.length > 0) {
   for (const { requirement: entry, value } of vendorFailures) {
