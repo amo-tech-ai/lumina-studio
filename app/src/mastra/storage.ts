@@ -161,16 +161,24 @@ function resolveMastraPgSslOption(
 
 /**
  * IPI-630 — which Postgres schema Mastra PostgresStore targets.
- * Default **public** for local/dev without an explicit env (safe when tables
- * still live in public). Linked/prod Path A recovery (IPI-792): after #614
- * `20260722150000` moved data into `mastra.*`, set `MASTRA_SCHEMA=mastra` on
- * the deploy target so CopilotKit threads hit the live schema — not empty public.
- * DDL stays migration-owned (`disableInit: true`); do not flip env without a
- * writer pause + backup (see IPI-792 / IPI-793).
+ * IPI-1011 · MASTRA-PG-015 — fail closed: MASTRA_SCHEMA must be explicitly set.
+ * Unset/empty previously defaulted to **public**, so any runtime without the env
+ * (local dev, preview deployments) silently wrote public.mastra_* shadows instead
+ * of the live mastra.* schema. Explicit `MASTRA_SCHEMA=public` is still honored
+ * for the documented rollback path (ipi-784-rollback.sql). DDL stays
+ * migration-owned (`disableInit: true`); do not flip env without a writer pause
+ * + backup (see IPI-792 / IPI-793).
  */
 export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): string {
-  const raw = (env.MASTRA_SCHEMA ?? "public").trim();
-  return raw.length > 0 ? raw : "public";
+  const raw = (env.MASTRA_SCHEMA ?? "").trim();
+  if (raw.length === 0) {
+    throw new Error(
+      "[mastra] MASTRA_SCHEMA must be explicitly set (e.g. MASTRA_SCHEMA=mastra). " +
+        "Unset/empty previously defaulted to public and wrote public.mastra_* shadows " +
+        "instead of mastra.* (IPI-1011 · MASTRA-PG-015).",
+    );
+  }
+  return raw;
 }
 
 /**
@@ -297,8 +305,8 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // each gets its own pool (worst case 2× max on session :5432). Transaction
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
   // IPI-630: disableInit always — tables come from migrations (IPI-628/784),
-  // never runtime DDL. schemaName from MASTRA_SCHEMA (default public); Path A
-  // recovery sets MASTRA_SCHEMA=mastra after #614 data is in mastra.*.
+  // never runtime DDL. schemaName from MASTRA_SCHEMA (required; IPI-1011
+  // fails closed if unset). Explicit MASTRA_SCHEMA=public is rollback-only.
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
