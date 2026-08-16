@@ -2,8 +2,9 @@
 /**
  * Prevent docs/docs.json from leaking into non-docs PRs (AGENTS.md rule #1).
  *
- * Fails the PR check if docs/docs.json is modified on any branch that is not
- * a docs-only branch (pattern: docs/* or chore/docs-*).
+ * Fails the PR check if docs/docs.json is added, modified, renamed, or deleted
+ * on any branch that is not a docs-only branch (pattern: docs/* or chore/docs-*).
+ * Deletes are included (AMRD) so a feature PR cannot wipe Mintlify nav silently.
  *
  * Fail-closed design: if the base ref cannot be resolved or the diff cannot
  * be computed, the check FAILS rather than passing silently.
@@ -34,7 +35,7 @@ function getChangedFiles(baseRef) {
 
   let changed;
   try {
-    changed = run(`git diff --name-only --diff-filter=AMR ${base}...HEAD`);
+    changed = run(`git diff --name-only --diff-filter=AMRD ${base}...HEAD`);
   } catch (err) {
     fail(
       `🔴 docs-json-gate: git diff against ${base} failed — cannot determine changed files. ` +
