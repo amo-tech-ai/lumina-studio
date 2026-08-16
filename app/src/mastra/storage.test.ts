@@ -122,6 +122,7 @@ describe("getMastraStorage (noop mode)", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
@@ -246,6 +247,7 @@ describe("IPI-718 · ESM-safe Postgres loading", () => {
       "DATABASE_URL",
       "postgresql://postgres:postgres@127.0.0.1:1/postgres?sslmode=disable",
     );
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const { getMastraStorage: freshGet } = await import("./storage");
     let store: unknown;
@@ -356,6 +358,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("CI", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "postgresql://session@127.0.0.1:5432/postgres");
     vi.stubEnv("MASTRA_PG_POOL_MAX", "3");
     vi.resetModules();
@@ -367,7 +370,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
         id: "mastra-storage",
         connectionString:
           "postgresql://mastra@127.0.0.1:6543/postgres?application_name=ipix-mastra",
-        schemaName: "public",
+        schemaName: "mastra",
         disableInit: true,
         max: 3,
         idleTimeoutMillis: 10_000,
@@ -385,8 +388,8 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("CI", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
-    vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
     const { getMastraStorage: freshGet } = await import("./storage");
     freshGet();
@@ -395,11 +398,17 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     );
   });
 
-  it("resolveMastraSchemaName defaults public and trims empty to public", async () => {
+  it("resolveMastraSchemaName fails closed on unset/empty and honors explicit values", async () => {
     const { resolveMastraSchemaName } = await import("./storage");
-    expect(resolveMastraSchemaName({})).toBe("public");
+    expect(() => resolveMastraSchemaName({})).toThrow(/MASTRA_SCHEMA must be explicitly set/);
+    expect(() => resolveMastraSchemaName({ MASTRA_SCHEMA: "" })).toThrow(
+      /MASTRA_SCHEMA must be explicitly set/,
+    );
+    expect(() => resolveMastraSchemaName({ MASTRA_SCHEMA: "   " })).toThrow(
+      /MASTRA_SCHEMA must be explicitly set/,
+    );
     expect(resolveMastraSchemaName({ MASTRA_SCHEMA: "  mastra  " })).toBe("mastra");
-    expect(resolveMastraSchemaName({ MASTRA_SCHEMA: "   " })).toBe("public");
+    expect(resolveMastraSchemaName({ MASTRA_SCHEMA: "public" })).toBe("public");
   });
 
   it("does not pass an explicit ssl override when DATABASE_SSL is unset (preserves connection-string sslmode)", async () => {
@@ -416,6 +425,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("CI", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DATABASE_SSL", "");
     vi.resetModules();
@@ -434,6 +444,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("CI", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DATABASE_SSL", "true");
     vi.resetModules();
@@ -454,6 +465,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("CI", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DATABASE_SSL", "false");
     vi.resetModules();
@@ -475,6 +487,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
       "MASTRA_DATABASE_URL",
       "postgresql://mastra@127.0.0.1:6543/postgres?sslmode=require",
     );
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DATABASE_SSL", "");
     vi.resetModules();
@@ -501,6 +514,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
       "MASTRA_DATABASE_URL",
       "postgresql://mastra@127.0.0.1:6543/postgres?sslmode=disable",
     );
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DATABASE_SSL", "");
     vi.resetModules();
@@ -563,6 +577,7 @@ describe("IPI-740 · Mastra pool + URL split (cont.)", () => {
     vi.stubEnv("DATABASE_URL", "postgresql://session@127.0.0.1:5432/postgres");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
     vi.stubEnv("MASTRA_PG_POOL_MAX", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { getMastraStorage: freshGet } = await import("./storage");
@@ -583,6 +598,7 @@ describe("IPI-740 · Mastra pool + URL split (cont.)", () => {
     delete (globalThis as { __ipixMastraPgStore?: unknown }).__ipixMastraPgStore;
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("DATABASE_URL", "postgresql://session@127.0.0.1:5432/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod1 = await import("./storage");
     const first = mod1.getMastraStorage();
@@ -613,12 +629,14 @@ describe("IPI-778 · degraded latch recovery", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
     expect(mod.isMastraStorageDegraded()).toBe(true);
 
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     expect(mod.isMastraStorageDegraded()).toBe(true);
 
     const store = mod.getMastraStorage();
@@ -641,6 +659,7 @@ describe("IPI-778 · degraded latch recovery", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
@@ -655,6 +674,7 @@ describe("IPI-778 · degraded latch recovery", () => {
   it("leaves Worker noop mode unchanged when latch never tripped", async () => {
     vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     const store = mod.getMastraStorage();
@@ -683,6 +703,7 @@ describe("IPI-778 · degraded latch recovery", () => {
 
     vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     const store = mod.getMastraStorage();
     expect(store).toBeInstanceOf(InMemoryStore);
     expect(ctor).not.toHaveBeenCalled();
@@ -703,11 +724,13 @@ describe("IPI-778 · degraded latch recovery", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
 
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     // Concurrent request paths (handlers) — init remains sync so both share one store.
     const [a, b] = await Promise.all([
       Promise.resolve().then(() => mod.getMastraStorage()),
@@ -735,12 +758,14 @@ describe("IPI-778 · degraded latch recovery", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
     const mod = await import("./storage");
     expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
     expect(mod.isMastraStorageDegraded()).toBe(true);
 
     vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     expect(() => mod.getMastraStorage()).toThrow(/ECONNREFUSED simulated/);
     // Latch must stay set — health must not claim recovery before durable init works.
     expect(mod.isMastraStorageDegraded()).toBe(true);
