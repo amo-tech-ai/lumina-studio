@@ -5,6 +5,21 @@ const mockGetMastra = vi.fn();
 const mockPromote = vi.fn();
 const mockDiscard = vi.fn();
 
+/** Official Next.js `after()` + Vitest `vi.waitFor` — no setTimeout(0) race. */
+const afterWork = vi.hoisted(() => ({
+  pending: Promise.resolve() as Promise<unknown>,
+}));
+
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return {
+    ...actual,
+    after: (task: () => unknown) => {
+      afterWork.pending = Promise.resolve().then(task);
+    },
+  };
+});
+
 vi.mock("@/app/api/_lib/supabase-admin", () => ({
   createSupabaseAdminClient: () => ({ from: (...args: unknown[]) => mockFrom(...args) }),
 }));
@@ -39,6 +54,7 @@ function chain(result: { data: unknown; error: unknown }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  afterWork.pending = Promise.resolve();
   mockPromote.mockResolvedValue({ ok: true });
   mockDiscard.mockResolvedValue({ ok: true });
   mockGetMastra.mockReturnValue({
@@ -51,8 +67,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  // IPI-1015: draft resume is after()/queueMicrotask + async Workers pg wrap.
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await vi.waitFor(() => afterWork.pending);
 });
 
 describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () => {

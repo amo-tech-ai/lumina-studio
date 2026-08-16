@@ -4,11 +4,24 @@
  * Reuses `withMastraWorkersPgStorage`. Resolves Hyperdrive here so the scope
  * helper stays OpenNext-free (IPI-844 gzip). CopilotKit keeps its own copy.
  */
+import { NextResponse } from "next/server";
 import {
   MastraStorageUnavailableError,
   isCloudflareWorkersRuntime,
   shouldSkipMastraPostgresStorage,
 } from "@/mastra/storage";
+
+/** Same 503 contract as CopilotKit `storageUnavailableResponse` — no raw internals. */
+export function workflowMastraPgErrorResponse(err: unknown): NextResponse | null {
+  if (!(err instanceof MastraStorageUnavailableError)) return null;
+  return NextResponse.json(
+    {
+      error: "Workflow persistence unavailable",
+      code: "storage_unavailable",
+    },
+    { status: 503 },
+  );
+}
 
 export async function withWorkflowMastraPg<T>(
   fn: () => T | Promise<T>,

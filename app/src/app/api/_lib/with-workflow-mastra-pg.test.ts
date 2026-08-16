@@ -73,4 +73,20 @@ describe("withWorkflowMastraPg (IPI-1015)", () => {
       MastraStorageUnavailableError,
     );
   });
+
+  it("maps MastraStorageUnavailableError to 503 storage_unavailable", async () => {
+    vi.resetModules();
+    const { MastraStorageUnavailableError } = await import("@/mastra/storage");
+    const { workflowMastraPgErrorResponse } = await import("./with-workflow-mastra-pg");
+    const res = workflowMastraPgErrorResponse(
+      new MastraStorageUnavailableError("HYPERDRIVE_FRESH missing"),
+    );
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(503);
+    await expect(res!.json()).resolves.toEqual({
+      error: "Workflow persistence unavailable",
+      code: "storage_unavailable",
+    });
+    expect(workflowMastraPgErrorResponse(new Error("other"))).toBeNull();
+  });
 });

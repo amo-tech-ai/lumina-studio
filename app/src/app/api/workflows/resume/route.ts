@@ -3,7 +3,10 @@ export const maxDuration = 60; // polling loop can take up to 30s for AI shot-li
 import { NextRequest, NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
-import { withWorkflowMastraPg } from "@/app/api/_lib/with-workflow-mastra-pg";
+import {
+  withWorkflowMastraPg,
+  workflowMastraPgErrorResponse,
+} from "@/app/api/_lib/with-workflow-mastra-pg";
 // POST /api/workflows/resume
 // Body: { workflowId, runId, stepId, resumeData }
 export async function POST(req: NextRequest) {
@@ -65,6 +68,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof OperatorAuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const unavailable = workflowMastraPgErrorResponse(err);
+    if (unavailable) return unavailable;
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

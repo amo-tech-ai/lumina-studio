@@ -4,7 +4,10 @@ import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { resolveJwtActor } from "@/lib/jwt-actor";
 import { getMastra } from "@/mastra";
-import { withWorkflowMastraPg } from "@/app/api/_lib/with-workflow-mastra-pg";
+import {
+  withWorkflowMastraPg,
+  workflowMastraPgErrorResponse,
+} from "@/app/api/_lib/with-workflow-mastra-pg";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +106,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ runId: run.runId });
     });
   } catch (e) {
+    const unavailable = workflowMastraPgErrorResponse(e);
+    if (unavailable) return unavailable;
     console.error("[brand-intelligence/start]", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Internal error" },

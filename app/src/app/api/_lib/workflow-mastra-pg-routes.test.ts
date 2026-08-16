@@ -159,6 +159,26 @@ describe("IPI-1015 workflow HTTP Workers+pg scope", () => {
     storageProbe.getMastraStorage = getMastraStorage;
   }
 
+  it("shoot-wizard: missing Hyperdrive returns 503 storage_unavailable", async () => {
+    vi.doMock("@opennextjs/cloudflare", () => ({
+      getCloudflareContext: async () => ({ env: {}, ctx: {} }),
+    }));
+    vi.resetModules();
+    const { POST } = await import("../workflows/shoot-wizard/route");
+    const res = await POST(
+      new Request("http://localhost/api/workflows/shoot-wizard", {
+        method: "POST",
+        body: JSON.stringify({ brandId: BRAND_ID }),
+      }) as never,
+    );
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      code: "storage_unavailable",
+      error: "Workflow persistence unavailable",
+    });
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
   it("shoot-wizard: getMastra() runs inside Workers pg scope", async () => {
     await installHyperdrive();
     const { POST } = await import("../workflows/shoot-wizard/route");

@@ -3,7 +3,10 @@
 // POST { runId: string, crawlId: string }
 import { NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
-import { withWorkflowMastraPg } from "@/app/api/_lib/with-workflow-mastra-pg";
+import {
+  withWorkflowMastraPg,
+  workflowMastraPgErrorResponse,
+} from "@/app/api/_lib/with-workflow-mastra-pg";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +53,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     });
   } catch (e) {
+    const unavailable = workflowMastraPgErrorResponse(e);
+    if (unavailable) return unavailable;
     console.error("[brand-intelligence/resume]", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Internal error" },
