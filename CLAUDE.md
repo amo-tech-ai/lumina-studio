@@ -22,6 +22,14 @@ Ground every explanation in something concrete from this repo — a real screen,
 
 **Never cite a bare issue or PR number.** Pair it with the actual title on first mention: `IPI-582 (Task Detail and Safe Mutations)`, not `IPI-582`.
 
+### #0 RULE — Always explain with real iPix examples
+
+Every response must be easy for a non-technical teammate: 1–2 plain-English sentences → a real-world **iPix/fashion** example (talent lookbook, Matching, shoot planning, Brand Hub, asset ingestion, Cloudinary pipeline — never warehouses or generic stores) → then the short technical bit. This is always on — see `.opencode/instructions/explain-ipix.md` for the full pattern and examples — no exceptions.
+
+**Example pattern:**
+- ❌ "Implemented conditional rendering with useState to prevent layout shift on onError."
+- ✅ "Think of a model lookbook: if a photo is missing, you don't leave an empty frame — you swap in a clean placeholder card that stays the same size. That's what we did in `TalentSwipeCard`… Tech: `showImage ? <img> : <User>` with `useState` onError."
+
 ## UX principles (every user-facing change)
 
 Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** — stop mistakes before they happen.
