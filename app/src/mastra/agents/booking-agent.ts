@@ -3,13 +3,28 @@
 // Never confirms — approve/confirm is human-only via POST /api/bookings/{id}/approve.
 
 import { Agent } from "@mastra/core/agent";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { agentTools } from "@/mastra/tools";
 import { resolveModel } from "@/mastra/models";
 
 export const bookingAgent = new Agent({
   id: "booking",
   name: "Booking",
-  model: resolveModel(),
+  // IPI-756 · CF-MIG-230-W6 — dynamic model via resolveAgentModel (reuse IPI-755/IPI-769 harness).
+  model: async ({ requestContext }) => {
+    try {
+      return await resolveAgentModel({
+        agentId: "booking",
+        tier: "default",
+        requestContext,
+      });
+    } catch {
+      console.warn(
+        "[booking] resolveAgentModel failed (agentId: booking, tier: default); falling back to legacy model",
+      );
+      return resolveModel("default");
+    }
+  },
   tools: {
     checkTalentAvailability: agentTools.checkTalentAvailability,
     draftBookingQuote: agentTools.draftBookingQuote,

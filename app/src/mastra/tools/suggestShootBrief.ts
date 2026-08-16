@@ -1,6 +1,8 @@
 import { createTool } from "@mastra/core/tools";
+import type { RequestContext } from "@mastra/core/request-context";
 import { z } from "zod";
 import { generateText } from "ai";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { resolveModel, resolveProviderOptions } from "../models";
 
 export const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
@@ -17,7 +19,10 @@ export const suggestShootBriefTool = createTool({
     tone: z.enum(ALLOWED_TONES).optional(),
   }),
   outputSchema: z.object({ brief: z.string() }),
-  execute: async ({ brandContext, channels, shootName, briefSeed, tone }) => {
+  execute: async (
+    { brandContext, channels, shootName, briefSeed, tone },
+    { requestContext }: { requestContext?: RequestContext } = {} as never,
+  ) => {
     const channelList = channels.join(", ") || "unspecified channels";
 
     const seedSection = briefSeed
@@ -28,8 +33,24 @@ export const suggestShootBriefTool = createTool({
       ? `\nTone adjustment: rewrite the brief to feel ${tone}.\n`
       : "";
 
+    // IPI-752 · CF-MIG-230-W3 — request-aware first (reuse IPI-750 draftCampaignBrief).
+    // Legacy resolveModel only when context is missing or the resolver throws.
+    let model;
+    try {
+      if (requestContext) {
+        model = await resolveAgentModel({ agentId: "production-planner", tier: "default", requestContext });
+      } else {
+        model = resolveModel("default");
+      }
+    } catch {
+      console.warn(
+        "[suggestShootBrief] resolveAgentModel failed (agentId: production-planner, tier: default); falling back to legacy model",
+      );
+      model = resolveModel("default");
+    }
+
     const { text } = await generateText({
-      model: resolveModel("default"),
+      model,
       prompt: `You are a Creative Director writing a concise shoot brief.
 
 ${brandContext ? `Brand context:\n${brandContext}\n` : ""}Campaign: ${shootName}

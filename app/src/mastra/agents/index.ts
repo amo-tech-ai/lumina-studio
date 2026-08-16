@@ -3,11 +3,8 @@ import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { agentTools } from "@/mastra/tools";
 import { getMastraMemory, getPlannerMemory, PlannerWorkingMemory } from "@/mastra/memory";
-import { resolveModel } from "@/mastra/models";
 
 export { PlannerWorkingMemory };
-
-const MODEL = resolveModel("default");
 
 // Excludes booking/CRM tools that belong to other agents (booking, crm-assistant) —
 // production-planner's instructions never mention them, so it shouldn't have unsupervised
@@ -42,7 +39,13 @@ export const productionPlannerAgent = new Agent({
   name: "Production Planner",
   tools: productionPlannerTools,
   workflows: mastraWorkflows("shoot-wizard"),
-  model: MODEL,
+  // IPI-752 · CF-MIG-230-W3 — dynamic model via resolveAgentModel (reuse IPI-769 harness).
+  model: ({ requestContext }) =>
+    resolveAgentModel({
+      agentId: "production-planner",
+      tier: "default",
+      requestContext,
+    }),
   instructions: `You are the iPix production planner for Lumina Studio operators.
 
 ## Navigation (frontend tool)

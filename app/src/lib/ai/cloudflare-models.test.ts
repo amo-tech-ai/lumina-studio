@@ -3,7 +3,13 @@ import { RequestContext } from "@mastra/core/request-context";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetAgentRoutingWarnState } from "./agent-routing";
-import { pickCfEnv, resolveAgentModel, resolveAgentModelOutcome } from "./cloudflare-models";
+import { ensureCfEnvOnContext, pickCfEnv, resolveAgentModel, resolveAgentModelOutcome } from "./cloudflare-models";
+
+vi.mock("@opennextjs/cloudflare", () => ({
+  getCloudflareContext: vi.fn(() => {
+    throw new Error("not in Cloudflare");
+  }),
+}));
 
 function contextWithCfEnv(env: Record<string, unknown> | undefined): RequestContext {
   const requestContext = new RequestContext();
@@ -191,5 +197,93 @@ describe("pickCfEnv — never leak the full Cloudflare env into RequestContext",
       AI_ROUTING_AGENT_BOOKING: { unexpected: "object" },
     });
     expect(picked.AI_ROUTING_AGENT_BOOKING).toBeUndefined();
+  });
+});
+
+describe("ensureCfEnvOnContext — durable-resume cfEnv restoration (IPI-750)", () => {
+  it("no-op when cfEnv already present on RequestContext", async () => {
+    const rc = new RequestContext();
+    const existing = { AI: fakeAiBinding, AI_ROUTING_AGENT_PRODUCTION_PLANNER: "native" } as unknown as Record<string, unknown>;
+    rc.set("cfEnv", existing);
+    await ensureCfEnvOnContext(rc);
+    expect(rc.get("cfEnv")).toBe(existing);
+  });
+
+  it("silent no-op outside Cloudflare (Vitest/Node — getCloudflareContext throws)", async () => {
+    const rc = new RequestContext();
+    await expect(ensureCfEnvOnContext(rc)).resolves.toBeUndefined();
+    expect(rc.get("cfEnv")).toBeUndefined();
+    const outcome = resolveAgentModelOutcome({ agentId: "production-planner", requestContext: rc });
+    expect(outcome.mode).toBe("legacy");
+    expect(outcome.reason).toBe("no_cf_env");
+  });
+
+  it("populates empty RequestContext when mocked Cloudflare supplies AI and flags (rehydration)", async () => {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const mocked = vi.mocked(getCloudflareContext as unknown as () => { env: Record<string, unknown> });
+    mocked.mockReturnValueOnce({
+      env: {
+        AI: fakeAiBinding,
+        AI_ROUTING_AGENT_PRODUCTION_PLANNER: "native",
+        GEMINI_API_KEY: "should-not-leak",
+      },
+    } as unknown as { env: Record<string, unknown> });
+    const rc = new RequestContext();
+    await ensureCfEnvOnContext(rc);
+    const cfEnv = rc.get("cfEnv") as Record<string, unknown> | undefined;
+    expect(cfEnv?.AI).toBe(fakeAiBinding);
+    expect(cfEnv?.AI_ROUTING_AGENT_PRODUCTION_PLANNER).toBe("native");
+    expect(cfEnv).not.toHaveProperty("GEMINI_API_KEY");
+    const outcome = resolveAgentModelOutcome({ agentId: "production-planner", requestContext: rc });
+    expect(outcome.mode).toBe("native");
+  });
+
+  it("unsupported tier or missing AI falls back safely after rehydration", async () => {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const mocked = vi.mocked(getCloudflareContext as unknown as () => { env: Record<string, unknown> });
+    mocked.mockReturnValueOnce({
+      env: { AI_ROUTING_AGENT_PRODUCTION_PLANNER: "native" },
+    } as unknown as { env: Record<string, unknown> });
+    const rc = new RequestContext();
+    await ensureCfEnvOnContext(rc);
+    const outcome = resolveAgentModelOutcome({ agentId: "production-planner", tier: "default", requestContext: rc });
+    expect(outcome.mode).toBe("legacy");
+    expect(outcome.reason).toBe("missing_ai_binding");
+  });
+
+  it("never stores complete Cloudflare env — secrets are dropped by pickCfEnv", async () => {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const mocked = vi.mocked(getCloudflareContext as unknown as () => { env: Record<string, unknown> });
+    mocked.mockReturnValueOnce({
+      env: {
+        AI: fakeAiBinding,
+        AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "native",
+        SUPABASE_SERVICE_ROLE_KEY: "secret-should-not-leak",
+        GEMINI_API_KEY: "secret-should-not-leak",
+        MASTRA_STORAGE_MODE: "secret",
+      },
+    } as unknown as { env: Record<string, unknown> });
+    const rc = new RequestContext();
+    await ensureCfEnvOnContext(rc);
+    const cfEnv = rc.get("cfEnv") as Record<string, unknown>;
+    expect(cfEnv).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    expect(cfEnv).not.toHaveProperty("GEMINI_API_KEY");
+    expect(cfEnv).not.toHaveProperty("MASTRA_STORAGE_MODE");
+    expect(cfEnv.AI_ROUTING_AGENT_CREATIVE_DIRECTOR).toBe("native");
+  });
+
+  it("Creative Director routing remains correct after rehydration and callers handle async", async () => {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const mocked = vi.mocked(getCloudflareContext as unknown as () => { env: Record<string, unknown> });
+    mocked.mockReturnValueOnce({
+      env: { AI: fakeAiBinding, AI_ROUTING_AGENT_CREATIVE_DIRECTOR: "native" },
+    } as unknown as { env: Record<string, unknown> });
+    const rc = new RequestContext();
+    await ensureCfEnvOnContext(rc);
+    const outcome = resolveAgentModelOutcome({ agentId: "creative-director", tier: "structured", requestContext: rc });
+    expect(outcome.mode).toBe("native");
+    const model = await resolveAgentModel({ agentId: "creative-director", tier: "structured", requestContext: rc });
+    expect(model).toBeDefined();
+    expect((model as { modelId?: string }).modelId).toBe("@cf/moonshotai/kimi-k2.6");
   });
 });
