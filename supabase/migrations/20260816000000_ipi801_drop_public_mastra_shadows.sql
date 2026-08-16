@@ -17,6 +17,8 @@
 -- soak row counts still match Day-0 (threads=16, messages=35,
 -- workflow_snapshot=8; the other 30 shadows have zero rows). Counts are
 -- taken under SHARE locks so a writer cannot sneak in before DROP.
+-- catalog_count = 0 is a no-op (fresh replay / already dropped) — Mastra
+-- auto-init created these tables, not an earlier migration.
 -- Drops ONLY the 33 allowlisted names — no LIKE loop, no CASCADE (a dependent
 -- object aborts the migration instead of silently cascading). The private
 -- mastra.* schema and all Mastra packages are untouched.
@@ -102,6 +104,12 @@ BEGIN
     AND c.relname LIKE 'mastra\_%' ESCAPE '\';
 
   IF catalog_count IS DISTINCT FROM 33 THEN
+    -- Already clean (fresh DB built by replaying migrations, or re-applied):
+    -- nothing to drop. Any other count is drift and must abort.
+    IF catalog_count = 0 THEN
+      RAISE NOTICE 'IPI-801 · Phase B: zero public.mastra_* relations — nothing to drop';
+      RETURN;
+    END IF;
     RAISE EXCEPTION
       'IPI-801 · Phase B: expected exactly 33 public.mastra_* relations (got %) — refuse partial drop',
       catalog_count;
@@ -141,6 +149,9 @@ BEGIN
   -- Soak row-count gate. SHARE blocks INSERT/UPDATE/DELETE; the lock is held
   -- until this migration transaction commits (Supabase default: one file =
   -- one transaction), so DROP below cannot race a new writer.
+  -- Official Postgres SET LOCAL lock_timeout — same 5s as the IPI-784 cutover.
+  SET LOCAL lock_timeout = '5s';
+
   LOCK TABLE
     public.mastra_agent_versions,
     public.mastra_agents,
