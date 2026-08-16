@@ -5,7 +5,8 @@ import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { v2 as cloudinary } from "cloudinary";
 import { z } from "zod";
-import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
+import { resolveAgentRoutingOutcome } from "@/lib/ai/agent-routing";
+import { ensureCfEnvOnContext, resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
 // Vision stays on Gemini until GROQ_MODEL_VISION is configured (golden eval gate) —
@@ -185,20 +186,31 @@ export { extractVisualIdentityTool, uploadToCloudinary };
 export const visualIdentityAgent = new Agent({
   id: "visual-identity",
   name: "Visual Identity",
-  // IPI-756 · CF-MIG-230-W6 — agent chat uses resolveAgentModel (default tier).
-  // extractVisualIdentity stays on resolveModel("vision") — approved nested exception.
+  // IPI-756 · CF-MIG-230-W6 — native chat uses default-tier Workers AI.
+  // Every non-native outcome keeps resolveModel("vision") (pre-migration Preview model).
+  // Peek the flag first so legacy/unset never constructs resolveModel("default")
+  // (that throws when AI_PROVIDER=groq and GROQ_API_KEY is unset).
+  // extractVisualIdentity stays on the same vision model — approved nested exception.
   model: async ({ requestContext }) => {
     try {
-      return await resolveAgentModel({
-        agentId: "visual-identity",
-        tier: "default",
-        requestContext,
+      await ensureCfEnvOnContext(requestContext);
+      const cfEnv = requestContext.get("cfEnv") as { AI?: unknown } | undefined;
+      const routing = resolveAgentRoutingOutcome("visual-identity", {
+        env: (cfEnv ?? {}) as Record<string, string | undefined>,
       });
+      if (routing.mode === "native" && cfEnv?.AI) {
+        return await resolveAgentModel({
+          agentId: "visual-identity",
+          tier: "default",
+          requestContext,
+        });
+      }
+      return resolveModel("vision");
     } catch {
       console.warn(
-        "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy model",
+        "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy vision model",
       );
-      return resolveModel("default");
+      return resolveModel("vision");
     }
   },
   tools: { extractVisualIdentity: extractVisualIdentityTool },

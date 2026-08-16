@@ -2,6 +2,7 @@ import { RequestContext } from "@mastra/core/request-context";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetAgentRoutingWarnState } from "@/lib/ai/agent-routing";
 import * as cloudflareModels from "@/lib/ai/cloudflare-models";
+import { GEMINI_MODELS } from "@/lib/ai/gemini-registry";
 import { bookingAgent } from "./booking-agent";
 import { modelMatchAgent } from "./model-match-agent";
 import { socialDiscoveryAgent } from "./social-discovery";
@@ -19,7 +20,7 @@ const REMAINING = [
     agent: visualIdentityAgent,
     agentId: "visual-identity",
     envKey: "AI_ROUTING_AGENT_VISUAL_IDENTITY",
-    warn: "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy model",
+    warn: "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy vision model",
   },
   {
     agent: socialDiscoveryAgent,
@@ -110,6 +111,23 @@ describe("IPI-756 remaining agents — routing (fail-closed, reuse harness)", ()
       expect(warnSpy.mock.calls.flat().join(" ")).not.toContain("secret-should-not-leak");
     },
   );
+
+  it("visual-identity non-native outcomes keep resolveModel(vision), including Groq-unset", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "");
+    vi.stubEnv("GROQ_MODEL_VISION", "");
+    const getModel = (requestContext: RequestContext) =>
+      (visualIdentityAgent as { getModel: (a: unknown) => Promise<{ modelId?: string }> }).getModel({
+        requestContext,
+      });
+    const unset = await getModel(ctx(undefined));
+    const legacy = await getModel(ctx({ AI_ROUTING_AGENT_VISUAL_IDENTITY: "legacy", AI: fakeAI }));
+    const missingAi = await getModel(ctx({ AI_ROUTING_AGENT_VISUAL_IDENTITY: "native" }));
+    expect(unset.modelId).toBe(GEMINI_MODELS.default);
+    expect(legacy.modelId).toBe(GEMINI_MODELS.default);
+    expect(missingAi.modelId).toBe(GEMINI_MODELS.default);
+    vi.unstubAllEnvs();
+  });
 
   it("booking write tools stay wired; canary must not select them", async () => {
     const tools = await bookingAgent.listTools();
