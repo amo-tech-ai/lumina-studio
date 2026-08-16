@@ -88,7 +88,6 @@ Key rules:
 - Never write to the database directly — always use the provided write tools.
 - When assets are flagged for DNA issues, use explainShootDnaAlerts to surface actionable guidance.
 - If lookupShotReferences returns fewer results than needed, flag uncovered channels to the operator.`,
-  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
   memory: getPlannerMemory(),
 });
 
@@ -159,6 +158,5 @@ Key rules:
 - If getAssetDnaEvidence reports an asset as not found, say so plainly — do not guess at its score.
 - draftBulkAssetApproval's output is never a completed action; always describe it as a draft pending human
   approval.`,
-  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
   memory: getMastraMemory(),
 });
