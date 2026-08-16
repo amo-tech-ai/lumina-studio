@@ -1,27 +1,28 @@
 -- IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables
--- Phase B anti-recreation proof (inverted from Phase A lockdown assertions).
+-- Phase A lockdown proof for the 33 public.mastra_* shadow tables.
 --
--- Asserts: zero public.mastra_% relations exist (all 33 allowlisted shadow
--- tables dropped by 20260816000000), none of the 33 allowlisted names has
--- reappeared, and the private mastra.* schema tables (threads/messages/
--- workflow_snapshot) still exist.
+-- Asserts: tables still exist (not dropped), RLS on, zero policies,
+-- deny-role + PUBLIC ACLs empty (all privilege_type / grantable bits),
+-- ownership is not a PostgREST role (DROP OWNED BY is not used —
+-- deny roles own zero public.mastra_* objects; owner is postgres),
+-- and allow-path: owning/bypass session can count(*) without error
+-- (rows preserved for rollback/inspection — counts only, no row payloads).
 --
 -- Plan math:
 --   1 allowlist count
---   + 1 catalog count (zero public.mastra_%)
+--   + 1 catalog count (no unexpected public.mastra_%)
 --   + 1 extras count (allowlist membership)
---   + 33 × absent check (to_regclass IS NULL)
---   + 3 × private mastra.* exists
---   = 39
+--   + 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count)
+--   = 234
 
 set search_path to public, extensions;
 
 begin;
-select plan(39);
+select plan(234);
 
-create temporary table retired_public_mastra_shadows (tablename text) on commit drop;
+create temporary table public_mastra_shadows (tablename text) on commit drop;
 
-insert into retired_public_mastra_shadows (tablename)
+insert into public_mastra_shadows (tablename)
 values
   ('mastra_agent_versions'),
   ('mastra_agents'),
@@ -58,12 +59,12 @@ values
   ('mastra_workspaces');
 
 select is(
-  (select count(*) from retired_public_mastra_shadows),
+  (select count(*) from public_mastra_shadows),
   33::bigint,
-  'IPI-801 · Phase B: expected 33 retired public shadow names'
+  'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: expected 33 public shadow names'
 );
 
--- Anti-recreation: catalog must have ZERO public.mastra_% relations.
+-- Fail closed: catalog must have exactly the allowlist — no new Mastra auto-init shadows.
 select is(
   (
     select count(*)::bigint
@@ -73,11 +74,10 @@ select is(
       and c.relkind in ('r', 'p', 'v', 'm', 'f')
       and c.relname like 'mastra\_%' escape '\'
   ),
-  0::bigint,
-  'IPI-801 · Phase B: zero public.mastra_* relations remain (shadows dropped)'
+  33::bigint,
+  'IPI-801 · MASTRA-PG-011 — catalog has exactly 33 public.mastra_* relations (no extras)'
 );
 
--- None of the 33 allowlisted names may reappear (CI fails on recreation).
 select is(
   (
     select count(*)::bigint
@@ -85,34 +85,101 @@ select is(
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
       and c.relkind in ('r', 'p', 'v', 'm', 'f')
-      and c.relname in (select tablename from retired_public_mastra_shadows)
+      and c.relname like 'mastra\_%' escape '\'
+      and c.relname not in (select tablename from public_mastra_shadows)
   ),
   0::bigint,
-  'IPI-801 · Phase B: no allowlisted public.mastra_* name has reappeared'
+  'IPI-801 · MASTRA-PG-011 — no public.mastra_* relation outside the 33-name allowlist'
 );
 
 select ok(
-    to_regclass(format('public.%I', t.tablename)) is null,
-    format('public.%I is absent (dropped in Phase B)', t.tablename)
+    to_regclass(format('public.%I', t.tablename)) is not null,
+    format('public.%I still exists (lockdown must not DROP)', t.tablename)
   )
-from retired_public_mastra_shadows t
+from public_mastra_shadows t
 order by t.tablename;
 
--- Private schema must be untouched: the live Mastra tables still exist.
 select ok(
-  to_regclass('mastra.mastra_threads') is not null,
-  'private mastra.mastra_threads still exists'
-);
+    exists(
+      select 1 from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public'
+        and c.relname = t.tablename
+        and c.relrowsecurity
+    ),
+    format('public.%I has RLS enabled', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
+
+select is(
+    (select count(*) from pg_policies p
+     where p.schemaname = 'public' and p.tablename = t.tablename),
+    0::bigint,
+    format('public.%I has zero RLS policies (fail-closed)', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
+
+-- ACL fail-closed for anon/authenticated/service_role (any privilege_type / grantable).
+select ok(
+    not exists(
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      cross join lateral aclexplode(c.relacl) as acl
+      join pg_roles gr on gr.oid = acl.grantee
+      where n.nspname = 'public'
+        and c.relname = t.tablename
+        and c.relacl is not null
+        and gr.rolname in ('anon', 'authenticated', 'service_role')
+    ),
+    format('deny roles have zero ACL entries on public.%I', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
 
 select ok(
-  to_regclass('mastra.mastra_messages') is not null,
-  'private mastra.mastra_messages still exists'
-);
+    not exists(
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      cross join lateral aclexplode(c.relacl) as acl
+      where n.nspname = 'public'
+        and c.relname = t.tablename
+        and c.relacl is not null
+        and acl.grantee = 0
+    ),
+    format('PUBLIC has no ACL entries on public.%I', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
 
 select ok(
-  to_regclass('mastra.mastra_workflow_snapshot') is not null,
-  'private mastra.mastra_workflow_snapshot still exists'
-);
+    (
+      select r.rolname
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      join pg_roles r on r.oid = c.relowner
+      where n.nspname = 'public' and c.relname = t.tablename
+    ) not in ('anon', 'authenticated', 'service_role'),
+    format('public.%I is not owned by a PostgREST role (no DROP OWNED BY needed)', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
+
+-- Allow path: session is owner/bypass (postgres in CI). Prove SELECT count(*)
+-- still works after lockdown — rows preserved for rollback/inspection.
+-- lives_ok: no error, no row payloads printed into the TAP stream.
+select lives_ok(
+    format('select count(*)::bigint from public.%I', t.tablename),
+    format(
+      'owner/bypass can count(*) public.%I (rows preserved; allow path)',
+      t.tablename
+    )
+  )
+from public_mastra_shadows t
+order by t.tablename;
 
 select * from finish();
 rollback;
