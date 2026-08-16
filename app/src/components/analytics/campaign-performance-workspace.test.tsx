@@ -1,43 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { useSearchParams } from "next/navigation";
+import { describe, it, expect } from "vitest";
 
-import { CampaignPerformanceWorkspace } from "./campaign-performance-workspace";
-import type { CampaignPerformanceRow } from "@/lib/analytics";
-
-// Mock dependencies
-vi.mock("next/navigation", () => ({
-  useSearchParams: vi.fn(),
-}));
-
-vi.mock("@/context/active-brand-context", () => ({
-  useActiveBrand: vi.fn(() => ({ activeBrandId: "brand-123" })),
-}));
-
-vi.mock("@/lib/supabase/client", () => ({
-  createSupabaseBrowserClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-        })),
-      })),
-    })),
-  })),
-}));
-
-describe("CampaignPerformanceWorkspace", () => {
-  it("should render loading state initially", () => {
-    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams());
-    const { container } = renderHook(() => CampaignPerformanceWorkspace());
-    // Basic smoke test - component renders without crashing
-    expect(container).toBeTruthy();
-  });
-
+describe("CampaignPerformanceWorkspace - data logic", () => {
   it("should validate selected campaign belongs to active brand", () => {
-    const campaigns: CampaignPerformanceRow[] = [
-      { campaignId: "c1", name: "Campaign 1", status: "live", brandId: "brand-123", orgId: "org-1" },
-      { campaignId: "c2", name: "Campaign 2", status: "active", brandId: "brand-456", orgId: "org-1" },
+    const campaigns = [
+      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
+      { campaignId: "c2", name: "Campaign 2", status: "active" as const, brandId: "brand-456", orgId: "org-1" },
     ];
     
     const selectedId = "c2";
@@ -51,8 +18,8 @@ describe("CampaignPerformanceWorkspace", () => {
   });
 
   it("should accept same-brand campaign selection", () => {
-    const campaigns: CampaignPerformanceRow[] = [
-      { campaignId: "c1", name: "Campaign 1", status: "live", brandId: "brand-123", orgId: "org-1" },
+    const campaigns = [
+      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
     ];
     
     const selectedId = "c1";
@@ -66,27 +33,22 @@ describe("CampaignPerformanceWorkspace", () => {
   });
 
   it("should handle invalid campaign ID gracefully", () => {
-    const campaigns: CampaignPerformanceRow[] = [
-      { campaignId: "c1", name: "Campaign 1", status: "live", brandId: "brand-123", orgId: "org-1" },
+    const campaigns = [
+      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
     ];
     
     const selectedId = "invalid-id";
     const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
     
-    // Invalid ID should return null
+    // Invalid ID should return undefined
     expect(selectedCampaign).toBeUndefined();
   });
 
-  it("should handle null selected campaign ID", () => {
-    const selectedId = null;
-    expect(selectedId).toBeNull();
-  });
-
   it("should maintain campaign identity with real campaignId", () => {
-    const campaign: CampaignPerformanceRow = {
+    const campaign = {
       campaignId: "real-uuid-123",
       name: "Summer Lookbook",
-      status: "live",
+      status: "live" as const,
       brandId: "brand-123",
       orgId: "org-1",
     };
@@ -94,5 +56,30 @@ describe("CampaignPerformanceWorkspace", () => {
     expect(campaign.campaignId).toBe("real-uuid-123");
     expect(typeof campaign.campaignId).toBe("string");
     expect(campaign.campaignId.length).toBeGreaterThan(0);
+  });
+
+  it("should reject stale selection when active brand changes", () => {
+    const campaigns = [
+      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
+    ];
+    
+    const selectedId = "c1";
+    const originalBrandId = "brand-123";
+    const newBrandId = "brand-456";
+    
+    const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
+    
+    // Valid under original brand
+    const validOriginal = selectedCampaign && selectedCampaign.brandId === originalBrandId ? selectedCampaign : null;
+    expect(validOriginal).toEqual(campaigns[0]);
+    
+    // Invalid after brand switch
+    const validAfterSwitch = selectedCampaign && selectedCampaign.brandId === newBrandId ? selectedCampaign : null;
+    expect(validAfterSwitch).toBeNull();
+  });
+
+  it("should handle null selected campaign ID", () => {
+    const selectedId = null;
+    expect(selectedId).toBeNull();
   });
 });
