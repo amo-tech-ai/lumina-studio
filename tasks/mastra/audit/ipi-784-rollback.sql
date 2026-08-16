@@ -16,17 +16,28 @@
 --      (schedulers, background tasks, Next.js / Mastra Studio / Worker pools)
 --   3. Switch application config BACK to public BEFORE this SQL commits
 --      - Set MASTRA_SCHEMA=public (required — do not unset) and redeploy / restart writers
---      - Unset/empty MASTRA_SCHEMA now fails closed (IPI-1011 · MASTRA-PG-015)
---        and will take agent memory offline instead of reconnecting to public
+--      - Fail-closed is deployment-dependent (IPI-1011 · MASTRA-PG-015):
+--          After that app change is live, unset/empty MASTRA_SCHEMA throws and
+--          takes Production Planner / agent memory offline instead of reconnecting
+--          to public. Before that deploy, unset/empty still falls back to public
+--          (storage.ts used to default both unset and empty to public). Diagnose
+--          the deployed runtime, not git main. Do not rely on the old fallback.
 --      - Do NOT leave the app on schemaName=mastra while this transaction
 --        commits — tables disappear from mastra.* under live writers
+--   3b. Verify BEFORE the transaction (skip → STOP)
+--      - Deployed env shows MASTRA_SCHEMA=public (Vercel / Worker dashboard or logs)
+--      - In this psql session, current_schema must be public:
+--          SELECT current_schema() AS session_schema;
+--        If that is not 'public', STOP and fix search_path / connection options
+--      - Confirm the 18 tables still live in mastra.* (they move only after BEGIN)
 --   4. Run the transaction below (SET SCHEMA + minimum ACL restore)
 --   5. Verify locations, grants, RLS, and runtime CRUD (see bottom)
 --   6. Compare COUNT(*) to the pre-rollback capture
 --   7. Resume traffic only after step 5–6 pass
 --
--- Abort conditions: lock_timeout / statement_timeout fires; any verify query
--- fails; row counts diverge; runtime CRUD fails for the documented role.
+-- Abort conditions: step 3b fails (session_schema is not public, or deployed
+-- MASTRA_SCHEMA is not public); lock_timeout / statement_timeout fires; any
+-- verify query fails; row counts diverge; runtime CRUD fails for the documented role.
 --
 -- =============================================================================
 -- ACCESS MODEL AFTER ROLLBACK (documented minimum — deliberate)
