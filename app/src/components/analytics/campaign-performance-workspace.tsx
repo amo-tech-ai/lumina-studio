@@ -145,7 +145,7 @@ export function CampaignPerformanceWorkspace() {
           ) : isLoading ? (
             <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--card-radius)", padding: "18px 20px", background: "var(--color-bg-card)", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 15 }}>
-                <div><div style={{ fontSize: "0.875rem", fontWeight: 600 }}>All campaigns</div><div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: 3 }}>Engagement rate · click a campaign to drill in</div></div>
+                <div><div style={{ fontSize: "0.875rem", fontWeight: 600 }}>All campaigns</div><div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: 3 }}>Click a campaign to drill in</div></div>
               </div>
               {[0, 1, 2].map((i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 11px", border: "1px solid var(--color-border)", borderRadius: 12, marginBottom: 8 }}>
@@ -163,15 +163,15 @@ export function CampaignPerformanceWorkspace() {
             <ErrorState title="Couldn't load campaign data" message={error ?? "The analytics service didn't respond."} onRetry={load} />
           ) : isNoData ? (
             <EmptyState
-              heading="No live campaigns"
-              body="Launch a campaign to compare reach, engagement, and DNA performance across your portfolio."
+              heading="No campaigns"
+              body="Create your first campaign to see campaign comparison."
               action={<a href="/app/campaigns" style={{ height: 40, padding: "0 20px", border: "none", borderRadius: "0.625rem", background: "var(--color-action)", color: "var(--color-action-text)", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>Go to Campaigns</a>}
             />
           ) : !data ? (
             <EmptyState heading="No campaigns yet" body="Create your first campaign to see performance comparison." />
           ) : (
             <>
-              {/* CAMPAIGN RANKING */}
+              {/* CAMPAIGN LIST */}
               <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--card-radius)", padding: "18px 20px", background: "var(--color-bg-card)", marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 15 }}>
                   <div><div style={{ fontSize: "0.875rem", fontWeight: 600 }}>All campaigns</div><div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: 3 }}>Click a campaign to drill in</div></div>
