@@ -1,5 +1,6 @@
 // IPI-368 · CRM-AI-002 — crm-assistant Mastra agent (wave 1)
 import { Agent } from "@mastra/core/agent";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { getMastraMemory } from "@/mastra/memory";
 import { resolveModel } from "@/mastra/models";
 import { agentTools } from "@/mastra/tools";
@@ -7,7 +8,23 @@ import { agentTools } from "@/mastra/tools";
 export const crmAssistantAgent = new Agent({
   id: "crm-assistant",
   name: "CRM Assistant",
-  model: resolveModel("default"),
+  // IPI-755 · CF-MIG-230-W5 — dynamic model via resolveAgentModel (reuse IPI-754/IPI-769 harness).
+  // Flag AI_ROUTING_AGENT_CRM_ASSISTANT stays legacy/unset until preview canary.
+  // Nested summarizeRelationship / draftFollowUp stay on resolveModel — shared barrel, not this PR.
+  model: async ({ requestContext }) => {
+    try {
+      return await resolveAgentModel({
+        agentId: "crm-assistant",
+        tier: "default",
+        requestContext,
+      });
+    } catch {
+      console.warn(
+        "[crmAssistant] resolveAgentModel failed (agentId: crm-assistant, tier: default); falling back to legacy model",
+      );
+      return resolveModel("default");
+    }
+  },
   tools: {
     searchCompanies: agentTools.searchCompanies,
     searchContacts: agentTools.searchContacts,
