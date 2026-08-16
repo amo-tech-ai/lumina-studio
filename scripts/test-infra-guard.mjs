@@ -385,6 +385,25 @@ function test12() {
   } finally { cleanup({ dir, bareDir }); }
 }
 
+// ─── Test 15: Code PR deletes docs/docs.json → FAIL (AMRD)
+function test15() {
+  console.log("\n--- Test 15: Code PR deletes docs/docs.json → FAIL ---");
+  const { dir, bareDir } = setupRepo();
+  try {
+    writeFileSync(join(dir, "docs/docs.json"), '{"pages": ["home"]}');
+    writeFileSync(join(dir, "src.ts"), "code");
+    run(dir, "git add -A && git commit -m 'initial'");
+    pushToOrigin(dir);
+
+    run(dir, "git checkout -b feature-delete-nav");
+    run(dir, "git rm docs/docs.json");
+    run(dir, "git commit -m 'feat: wipe docs.json'");
+
+    failCheck(dir, "", "code PR that deletes docs.json",
+      "scripts/check-docs-json-contamination.mjs");
+  } finally { cleanup({ dir, bareDir }); }
+}
+
 // ─── Test 13: No docs/docs.json changes at all → PASS
 function test13() {
   console.log("\n--- Test 13: No docs/docs.json changes → PASS ---");
@@ -442,6 +461,7 @@ test11();
 test12();
 test13();
 test14();
+test15();
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 process.exit(failed > 0 ? 1 : 0);
