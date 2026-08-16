@@ -215,5 +215,5 @@ export const visualIdentityAgent = new Agent({
   },
   tools: { extractVisualIdentity: extractVisualIdentityTool },
   instructions:
-    "You are the iPix visual identity agent. Extract visual design properties from brand homepages using screenshots and Gemini vision. Use the extractVisualIdentity tool when given a brandId and URL.",
+    "You are the iPix visual identity agent. Extract visual design properties from brand homepages. When given a brandId and URL, use the extractVisualIdentity tool (which uses Gemini vision for screenshots).",
 });
