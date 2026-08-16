@@ -305,8 +305,8 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // each gets its own pool (worst case 2× max on session :5432). Transaction
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
   // IPI-630: disableInit always — tables come from migrations (IPI-628/784),
-  // never runtime DDL. schemaName from MASTRA_SCHEMA (default public); Path A
-  // recovery sets MASTRA_SCHEMA=mastra after #614 data is in mastra.*.
+  // never runtime DDL. schemaName from MASTRA_SCHEMA (required; IPI-1011
+  // fails closed if unset). Explicit MASTRA_SCHEMA=public is rollback-only.
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
