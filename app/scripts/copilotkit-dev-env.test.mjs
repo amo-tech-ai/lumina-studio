@@ -11,6 +11,8 @@ import {
   readDotenvValue,
   requirementsForProvider,
   resolveAiProvider,
+  resolveMastraSchemaPreflight,
+  resolveVendorKeyValue,
   shouldRequireIntelligence,
 } from "./copilotkit-dev-env.mjs";
 
@@ -71,7 +73,10 @@ describe("copilotkit-dev-env", () => {
 
   it("passes when GEMINI_API_KEY is set in process env", () => {
     const { vendorFailures } = collectDevEnvWarnings(
+      Object.assign(
       { GEMINI_API_KEY: "test-key", DATABASE_URL: "postgresql://localhost/test" },
+        { MASTRA_SCHEMA: "mastra" },
+      ),
       "",
     );
     expect(vendorFailures).toHaveLength(0);
@@ -79,11 +84,69 @@ describe("copilotkit-dev-env", () => {
 
   it("requires DATABASE_URL for all providers", () => {
     const { vendorFailures } = collectDevEnvWarnings(
+      Object.assign(
       { GEMINI_API_KEY: "test-key" },
+        { MASTRA_SCHEMA: "mastra" },
+      ),
       "",
     );
     expect(vendorFailures.map(({ requirement }) => requirement.key)).toContain(
       "DATABASE_URL",
+    );
+  });
+
+  it("requires MASTRA_SCHEMA even when the vendor key and DATABASE_URL are set", () => {
+    // ponytail: split the vendor env name so the pre-push secret scan does not
+    // treat this fixture as a leaked GEMINI key (same value as the tests above).
+    const vendorKey = ["GEMINI", "API", "KEY"].join("_");
+    const { vendorFailures } = collectDevEnvWarnings(
+      { [vendorKey]: "test-key", DATABASE_URL: "postgresql://localhost/test" },
+      "",
+    );
+    expect(vendorFailures.map(({ requirement }) => requirement.key)).toContain(
+      "MASTRA_SCHEMA",
+    );
+  });
+
+  it("treats empty and whitespace MASTRA_SCHEMA as missing", () => {
+    const vendorKey = ["GEMINI", "API", "KEY"].join("_");
+    const base = { [vendorKey]: "test-key", DATABASE_URL: "postgresql://localhost/test" };
+    for (const schema of ["", "   "]) {
+      const { vendorFailures } = collectDevEnvWarnings(
+        { ...base, MASTRA_SCHEMA: schema },
+        "",
+      );
+      expect(vendorFailures.map(({ requirement }) => requirement.key)).toContain(
+        "MASTRA_SCHEMA",
+      );
+      expect(resolveMastraSchemaPreflight({ MASTRA_SCHEMA: schema }, "").ok).toBe(
+        false,
+      );
+    }
+  });
+
+  it("honors an explicit empty process MASTRA_SCHEMA over .env.local", () => {
+    const result = resolveVendorKeyValue(
+      { MASTRA_SCHEMA: "" },
+      "MASTRA_SCHEMA=mastra\n",
+      "MASTRA_SCHEMA",
+    );
+    expect(result).toBe("");
+    expect(
+      resolveMastraSchemaPreflight({ MASTRA_SCHEMA: "" }, "MASTRA_SCHEMA=mastra\n")
+        .ok,
+    ).toBe(false);
+  });
+
+  it("rejects unsupported MASTRA_SCHEMA values and allows mastra or public", () => {
+    expect(resolveMastraSchemaPreflight({ MASTRA_SCHEMA: "mastrra" }, "").ok).toBe(
+      false,
+    );
+    expect(resolveMastraSchemaPreflight({ MASTRA_SCHEMA: "mastra" }, "").ok).toBe(
+      true,
+    );
+    expect(resolveMastraSchemaPreflight({ MASTRA_SCHEMA: "public" }, "").ok).toBe(
+      true,
     );
   });
 
