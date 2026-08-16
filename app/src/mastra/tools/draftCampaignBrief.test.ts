@@ -24,6 +24,7 @@ vi.mock("@/lib/request-token", () => ({
   requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
 }));
 vi.mock("ai", () => ({
+  generateText: vi.fn(),
   generateObject: vi.fn(),
 }));
 
@@ -335,9 +336,9 @@ describe("draftCampaignBrief routing — IPI-751 nested canary", () => {
   it("resolver failure logs sanitized warning and uses legacy model", async () => {
     const cloudflareModels = await import("@/lib/ai/cloudflare-models");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const modelSpy = vi.spyOn(cloudflareModels, "resolveAgentModel").mockImplementation(() => {
-      throw new Error("secret config leak: token=abc123\nstack: at foo");
-    });
+    const modelSpy = vi.spyOn(cloudflareModels, "resolveAgentModel").mockRejectedValue(
+      new Error("secret config leak: token=abc123\nstack: at foo"),
+    );
     const { RequestContext } = await import("@mastra/core/request-context");
     const rc = new RequestContext();
     (rc as unknown as { set: (k: string, v: unknown) => void }).set("cfEnv", {
@@ -351,8 +352,17 @@ describe("draftCampaignBrief routing — IPI-751 nested canary", () => {
     );
     const modelArg = vi.mocked(generateObject).mock.calls[0][0].model as { modelId?: string };
     expect(modelArg.modelId).not.toBe("@cf/moonshotai/kimi-k2.6");
-    expect(warnSpy).toHaveBeenCalledWith("[draftCampaignBrief] resolveAgentModel failed, falling back to legacy model");
-    expect(warnSpy.mock.calls[0][0]).not.toMatch(/secret|token|stack|Error/);
+    // Exact fixed warning — no String(err), no secret leak
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[draftCampaignBrief] resolveAgentModel failed (agentId: creative-director, tier: structured); falling back to legacy model",
+    );
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const logged = warnSpy.mock.calls[0][0] as string;
+    expect(logged).toContain("agentId: creative-director");
+    expect(logged).toContain("tier: structured");
+    expect(logged).toContain("falling back to legacy model");
+    expect(logged).not.toContain("secret config leak");
+    expect(logged).not.toMatch(/secret|token|stack|Error|Bearer\s+\S+/);
     warnSpy.mockRestore();
     modelSpy.mockRestore();
   });
