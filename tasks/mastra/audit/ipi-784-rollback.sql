@@ -15,7 +15,9 @@
 --   2. Pause Mastra-writing traffic
 --      (schedulers, background tasks, Next.js / Mastra Studio / Worker pools)
 --   3. Switch application config BACK to public BEFORE this SQL commits
---      - Set MASTRA_SCHEMA=public (or unset) and redeploy / restart writers
+--      - Set MASTRA_SCHEMA=public (required — do not unset) and redeploy / restart writers
+--      - Unset/empty MASTRA_SCHEMA now fails closed (IPI-1011 · MASTRA-PG-015)
+--        and will take agent memory offline instead of reconnecting to public
 --      - Do NOT leave the app on schemaName=mastra while this transaction
 --        commits — tables disappear from mastra.* under live writers
 --   4. Run the transaction below (SET SCHEMA + minimum ACL restore)
