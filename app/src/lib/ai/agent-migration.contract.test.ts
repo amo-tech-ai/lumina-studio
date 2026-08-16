@@ -38,7 +38,7 @@ type RoutingContractCase = {
   /** Surface for default resolution (operator → production-planner, marketing → public-marketing) */
   surface?: "operator" | "marketing";
   /** Requested model tier (default for most agents, fast for public-marketing) */
-  tier?: "default" | "fast" | "stt";
+  tier?: "default" | "fast" | "stt" | "vision";
   /** Cloudflare environment to inject into RequestContext */
   cfEnv?: Record<string, unknown>;
   /** Expected routing mode */
@@ -56,9 +56,9 @@ type RoutingContractCase = {
  * - W1 (IPI-753): public-marketing (migrated, tier: fast)
  * - W2 (IPI-751): everyday operator agents (production-planner, creative-director)
  * - W3 (IPI-752): production-planner (default tier)
- * - W4 (IPI-754): brand-intelligence, model-match
+ * - W4 (IPI-754): brand-intelligence
  * - W5 (IPI-755): crm-assistant
- * - Planned: visual-identity, social-discovery, booking
+ * - W6 (IPI-756): visual-identity, social-discovery, model-match, booking
  */
 const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
   // ─── No Cloudflare context (Vercel / Node / Vitest) ────────────────────────
@@ -159,7 +159,7 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     expectedModelId: "@cf/moonshotai/kimi-k2.6",
   },
 
-  // ─── Valid native routing (planned W4: brand-intelligence, model-match) ─────
+  // ─── Valid native routing (W4: brand-intelligence) ─────
   {
     agentId: "brand-intelligence",
     cfEnv: {
@@ -174,6 +174,16 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     agentId: "model-match",
     cfEnv: {
       AI_ROUTING_AGENT_MODEL_MATCH: "native",
+      AI: fakeAiBinding,
+    },
+    expectedMode: "native",
+    expectedReason: "native",
+    expectedModelId: "@cf/moonshotai/kimi-k2.6",
+  },
+  {
+    agentId: "booking",
+    cfEnv: {
+      AI_ROUTING_AGENT_BOOKING: "native",
       AI: fakeAiBinding,
     },
     expectedMode: "native",
@@ -238,12 +248,22 @@ const AGENT_MIGRATION_CASES: RoutingContractCase[] = [
     expectsWarn: true,
   },
 
-  // ─── Unsupported tier (no Workers AI capability entry) ─────────────────────
+  // ─── Unsupported / inactive capability tiers (synthetic proof) ─────────────
   {
     agentId: "booking",
     tier: "stt",
     cfEnv: {
       AI_ROUTING_AGENT_BOOKING: "native",
+      AI: fakeAiBinding,
+    },
+    expectedMode: "legacy",
+    expectedReason: "unsupported_tier",
+  },
+  {
+    agentId: "visual-identity",
+    tier: "vision",
+    cfEnv: {
+      AI_ROUTING_AGENT_VISUAL_IDENTITY: "native",
       AI: fakeAiBinding,
     },
     expectedMode: "legacy",
