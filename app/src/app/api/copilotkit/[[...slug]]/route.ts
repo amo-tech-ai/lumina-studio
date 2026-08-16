@@ -279,11 +279,13 @@ const runtime = new CopilotRuntime({
     // survive cloning, including repeated clone-of-clone.
     //
     // 1.1.1 defaults this to true, which requires a CopilotKit client >=1.61.2 to
-    // resume structured interrupts. This repo runs @copilotkit/runtime@1.61.0 —
-    // explicitly named as an affected version in AG-UI's own README — so leaving
-    // the default on strands every Mastra HITL interrupt/resume with "Thread has
-    // N pending interrupt(s) not addressed by resume". Keep false until
-    // CopilotKit is bumped to >=1.61.2 (separate, larger decision — see IPI-760).
+    // resume structured interrupts. This repo now runs @copilotkit/runtime@1.61.2,
+    // so the client CAN resume those interrupts — but we still force false.
+    // The clone discard is in @ag-ui/mastra + CopilotKit's cloneAgentForRequest,
+    // not the old 1.61.0 client gap. Removing emitInterruptOutcome=false without
+    // dedicated interrupt/resume proof (IPI-760) would still strand talent-
+    // approval HITL with "Thread has N pending interrupt(s) not addressed by
+    // resume". Keep false until that proof lands.
     for (const [agentId, agent] of Object.entries(agents)) {
       if (agent instanceof MastraAgent) {
         agent.emitInterruptOutcome = false;

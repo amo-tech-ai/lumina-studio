@@ -35,8 +35,8 @@
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/groq": "^3.0.39",
     "@ai-sdk/openai-compatible": "^1.0.42",
-    "@copilotkit/react-core": "1.61.0",
-    "@copilotkit/runtime": "1.61.0",
+    "@copilotkit/react-core": "1.61.2",
+    "@copilotkit/runtime": "1.61.2",
     "@libsql/client": "^0.15.15",
     "@mastra/client-js": "1.23.2",
     "@mastra/core": "1.41.0",
@@ -101,6 +101,9 @@
       "postcss": "8.5.10"
     },
     "sharp": "0.35.3",
+    "openai": "6.48.0",
+    "@langchain/core": "1.2.3",
+    "langchain": "1.5.3",
     "@ag-ui/mastra": {
       "@ai-sdk/provider-utils": "4.0.30",
       "@ai-sdk/ui-utils": {
