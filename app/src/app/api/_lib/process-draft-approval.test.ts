@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFrom = vi.fn();
 const mockGetMastra = vi.fn();
@@ -48,6 +48,11 @@ beforeEach(() => {
       }),
     }),
   });
+});
+
+afterEach(async () => {
+  // IPI-1015: draft resume is after()/queueMicrotask + async Workers pg wrap.
+  await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
 describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () => {

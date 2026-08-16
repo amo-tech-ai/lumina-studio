@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { resolveJwtActor } from "@/lib/jwt-actor";
 import { getMastra } from "@/mastra";
+import { withWorkflowMastraPg } from "@/app/api/_lib/with-workflow-mastra-pg";
 
 export const dynamic = "force-dynamic";
 
@@ -85,20 +86,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    const workflow = getMastra().getWorkflow("brand-intelligence");
-    const run = await workflow.createRun();
-    // start (not startAsync): await through the first suspend so checkpoint
-    // persistence completes before the response. startAsync returns early (IPI-803).
-    // actorId is the verified JWT subject — never the operator-gate fallback (IPI-812).
-    // Only brandId + actorId enter Mastra — start-crawl uses the service-role
-    // credential + actorId against the dual-auth edge (IPI-817 / PR-E).
-    await run.start({
-      inputData: {
-        brandId,
-        actorId,
-      },
+    return await withWorkflowMastraPg(async () => {
+      const workflow = getMastra().getWorkflow("brand-intelligence");
+      const run = await workflow.createRun();
+      // start (not startAsync): await through the first suspend so checkpoint
+      // persistence completes before the response. startAsync returns early (IPI-803).
+      // actorId is the verified JWT subject — never the operator-gate fallback (IPI-812).
+      // Only brandId + actorId enter Mastra — start-crawl uses the service-role
+      // credential + actorId against the dual-auth edge (IPI-817 / PR-E).
+      await run.start({
+        inputData: {
+          brandId,
+          actorId,
+        },
+      });
+      return NextResponse.json({ runId: run.runId });
     });
-    return NextResponse.json({ runId: run.runId });
   } catch (e) {
     console.error("[brand-intelligence/start]", e);
     return NextResponse.json(
