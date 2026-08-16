@@ -5,10 +5,13 @@ import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { v2 as cloudinary } from "cloudinary";
 import { z } from "zod";
+import { resolveAgentRoutingOutcome } from "@/lib/ai/agent-routing";
+import { ensureCfEnvOnContext, resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
 // Vision stays on Gemini until GROQ_MODEL_VISION is configured (golden eval gate) —
 // resolveModel("vision") forces Gemini regardless of AI_PROVIDER when unconfigured.
+// Nested extractVisualIdentity keeps this static model — do not route the tool here.
 const MODEL = resolveModel("vision");
 
 const HexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Expected hex color");
@@ -183,8 +186,34 @@ export { extractVisualIdentityTool, uploadToCloudinary };
 export const visualIdentityAgent = new Agent({
   id: "visual-identity",
   name: "Visual Identity",
-  model: MODEL,
+  // IPI-756 · CF-MIG-230-W6 — native chat uses default-tier Workers AI.
+  // Every non-native outcome keeps resolveModel("vision") (pre-migration Preview model).
+  // Peek the flag first so legacy/unset never constructs resolveModel("default")
+  // (that throws when AI_PROVIDER=groq and GROQ_API_KEY is unset).
+  // extractVisualIdentity stays on the same vision model — approved nested exception.
+  model: async ({ requestContext }) => {
+    try {
+      await ensureCfEnvOnContext(requestContext);
+      const cfEnv = requestContext.get("cfEnv") as { AI?: unknown } | undefined;
+      const routing = resolveAgentRoutingOutcome("visual-identity", {
+        env: (cfEnv ?? {}) as Record<string, string | undefined>,
+      });
+      if (routing.mode === "native" && cfEnv?.AI) {
+        return await resolveAgentModel({
+          agentId: "visual-identity",
+          tier: "default",
+          requestContext,
+        });
+      }
+      return resolveModel("vision");
+    } catch {
+      console.warn(
+        "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy vision model",
+      );
+      return resolveModel("vision");
+    }
+  },
   tools: { extractVisualIdentity: extractVisualIdentityTool },
   instructions:
-    "You are the iPix visual identity agent. Extract visual design properties from brand homepages using screenshots and Gemini vision. Use the extractVisualIdentity tool when given a brandId and URL.",
+    "You are the iPix visual identity agent. Extract visual design properties from brand homepages. When given a brandId and URL, use the extractVisualIdentity tool (which uses Gemini vision for screenshots).",
 });
