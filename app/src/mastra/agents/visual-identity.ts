@@ -5,10 +5,12 @@ import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { v2 as cloudinary } from "cloudinary";
 import { z } from "zod";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
 // Vision stays on Gemini until GROQ_MODEL_VISION is configured (golden eval gate) —
 // resolveModel("vision") forces Gemini regardless of AI_PROVIDER when unconfigured.
+// Nested extractVisualIdentity keeps this static model — do not route the tool here.
 const MODEL = resolveModel("vision");
 
 const HexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Expected hex color");
@@ -183,7 +185,22 @@ export { extractVisualIdentityTool, uploadToCloudinary };
 export const visualIdentityAgent = new Agent({
   id: "visual-identity",
   name: "Visual Identity",
-  model: MODEL,
+  // IPI-756 · CF-MIG-230-W6 — agent chat uses resolveAgentModel (default tier).
+  // extractVisualIdentity stays on resolveModel("vision") — approved nested exception.
+  model: async ({ requestContext }) => {
+    try {
+      return await resolveAgentModel({
+        agentId: "visual-identity",
+        tier: "default",
+        requestContext,
+      });
+    } catch {
+      console.warn(
+        "[visualIdentity] resolveAgentModel failed (agentId: visual-identity, tier: default); falling back to legacy model",
+      );
+      return resolveModel("default");
+    }
+  },
   tools: { extractVisualIdentity: extractVisualIdentityTool },
   instructions:
     "You are the iPix visual identity agent. Extract visual design properties from brand homepages using screenshots and Gemini vision. Use the extractVisualIdentity tool when given a brandId and URL.",
