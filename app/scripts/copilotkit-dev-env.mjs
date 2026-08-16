@@ -42,11 +42,14 @@ export const COMMON_DEV_KEYS = [
   },
   {
     key: "MASTRA_SCHEMA",
-    note: "Required by Mastra PostgresStore (IPI-1011). Use mastra in normal work; public only for the documented rollback.",
+    note: "Required by Mastra PostgresStore (IPI-1011 · MASTRA-PG-015 — Stop Residual Writes to public.mastra_*). Use mastra in normal work; public only for the documented rollback.",
     url: "https://mastra.ai/reference/storage/postgresql",
     example: "mastra",
   },
 ];
+
+/** Only values resolveMastraSchemaName should see in local `npm run dev`. */
+export const ALLOWED_MASTRA_SCHEMAS = new Set(["mastra", "public"]);
 
 export function readDotenvValue(envFileContent, key) {
   const re = new RegExp("^\\s*(?:export\\s+)?" + key + "=(.*)$", "gm");
@@ -77,8 +80,24 @@ export function isPlaceholderValue(value) {
 }
 
 export function resolveVendorKeyValue(processEnv, envFileContent, key) {
-  const fromProcess = ((processEnv && processEnv[key]) || "").trim();
-  return fromProcess !== "" ? fromProcess : readDotenvValue(envFileContent, key);
+  // Next.js keeps an already-defined process env (including empty) and does
+  // not overlay .env.local. Preflight must use the same precedence.
+  if (processEnv && Object.prototype.hasOwnProperty.call(processEnv, key)) {
+    return (processEnv[key] ?? "").trim();
+  }
+  return readDotenvValue(envFileContent, key);
+}
+
+/** @returns {{ ok: true, value: string } | { ok: false, reason: "missing" | "unsupported", value: string }} */
+export function resolveMastraSchemaPreflight(processEnv, envFileContent) {
+  const value = resolveVendorKeyValue(processEnv, envFileContent, "MASTRA_SCHEMA");
+  if (value === "" || isPlaceholderValue(value)) {
+    return { ok: false, reason: "missing", value };
+  }
+  if (!ALLOWED_MASTRA_SCHEMAS.has(value)) {
+    return { ok: false, reason: "unsupported", value };
+  }
+  return { ok: true, value };
 }
 
 export function findUnsatisfiedVendorKeys(processEnv, envFileContent, requirements) {
