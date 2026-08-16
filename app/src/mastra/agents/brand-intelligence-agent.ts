@@ -2,17 +2,31 @@
 // Loaded when operator is on /app/brand/* (route-agent-map.ts).
 // Page-context-aware: opens with brand profile + scores, guides HITL approval.
 import { Agent } from "@mastra/core/agent";
+import { resolveAgentModel } from "@/lib/ai/cloudflare-models";
 import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { getMastraMemory } from "@/mastra/memory";
 import { resolveModel } from "@/mastra/models";
 import { brandIntelligenceTools } from "@/mastra/tools/brand-intelligence-tools";
 
-const MODEL = resolveModel("default");
-
 export const brandIntelligenceAgent = new Agent({
   id: "brand-intelligence",
   name: "Brand Intelligence",
-  model: MODEL,
+  // IPI-754 · CF-MIG-230-W4 — dynamic model via resolveAgentModel (reuse IPI-752/IPI-769 harness).
+  // Flag AI_ROUTING_AGENT_BRAND_INTELLIGENCE stays legacy/unset until preview canary.
+  model: async ({ requestContext }) => {
+    try {
+      return await resolveAgentModel({
+        agentId: "brand-intelligence",
+        tier: "default",
+        requestContext,
+      });
+    } catch {
+      console.warn(
+        "[brandIntelligence] resolveAgentModel failed (agentId: brand-intelligence, tier: default); falling back to legacy model",
+      );
+      return resolveModel("default");
+    }
+  },
   tools: brandIntelligenceTools,
   workflows: mastraWorkflows("brand-intelligence"),
   instructions: `You are the iPix Brand Intelligence specialist for Lumina Studio operators.
