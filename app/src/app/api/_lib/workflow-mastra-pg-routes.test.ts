@@ -22,6 +22,8 @@ const mockMaybeSingle = vi.fn();
 const mockRpc = vi.fn();
 const mockStart = vi.fn();
 const mockResume = vi.fn();
+const mockCreateRun = vi.fn();
+const mockLoadWorkflowSnapshot = vi.fn();
 const mockFrom = vi.fn();
 const mockPromote = vi.fn();
 const mockDiscard = vi.fn();
@@ -84,13 +86,13 @@ vi.mock("@/mastra", () => ({
     storageProbe.getMastraStorage();
     return {
       getWorkflow: () => ({
-        createRun: async () => ({
-          runId: "run-1",
-          start: mockStart,
-          resume: mockResume,
+        createRun: (...args: unknown[]) => mockCreateRun(...args),
+      }),
+      getStorage: () => ({
+        getStore: () => ({
+          loadWorkflowSnapshot: (...args: unknown[]) => mockLoadWorkflowSnapshot(...args),
         }),
       }),
-      getStorage: async () => null,
     };
   },
 }));
@@ -115,6 +117,12 @@ describe("IPI-1015 workflow HTTP Workers+pg scope", () => {
     mockRpc.mockResolvedValue({ data: true, error: null });
     mockStart.mockResolvedValue({ status: "suspended", suspendPayload: {} });
     mockResume.mockResolvedValue({ status: "suspended", suspendPayload: {} });
+    mockCreateRun.mockResolvedValue({
+      runId: "run-1",
+      start: mockStart,
+      resume: mockResume,
+    });
+    mockLoadWorkflowSnapshot.mockResolvedValue(null);
     mockPromote.mockResolvedValue({ ok: true });
     mockDiscard.mockResolvedValue({ ok: true });
     mockCreateUserScopedClient.mockReturnValue({
@@ -129,6 +137,7 @@ describe("IPI-1015 workflow HTTP Workers+pg scope", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.resetModules();
     vi.doUnmock("@mastra/pg");
@@ -235,6 +244,71 @@ describe("IPI-1015 workflow HTTP Workers+pg scope", () => {
     );
     expect(res.status).toBe(200);
     expect(mockResume).toHaveBeenCalledTimes(1);
+  });
+
+  it("shoot-wizard: start validation error is 400 without schema internals", async () => {
+    await installHyperdrive();
+    const zodErr = new Error("Validation error: required at \"product_category\"");
+    zodErr.name = "ZodError";
+    mockStart.mockRejectedValue(zodErr);
+    const { POST } = await import("../workflows/shoot-wizard/route");
+    const res = await POST(
+      new Request("http://localhost/api/workflows/shoot-wizard", {
+        method: "POST",
+        body: JSON.stringify({ brand_id: BRAND_ID }),
+      }) as never,
+    );
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: "Invalid workflow input",
+      code: "invalid_input",
+    });
+  });
+
+  it("brand-intelligence resume: duplicate runId is 409 without DB text", async () => {
+    await installHyperdrive();
+    mockCreateRun.mockRejectedValue(
+      new Error("duplicate key value violates unique constraint mastra_workflow_snapshot_pkey"),
+    );
+    const { POST } = await import("../workflows/brand-intelligence/resume/route");
+    const res = await POST(
+      new Request("http://localhost/api/workflows/brand-intelligence/resume", {
+        method: "POST",
+        headers: { "X-Internal-Secret": "test-secret" },
+        body: JSON.stringify({ runId: "run-1", crawlId: "crawl-1" }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({
+      error: "Workflow run already exists",
+      code: "run_conflict",
+    });
+  });
+
+  it("generic workflow resume: snapshot store timeout returns 503", async () => {
+    await installHyperdrive();
+    const { MastraStorageUnavailableError } = await import("@/mastra/storage");
+    mockResume.mockRejectedValue(new Error("step is not suspended"));
+    mockLoadWorkflowSnapshot.mockRejectedValue(
+      new MastraStorageUnavailableError("loadWorkflowSnapshot timed out after 4000ms"),
+    );
+    const { POST } = await import("../workflows/resume/route");
+    const res = await POST(
+      new Request("http://localhost/api/workflows/resume", {
+        method: "POST",
+        body: JSON.stringify({
+          workflowId: "shoot-wizard",
+          runId: "run-1",
+          stepId: "deliverable-gate",
+          resumeData: {},
+        }),
+      }) as never,
+    );
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      code: "storage_unavailable",
+      error: "Workflow persistence unavailable",
+    });
   });
 
   it("draft-approval deferred resume: getMastra() runs inside Workers pg scope", async () => {

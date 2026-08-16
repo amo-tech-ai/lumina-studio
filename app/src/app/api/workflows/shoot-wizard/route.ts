@@ -4,7 +4,7 @@ import { getMastra } from "@/mastra";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import {
   withWorkflowMastraPg,
-  workflowMastraPgErrorResponse,
+  workflowClientErrorResponse,
 } from "@/app/api/_lib/with-workflow-mastra-pg";
 
 export async function POST(req: NextRequest) {
@@ -24,9 +24,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof OperatorAuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const unavailable = workflowMastraPgErrorResponse(err);
-    if (unavailable) return unavailable;
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return workflowClientErrorResponse(err);
   }
 }

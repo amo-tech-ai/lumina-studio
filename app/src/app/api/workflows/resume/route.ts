@@ -5,7 +5,8 @@ import { getMastra } from "@/mastra";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import {
   withWorkflowMastraPg,
-  workflowMastraPgErrorResponse,
+  withWorkflowStoreTimeout,
+  workflowClientErrorResponse,
 } from "@/app/api/_lib/with-workflow-mastra-pg";
 // POST /api/workflows/resume
 // Body: { workflowId, runId, stepId, resumeData }
@@ -49,7 +50,10 @@ export async function POST(req: NextRequest) {
         if (workflowsStore) {
           for (let attempt = 0; attempt < 15 && !suspendPayload; attempt++) {
             if (attempt > 0) await new Promise((r) => setTimeout(r, 2000));
-            const snapshot = await workflowsStore.loadWorkflowSnapshot({ workflowName: workflowId, runId });
+            const snapshot = await withWorkflowStoreTimeout(
+              workflowsStore.loadWorkflowSnapshot({ workflowName: workflowId, runId }),
+              "loadWorkflowSnapshot",
+            );
             if (snapshot) {
               const active = Object.keys(snapshot.suspendedPaths ?? {});
               if (active.length === 0) break; // workflow complete, no more gates
@@ -68,9 +72,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof OperatorAuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const unavailable = workflowMastraPgErrorResponse(err);
-    if (unavailable) return unavailable;
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return workflowClientErrorResponse(err);
   }
 }
