@@ -205,9 +205,17 @@ async function extractThreadIdFromBody(
  */
 function stripOperatorAuthorization(request: Request): Request {
   if (!request.headers.has("authorization")) return request;
-  const headers = new Headers(request.headers);
-  headers.delete("authorization");
-  return new Request(request, { headers });
+  try {
+    request.headers.delete("authorization");
+    return request;
+  } catch {
+    const headers = new Headers(request.headers);
+    headers.delete("authorization");
+    return new Request(request.url, {
+      method: request.method,
+      headers,
+    });
+  }
 }
 
 if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
@@ -343,7 +351,12 @@ function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): s
 }
 
 function shouldExposeRuntimeErrorDetail(): boolean {
-  return process.env.NODE_ENV !== "production";
+  if (process.env.NODE_ENV !== "production") return true;
+  const vercelEnv = process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (vercelEnv === "preview" || vercelEnv === "development") return true;
+  if (process.env.CF_PAGES === "1") return true;
+  if (process.env.WORKER_ENV === "preview" || process.env.WORKER_ENV === "development") return true;
+  return false;
 }
 
 /** True when a client-facing string looks like a raw Node/bundler internal. */
@@ -647,8 +660,14 @@ const handler = async (request: Request): Promise<Response> => {
       return storageUnavailableResponse(err);
     }
     console.error("[copilotkit] runtime handler failed", err);
+    const exposeDetail = shouldExposeRuntimeErrorDetail();
+    const detail = exposeDetail ? clientSafeErrorLabel(err instanceof Error ? err.message : String(err), "") : undefined;
     return Response.json(
-      { error: "CopilotKit runtime unavailable", code: "runtime_error" },
+      {
+        error: "CopilotKit runtime unavailable",
+        code: "runtime_error",
+        ...(detail ? { detail } : {}),
+      },
       { status: 503 },
     );
   }

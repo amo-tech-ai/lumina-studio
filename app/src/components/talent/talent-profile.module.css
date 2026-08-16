@@ -1,0 +1,640 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.breadcrumb a {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.breadcrumbActive {
+  color: #111;
+  font-weight: 600;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.primaryBtn {
+  background: #111 !important;
+  color: #fff !important;
+}
+
+.actionIcon {
+  width: 15px;
+  height: 15px;
+}
+
+.scrollBody {
+  flex: 1;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.center {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 28px 12px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 28px;
+}
+
+.heroImageWrap {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+}
+
+.availBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.availDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.availDot[data-status="available"] {
+  background: #059669;
+}
+
+.availDot[data-status="unavailable"] {
+  background: #9ca3af;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+
+.heroTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.verified {
+  display: inline-flex;
+}
+
+.heroSub {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: #4b5563;
+}
+
+.metaRow {
+  display: flex;
+  gap: 26px;
+  margin: 20px 0 0;
+}
+
+.metaLabel {
+  font-size: 12px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metaValue {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.metaValueMono {
+  font-family: "Geist Mono", monospace;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.fitCard {
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.fitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fitScore {
+  font-family: "Geist Mono", monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.fitLabel {
+  font-size: 13px;
+  color: #4b5563;
+  margin-left: 8px;
+}
+
+.fitBar {
+  height: 6px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.fitFill {
+  height: 100%;
+  background: #059669;
+}
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.starIcon {
+  width: 16px;
+  height: 16px;
+  fill: #f3b93c;
+  color: #f3b93c;
+}
+
+.ratingValue {
+  font-family: "Geist Mono", monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ratingMuted {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.tabs {
+  display: flex;
+  gap: 26px;
+  margin-top: 32px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab,
+.tabActive {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: "Outfit", sans-serif;
+  font-size: 14px;
+  padding: 0 0 12px;
+}
+
+.tab {
+  color: #9ca3af;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+
+.tabActive {
+  color: #111;
+  font-weight: 600;
+  border-bottom: 2px solid #111;
+}
+
+.panel {
+  padding: 22px 0 8px;
+}
+
+.portfolioGrid {
+  columns: 3;
+  column-gap: 14px;
+}
+
+.portfolioItem {
+  break-inside: avoid;
+  margin-bottom: 14px;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.portfolioImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px 40px;
+}
+
+.detailRow {
+  border-bottom: 1px solid #ededed;
+  padding-bottom: 12px;
+}
+
+.detailK {
+  font-size: 12px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detailV {
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.evidenceWrap {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+}
+
+.availList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.availLegend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.legendDot[data-status="available"] {
+  background: #059669;
+}
+
+.legendDot[data-status="tentative"] {
+  background: #f3b93c;
+}
+
+.legendDot[data-status="booked"] {
+  background: #111;
+}
+
+.legendDot[data-status="blocked"] {
+  background: #d1d5db;
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+
+.slot {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Geist Mono", monospace;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.slot[data-status="available"] {
+  background: #fff;
+  border-color: #059669;
+  color: #059669;
+}
+
+.slot[data-status="tentative"] {
+  background: #fff;
+  border-color: #f3b93c;
+  color: #d97706;
+}
+
+.slot[data-status="booked"] {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.slot[data-status="blocked"] {
+  background: #fafafa;
+  border-color: #e5e7eb;
+  color: #9ca3af;
+}
+
+.bookingsWrap {
+  padding: 12px 0;
+}
+
+.reviewsStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reviewCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.reviewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reviewBrand {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.reviewDate {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.reviewRating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "Geist Mono", monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reviewText {
+  margin: 11px 0 0;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.55;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+}
+
+.activityRow {
+  display: flex;
+  gap: 13px;
+}
+
+.activityDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.activityText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.activityMeta {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.chatDock {
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 14px 28px;
+  flex-shrink: 0;
+}
+
+.chatCenter {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.chatPrompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.chatIcon {
+  width: 15px;
+  height: 15px;
+}
+
+.chatInputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+.chatInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: "Outfit", sans-serif;
+  font-size: 14px;
+  background: transparent;
+}
+
+.chatSend {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+}
+
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 90px 24px;
+}
+
+.loadingHero {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 28px;
+}
+
+.heroImageSkeleton {
+  aspect-ratio: 3/4;
+  border-radius: 20px;
+}
+
+.heroTextSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.skeletonTitle {
+  height: 30px;
+  width: 60%;
+  border-radius: 8px;
+}
+
+.skeletonLine {
+  height: 16px;
+  width: 42%;
+  border-radius: 6px;
+}
+
+.skeletonCard {
+  height: 88px;
+  border-radius: 12px;
+  margin-top: 22px;
+}
+
+.skeletonBtn {
+  width: 120px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .breadcrumb {
+    flex: 1 1 100%;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolioGrid {
+    columns: 2;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    gap: 18px;
+  }
+}
+
+.feedback {
+  font-size: 12px;
+  color: #059669;
+  margin-left: 8px;
+}
+
+.evidenceNote {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.fitUnavailable {
+  font-size: 13px;
+  color: #6b7280;
+  padding: 8px 0;
+}

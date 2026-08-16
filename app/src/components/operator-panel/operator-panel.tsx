@@ -17,8 +17,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
-import { useCrmDraftFollowUpRender } from "@/components/crm/follow-up-draft-card";
+import { useGenerativeUIRegistry } from "@/components/copilot/generative-ui-registry";
 import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
@@ -132,8 +131,7 @@ function OperatorShell({
     }
   }, [devSkip, activeBrandId, setActiveBrandId]);
 
-  useHideInternalToolCalls();
-  useCrmDraftFollowUpRender();
+  useGenerativeUIRegistry();
 
   const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
   const routeBrandName = useMemo(

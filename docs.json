@@ -1,0 +1,196 @@
+{
+  "theme": "willow",
+  "name": "iPix",
+  "colors": {
+    "primary": "#0A0A0A",
+    "light": "#FAFAFA",
+    "dark": "#0A0A0A"
+  },
+  "favicon": "/favicon.svg",
+  "navbar": {
+    "links": [
+      {
+        "href": "https://github.com/amo-tech-ai/lumina-studio",
+        "label": "GitHub"
+      }
+    ]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "pages": [
+          "overview/ipix",
+          "overview/architecture",
+          "overview/tech-stack",
+          "overview/roadmap",
+          "overview/feature-status"
+        ]
+      },
+      {
+        "tab": "AI",
+        "pages": [
+          "ai/agents",
+          "ai/workflows",
+          "ai/hitl",
+          "ai/memory",
+          "ai/rag",
+          "ai/tools",
+          "ai/skills",
+          "ai/model-providers"
+        ]
+      },
+      {
+        "tab": "Cloudflare",
+        "pages": [
+          "cloudflare/overview",
+          "cloudflare/workers",
+          "cloudflare/workers-ai",
+          "cloudflare/ai-gateway",
+          "cloudflare/hyperdrive",
+          "cloudflare/deployment",
+          "cloudflare/configuration"
+        ]
+      },
+      {
+        "tab": "Mastra",
+        "pages": [
+          "mastra/overview",
+          "mastra/agents",
+          "mastra/workflows",
+          "mastra/tools",
+          "mastra/memory",
+          "mastra/storage"
+        ]
+      },
+      {
+        "tab": "CopilotKit",
+        "pages": [
+          "copilotkit/overview",
+          "copilotkit/runtime",
+          "copilotkit/generative-ui",
+          "copilotkit/hitl",
+          "copilotkit/integration",
+          "copilotkit/master-prd-roadmap",
+          "copilotkit/audit-review"
+        ]
+      },
+      {
+        "tab": "Supabase",
+        "pages": [
+          "supabase/overview",
+          "supabase/database",
+          "supabase/auth",
+          "supabase/rls",
+          "supabase/storage",
+          "supabase/realtime",
+          "supabase/functions",
+          "supabase/migrations"
+        ]
+      },
+      {
+        "tab": "Cloudinary",
+        "pages": [
+          "cloudinary/overview",
+          "cloudinary/assets",
+          "cloudinary/uploads",
+          "cloudinary/transformations",
+          "cloudinary/metadata",
+          "cloudinary/moderation"
+        ]
+      },
+      {
+        "tab": "Stripe",
+        "pages": [
+          "stripe/overview",
+          "stripe/connect",
+          "stripe/payments",
+          "stripe/checkout",
+          "stripe/webhooks",
+          "stripe/marketplace"
+        ]
+      },
+      {
+        "tab": "Product",
+        "pages": [
+          "product/brands",
+          "product/shoots",
+          "product/talent",
+          "product/bookings",
+          "product/crm",
+          "product/campaigns",
+          "product/ecommerce",
+          "product/intelligence"
+        ]
+      },
+      {
+        "tab": "Data",
+        "pages": [
+          "data/schemas",
+          "data/data-models",
+          "data/vectors",
+          "data/migrations"
+        ]
+      },
+      {
+        "tab": "Design",
+        "pages": [
+          "design/design-system",
+          "design/screens",
+          "design/user-journeys",
+          "design/wireframes",
+          "design/diagrams"
+        ]
+      },
+      {
+        "tab": "Engineering",
+        "pages": [
+          "engineering/local-development",
+          "engineering/api",
+          "engineering/testing",
+          "engineering/github",
+          "engineering/ci-cd",
+          "engineering/deployment"
+        ]
+      },
+      {
+        "tab": "Operations",
+        "pages": [
+          "operations/infrastructure",
+          "operations/observability",
+          "operations/security",
+          "operations/performance",
+          "operations/runbooks",
+          "operations/incidents"
+        ]
+      },
+      {
+        "tab": "Planning",
+        "pages": [
+          "planning/prds",
+          "planning/linear",
+          "planning/epics",
+          "planning/audits",
+          "planning/decisions"
+        ]
+      },
+      {
+        "tab": "Reference",
+        "pages": [
+          "reference/repositories",
+          "reference/commands",
+          "reference/configuration",
+          "reference/troubleshooting",
+          "reference/changelog",
+          "reference/archive"
+        ]
+      },
+      {
+        "tab": "linear",
+        "pages": [
+          "untitled-page"
+        ]
+      }
+    ]
+  }
+}

@@ -9,6 +9,7 @@ const APP_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../app");
 const MARKETING_TOP_LEVEL = ["/", "/login"] as const;
 
 const OPERATOR_SECTIONS = [
+  "analytics",
   "brand",
   "shoots",
   "assets",
@@ -19,6 +20,7 @@ const OPERATOR_SECTIONS = [
   "onboarding",
   "planner",
   "preview",
+  "talent",
 ] as const;
 
 // Top-level (operator)/app directories that are detail-only entry points
