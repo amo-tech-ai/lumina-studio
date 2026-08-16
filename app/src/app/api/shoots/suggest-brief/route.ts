@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { pickCfEnv } from "@/lib/ai/cloudflare-models";
+import { RequestContext } from "@mastra/core/request-context";
 import { suggestShootBriefTool, ALLOWED_TONES } from "@/mastra/tools/suggestShootBrief";
 
 const BodySchema = z.object({
@@ -59,7 +62,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = await suggestShootBriefTool.execute!({ brandContext, channels, shootName, briefSeed, tone }, {} as never) as { brief: string } | undefined;
+    const requestContext = new RequestContext();
+    try {
+      const { env } = getCloudflareContext();
+      requestContext.set("cfEnv", pickCfEnv(env));
+    } catch {
+      // Vercel/Node — cfEnv stays unset, cloudflare-models.ts falls back to legacy.
+    }
+
+    const result = await suggestShootBriefTool.execute!(
+      { brandContext, channels, shootName, briefSeed, tone },
+      { requestContext } as never,
+    ) as { brief: string } | undefined;
     if (!result) throw new Error("Tool returned no result");
     return NextResponse.json({ brief: result.brief });
   } catch (err) {
