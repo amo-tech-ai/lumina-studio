@@ -128,26 +128,25 @@ export function AnalyticsWorkspace() {
                 {needsBrand ? "Select a brand to view analytics" : isLoading ? "Loading analytics…" : isError ? "Couldn’t load analytics" : "Trusted overview"}
               </p>
             </div>
-            <span
-              title="Campaign comparison — coming in IPI-297"
-              aria-disabled="true"
+            <a
+              href="/app/analytics/campaigns"
               style={{
                 height: 40,
                 padding: "0 14px",
                 border: "1px solid var(--color-border)",
                 borderRadius: "0.625rem",
-                background: "var(--color-bg-muted)",
-                color: "var(--color-text-muted)",
+                background: "var(--color-bg-card)",
+                color: "var(--color-text-primary)",
                 fontSize: "0.875rem",
                 fontWeight: 500,
                 display: "inline-flex",
                 alignItems: "center",
-                cursor: "not-allowed",
-                opacity: 0.7,
+                textDecoration: "none",
               }}
+              style-hover={{ border: "1px solid var(--color-border-strong)" }}
             >
               Compare campaigns →
-            </span>
+            </a>
           </div>
         </div>
       </div>
@@ -203,13 +202,12 @@ export function AnalyticsWorkspace() {
                 <div style={{ fontSize: "var(--fs-sm)", fontWeight: 600 }}>Campaign performance</div>
                 <div style={{ fontSize: "var(--fs-xs)", color: "var(--color-text-muted)", marginTop: 3 }}>Campaign comparison</div>
                 <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span
-                    title="Open Campaign Performance — coming in IPI-297"
-                    aria-disabled="true"
-                    style={{ fontSize: "var(--fs-sm)", fontWeight: 600, color: "var(--color-text-muted)", cursor: "not-allowed", opacity: 0.7 }}
+                  <a
+                    href="/app/analytics/campaigns"
+                    style={{ fontSize: "var(--fs-sm)", fontWeight: 600, color: "var(--color-text-primary)", textDecoration: "none" }}
                   >
                     Open Campaign Performance →
-                  </span>
+                  </a>
                 </div>
               </div>
 
