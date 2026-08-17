@@ -3,6 +3,10 @@
 // POST { runId: string, crawlId: string }
 import { NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
+import {
+  withWorkflowMastraPg,
+  workflowClientErrorResponse,
+} from "@/app/api/_lib/with-workflow-mastra-pg";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +43,17 @@ export async function POST(request: Request) {
   const error = typeof body.error === "string" ? body.error : undefined;
 
   try {
-    const workflow = getMastra().getWorkflow("brand-intelligence");
-    const run = await workflow.createRun({ runId });
-    await run.resume({
-      step: "wait-for-crawl",
-      resumeData: { crawlId, ...(failed ? { failed: true, ...(error ? { error } : {}) } : {}) },
+    return await withWorkflowMastraPg(async () => {
+      const workflow = getMastra().getWorkflow("brand-intelligence");
+      const run = await workflow.createRun({ runId });
+      await run.resume({
+        step: "wait-for-crawl",
+        resumeData: { crawlId, ...(failed ? { failed: true, ...(error ? { error } : {}) } : {}) },
+      });
+      return NextResponse.json({ ok: true });
     });
-    return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[brand-intelligence/resume]", e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Internal error" },
-      { status: 500 },
-    );
+    return workflowClientErrorResponse(e);
   }
 }
