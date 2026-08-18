@@ -1,6 +1,18 @@
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { insertTalentProfileSource } from "./sources";
 
+/**
+ * Get the current authenticated user from Supabase session.
+ */
+async function getCurrentUser() {
+  const supabase = createSupabaseBrowserClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    throw new Error("Authentication required");
+  }
+  return user;
+}
+
 export interface CreateTalentProfileInput {
   displayName: string;
   bio?: string;
@@ -37,6 +49,9 @@ export async function createTalentProfileWithSources(
 ): Promise<{ profile: CreatedTalentProfile | null; sourcesInserted: number }> {
   const supabase = createSupabaseBrowserClient();
 
+  // Get current authenticated user
+  const user = await getCurrentUser();
+
   // Validate exactly one owner
   if (!input.profileId && !input.agencyOrgId) {
     throw new Error("Either profileId or agencyOrgId must be provided");
@@ -44,6 +59,15 @@ export async function createTalentProfileWithSources(
   if (input.profileId && input.agencyOrgId) {
     throw new Error("Only one of profileId or agencyOrgId should be provided");
   }
+
+  // Authorization check: user can only create profile for themselves (self-managed)
+  // or if they have org editor permissions (agency-managed)
+  if (input.profileId && input.profileId !== user.id) {
+    throw new Error("Cannot create profile for another user");
+  }
+
+  // For agency-managed profiles, we rely on RLS to check org permissions
+  // since client-side cannot verify org membership without additional queries
 
   // Create the talent profile
   const { data: profile, error: profileError } = await supabase
