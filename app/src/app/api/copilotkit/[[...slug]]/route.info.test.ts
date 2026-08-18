@@ -546,7 +546,6 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     (globalThis as { WebSocketPair?: unknown }).WebSocketPair = class WebSocketPair {};
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
-    vi.stubEnv("GEMINI_API_KEY", "test-key");
     vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
 
