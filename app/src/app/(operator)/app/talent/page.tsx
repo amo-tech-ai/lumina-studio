@@ -1,39 +1,19 @@
 import { redirect } from "next/navigation";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function TalentIndexPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-      },
-    }
-  );
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  if (!user) {
-    redirect("/login");
-  }
+  const { data: own } = await supabase.rpc("get_own_talent_profile");
+  const id = own && typeof own === "object" && "id" in own ? String((own as { id: string }).id) : null;
 
-  // Check if user has a talent profile
-  const { data: profile } = await supabase
-    .from("talent_profiles")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle();
-
-  // If no profile exists, redirect to onboarding
-  if (!profile) {
-    redirect("/app/talent/onboarding");
-  }
-
-  // Otherwise redirect to profile view
-  redirect(`/app/talent/profile?talentId=${profile.id}`);
+  if (!id) redirect("/app/talent/onboarding");
+  redirect(`/app/talent/profile?talentId=${id}`);
 }

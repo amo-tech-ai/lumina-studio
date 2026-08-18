@@ -6949,6 +6949,21 @@ export type Database = {
         }
         Returns: Json
       }
+      create_talent_profile_with_sources: {
+        Args: {
+          p_agency_org_id?: string | null
+          p_bio?: string | null
+          p_display_name: string
+          p_half_day?: number | null
+          p_handle?: string | null
+          p_languages?: string[]
+          p_location?: string | null
+          p_niche?: string | null
+          p_source_url?: string | null
+          p_sources?: Json
+        }
+        Returns: Json
+      }
       crm_convert_deal: {
         Args: { p_deal_id: string; p_decision: string }
         Returns: {
@@ -6979,6 +6994,7 @@ export type Database = {
         }[]
       }
       get_or_create_shortlist: { Args: { p_org_id: string }; Returns: string }
+      get_own_talent_profile: { Args: never; Returns: Json }
       get_shoot_detail: { Args: { p_shoot_id: string }; Returns: Json }
       get_user_shoots: {
         Args: {

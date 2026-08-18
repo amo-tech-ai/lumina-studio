@@ -1,177 +1,105 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { toCreateTalentProfileRpcArgs } from "@/lib/talent/profile-creation";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-interface CreateTalentProfileRequest {
-  displayName: string;
-  bio?: string;
-  handle?: string;
-  niche?: string;
-  tier?: string;
-  location?: string;
-  dayRate?: string;
-  languages?: string[];
-  sourceUrl: string;
-  profileId?: string;
-  agencyOrgId?: string;
-  analyzedFields: Array<{ 
-    key: string; 
-    value: string; 
-    confidence: number; 
-    evidence: string 
-  }>;
-}
-
-interface CreateTalentProfileResponse {
-  success: boolean;
-  profile?: {
-    id: string;
-    displayName: string;
-    bio: string | null;
-    verificationStatus: string;
-    createdAt: string;
-  };
-  sourcesInserted: number;
-  error?: string;
-}
+type AnalyzedFieldBody = {
+  key?: unknown;
+  value?: unknown;
+  confidence?: unknown;
+  evidence?: unknown;
+};
 
 export async function POST(req: NextRequest) {
-  try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return req.cookies.getAll();
-          },
-        },
-      }
-    );
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const body: CreateTalentProfileRequest = await req.json();
-    const {
-      displayName,
-      bio,
-      handle,
-      niche,
-      tier,
-      location,
-      dayRate,
-      languages,
-      sourceUrl,
-      profileId,
-      agencyOrgId,
-      analyzedFields,
-    } = body;
-
-    // Validate exactly one owner
-    if (!profileId && !agencyOrgId) {
-      return NextResponse.json(
-        { success: false, error: "Either profileId or agencyOrgId must be provided" },
-        { status: 400 }
-      );
-    }
-    if (profileId && agencyOrgId) {
-      return NextResponse.json(
-        { success: false, error: "Only one of profileId or agencyOrgId should be provided" },
-        { status: 400 }
-      );
-    }
-
-    // Authorization check: user can only create profile for themselves (self-managed)
-    if (profileId && profileId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: "Cannot create profile for another user" },
-        { status: 403 }
-      );
-    }
-
-    // Create the talent profile in talent schema
-    const { data: profile, error: profileError } = await supabase
-      .from("talent_profiles")
-      .insert({
-        profile_id: profileId || null,
-        agency_org_id: agencyOrgId || null,
-        display_name: displayName,
-        bio: bio || null,
-        measurements: {
-          handle: handle || null,
-          niche: niche || null,
-          location: location || null,
-        },
-        rates: {
-          tier: tier || null,
-          day_rate: dayRate || null,
-        },
-        languages: languages || [],
-        travel_ready: false,
-        verification_status: "pending",
-      })
-      .select()
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { success: false, error: "Failed to create talent profile" },
-        { status: 500 }
-      );
-    }
-
-    // Insert sources for each analyzed field
-    let sourcesInserted = 0;
-    const sourceErrors: string[] = [];
-
-    for (const field of analyzedFields) {
-      const { error: sourceError } = await supabase
-        .from("talent_profile_sources")
-        .insert({
-          talent_profile_id: profile.id,
-          field_name: field.key,
-          source_url: sourceUrl,
-          confidence: field.confidence,
-        });
-
-      if (sourceError) {
-        sourceErrors.push(`Failed to insert source for ${field.key}`);
-      } else {
-        sourcesInserted++;
-      }
-    }
-
-    // If any source insert failed, treat as partial failure
-    if (sourceErrors.length > 0) {
-      return NextResponse.json(
-        { success: false, error: "Failed to insert all provenance rows" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json<CreateTalentProfileResponse>({
-      success: true,
-      profile: {
-        id: profile.id,
-        displayName: profile.display_name,
-        bio: profile.bio,
-        verificationStatus: profile.verification_status,
-        createdAt: profile.created_at,
-      },
-      sourcesInserted,
-    });
-  } catch (error) {
+  if (authError || !user) {
     return NextResponse.json(
-      { success: false, error: "Failed to create talent profile" },
-      { status: 500 }
+      { success: false, error: "Authentication required" },
+      { status: 401 },
     );
   }
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+  const sourceUrl = typeof body.sourceUrl === "string" ? body.sourceUrl.trim() : "";
+  const analyzedFields = Array.isArray(body.analyzedFields) ? body.analyzedFields : [];
+
+  if (!displayName || !sourceUrl || analyzedFields.length === 0) {
+    return NextResponse.json(
+      { success: false, error: "displayName, sourceUrl, and analyzedFields are required" },
+      { status: 400 },
+    );
+  }
+
+  const agencyOrgId = typeof body.agencyOrgId === "string" ? body.agencyOrgId : undefined;
+  const args = toCreateTalentProfileRpcArgs({
+    displayName,
+    bio: typeof body.bio === "string" ? body.bio : undefined,
+    handle: typeof body.handle === "string" ? body.handle : undefined,
+    niche: typeof body.niche === "string" ? body.niche : undefined,
+    location: typeof body.location === "string" ? body.location : undefined,
+    dayRate: typeof body.dayRate === "string" ? body.dayRate : undefined,
+    languages: Array.isArray(body.languages)
+      ? body.languages.filter((item): item is string => typeof item === "string")
+      : [],
+    sourceUrl,
+    agencyOrgId,
+    analyzedFields: analyzedFields.flatMap((field): AnalyzedFieldBody[] =>
+      field && typeof field === "object" ? [field as AnalyzedFieldBody] : [],
+    ).flatMap((field) => {
+      if (typeof field.key !== "string" || typeof field.confidence !== "number") return [];
+      return [{
+        key: field.key,
+        value: typeof field.value === "string" ? field.value : undefined,
+        confidence: field.confidence,
+        evidence: typeof field.evidence === "string" ? field.evidence : undefined,
+      }];
+    }),
+  });
+
+  const { data, error } = await supabase.rpc("create_talent_profile_with_sources", args);
+
+  if (error || !data) {
+    const message = error?.message ?? "Failed to create talent profile";
+    const status = message.includes("already exists")
+      ? 409
+      : message.includes("role required") || message.includes("not an editor")
+        ? 403
+        : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
+  }
+
+  const row = data as {
+    id: string;
+    display_name: string;
+    bio: string | null;
+    verification_status: string;
+    sources_inserted: number;
+    created_at?: string;
+  };
+
+  return NextResponse.json({
+    success: true,
+    profile: {
+      id: row.id,
+      displayName: row.display_name,
+      bio: row.bio,
+      verificationStatus: row.verification_status,
+      createdAt: row.created_at ?? new Date().toISOString(),
+    },
+    sourcesInserted: row.sources_inserted,
+  });
 }
