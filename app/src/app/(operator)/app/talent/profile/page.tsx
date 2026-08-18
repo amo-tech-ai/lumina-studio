@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { TalentProfileWorkspace } from "@/components/talent/talent-profile-workspace";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +15,15 @@ export default async function TalentProfilePage({ searchParams }: { searchParams
   if (!talentId || typeof talentId !== "string") {
     return (
       <div style={{ padding: "40px 28px", maxWidth: 920, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Talent profile</h1>
-        <p style={{ color: "#6b7280", marginTop: 8 }}>
-          No talent selected. Open a profile from <a href="/app/matching" style={{ color: "#111", textDecoration: "underline" }}>Matching</a>.
-        </p>
+        <EmptyState
+          heading="No talent selected"
+          body="Open a profile from Matching, or create yours if you don't have one yet."
+          action={
+            <Link href="/app/talent/onboarding" className="inline-flex">
+              <Button size="sm">Create talent profile</Button>
+            </Link>
+          }
+        />
       </div>
     );
   }

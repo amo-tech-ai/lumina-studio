@@ -16,6 +16,7 @@ export type TalentProfileDetail = {
   created_at: string;
   rate_tier?: string | null;
   is_available?: boolean;
+  ai_tags: Record<string, unknown>;
 };
 
 export type TalentAvailabilitySlot = {
@@ -44,6 +45,7 @@ export async function fetchTalentProfile(talentId: string): Promise<{ profile: T
       bio: row["bio"] as string | null,
       measurements: (row["measurements"] as Record<string, unknown>) ?? {},
       rates: {},
+      ai_tags: (row["ai_tags"] as Record<string, unknown>) ?? {},
       languages: (row["languages"] as string[]) ?? [],
       travel_ready: !!row["travel_ready"],
       verification_status: (row["verification_status"] as string) ?? "unverified",
@@ -71,6 +73,11 @@ export async function fetchTalentAvailability(talentId: string): Promise<{ slots
   return { slots: [], error: null };
 }
 
+export function storedTag(profile: TalentProfileDetail, key: string): string | null {
+  const value = profile.ai_tags?.[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 export function getTalentHandle(profile: TalentProfileDetail): string {
-  return profile.display_name;
+  return storedTag(profile, "handle") ?? "—";
 }
