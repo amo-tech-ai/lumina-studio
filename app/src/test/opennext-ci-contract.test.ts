@@ -117,6 +117,28 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(openNext).toMatch(/IPIX_CF_BUNDLE_STUBS=1/);
   });
 
+  it("IPI-1014 can omit the PG-scope stub via IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    const openNext = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");
+    expect(nextConfig).toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE/);
+    expect(openNext).toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE === "1"/);
+    expect(openNext).toMatch(
+      /IPIX_CF_BUNDLE_STUBS=1 IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1 MASTRA_STORAGE_MODE=noop/,
+    );
+  });
+
+  it("IPI-1014 CopilotKit wraps Workers+pg including /info (does not skip wrap on pathname)", () => {
+    const route = readFileSync(
+      resolve(__dirname, "../app/api/copilotkit/[[...slug]]/route.ts"),
+      "utf8",
+    );
+    expect(route).toMatch(/Include \/info/);
+    expect(route).toMatch(/const workersPg =/);
+    expect(route).not.toMatch(
+      /if \(!requestNeedsDurableStorage\(request\)\) \{\s*return await runCopilot\(\);/,
+    );
+  });
+
   it("check-worker-bundle-size.mjs enforces 8.5 MiB warn and 9.0 MiB fail gates", () => {
     const script = readFileSync(
       resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
