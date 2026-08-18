@@ -117,6 +117,14 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(nextConfig).toMatch(/outputFileTracingExcludes/);
     expect(nextConfig).toMatch(/node_modules\/@ast-grep\/\*\*/);
     expect(wrangler).toMatch(/"@ast-grep\/napi"\s*:\s*"\.\/scripts\/cf-ast-grep-stub\.mjs"/);
+    // OpenNext esbuild (bundle-server.js) is the stage that actually follows
+    // Mastra's `import("@ast-grep/napi")`. Next aliases do not apply there.
+    const openNextEsbuildPatch = readFileSync(
+      resolve(__dirname, "../../patches/@opennextjs+cloudflare+1.20.2.patch"),
+      "utf8",
+    );
+    expect(openNextEsbuildPatch).toMatch(/"@ast-grep\/napi"/);
+    expect(openNextEsbuildPatch).toMatch(/scripts\/cf-ast-grep-stub\.mjs/);
   });
 
   it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {

@@ -62,11 +62,13 @@ const astGrepStub = path.join(appDir, "scripts/cf-ast-grep-stub.mjs");
  * Preview pg canary (IPI-1014): `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1 npm run build:cf`
  * omits this one alias so ALS wrap is real. Default CI/production keeps the stub.
  *
- * IPI-1006 lockfile hoist: `@ast-grep/napi` is an OpenNext CLI build-time parser
- * (`astCodePatcher.js`, `load-manifest.js`). Listing it in `serverExternalPackages`
- * makes Next NFT + OpenNext `copyTracedFiles` pack linux-gnu/musl `.node` addons
- * into the Worker graph; Wrangler aliases run after OpenNext esbuild. Stub the
- * package here and exclude it from file tracing so `build:cf` never loads a native addon.
+ * IPI-1007: `@ast-grep/napi` is OpenNext CLI-time (`astCodePatcher.js`) and a
+ * Mastra 1.59 workspace optional import (`import("@ast-grep/napi")`). Next
+ * turbopack aliases + NFT excludes keep `.node` out of `.open-next` copy-out.
+ * They do not apply to OpenNext's second-stage esbuild — that alias lives in
+ * the `@opennextjs/cloudflare` patch (`bundle-server.js`). Wrangler aliases
+ * run even later. Do not list `@ast-grep/napi` in `serverExternalPackages`
+ * (that copies native addons). Do not npm-override it (breaks OpenNext CLI).
  *
  * IPI-620A/B: do NOT alias `@mastra/pg`, `pg`, or `pg-cloudflare` here.
  * - Bare `pg` needs real `Client` for Hyperdrive `queryFresh` (IPI-620A).
