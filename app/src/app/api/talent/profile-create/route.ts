@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { toCreateTalentProfileRpcArgs } from "@/lib/talent/profile-creation";
+import { toCreateTalentProfileRpcArgs, type AnalyzedPublishField } from "@/lib/talent/profile-creation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const agencyOrgId = typeof body.agencyOrgId === "string" ? body.agencyOrgId : undefined;
   const parsedFields = analyzedFields.flatMap((field): AnalyzedFieldBody[] =>
     field && typeof field === "object" ? [field as AnalyzedFieldBody] : [],
-  ).flatMap((field) => {
+  ).flatMap((field): AnalyzedPublishField[] => {
     if (typeof field.key !== "string" || typeof field.confidence !== "number") return [];
     if (field.status !== "approved" && field.status !== "edited") return [];
     return [{
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       value: typeof field.value === "string" ? field.value : undefined,
       confidence: field.confidence,
       evidence: typeof field.evidence === "string" ? field.evidence : undefined,
-      status: field.status,
+      status: field.status === "edited" ? "edited" : "approved",
     }];
   });
 
