@@ -264,12 +264,15 @@ export async function processBrandIntelligenceDraftApproval(params: {
 function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
   const schedule = async () => {
     try {
-      const { getMastra } = await import("@/mastra");
-      const mastra = getMastra();
-      const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
-      if (run) {
-        await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
-      }
+      const { withWorkflowMastraPg } = await import("./with-workflow-mastra-pg");
+      await withWorkflowMastraPg(async () => {
+        const { getMastra } = await import("@/mastra");
+        const mastra = getMastra();
+        const run = await mastra.getWorkflow("brand-intelligence").createRun({ runId });
+        if (run) {
+          await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
+        }
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.toLowerCase().includes("not suspended")) {

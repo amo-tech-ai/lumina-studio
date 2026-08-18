@@ -200,6 +200,36 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     expect(closes[0]).toHaveBeenCalledTimes(1);
   });
 
+  it("closes the store when the wrapped fn throws", async () => {
+    const close = vi.fn(async () => {});
+    const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {
+      this.close = close;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+
+    const { getMastraStorage } = await import("@/mastra/storage");
+    const { withMastraWorkersPgStorage } = await import("./mastra-workers-pg-scope");
+
+    await expect(
+      withMastraWorkersPgStorage(
+        async () => {
+          getMastraStorage();
+          throw new Error("workflow boom");
+        },
+        { connectionString: HD_URL },
+      ),
+    ).rejects.toThrow("workflow boom");
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(() => getMastraStorage()).toThrow(/withMastraWorkersPgStorage/);
+  });
+
   it("defers store.close until Response body completes (SSE lifecycle)", async () => {
     const close = vi.fn(async () => {});
     const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {
