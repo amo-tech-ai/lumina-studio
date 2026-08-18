@@ -40,9 +40,12 @@
 -- Do not invert 004 in this PR — that would fail supabase-verify-rls
 -- without applying the DROP to QA.
 --
--- Rollback (Free plan): restore the shadow tables from the manual backup:
+-- Rollback (Free plan): restore the shadow tables from the manual backup.
+-- NOTE: pg_restore -t does NOT support wildcards or schema-qualified names
+-- (pg_dump -t does) — restore the FULL archive; it already contains only the
+-- 33 shadow tables because the backup was taken with pg_dump -t 'public.mastra_*':
 --   pg_restore -d "$DATABASE_URL" --no-owner --no-privileges \
---     -t 'public.mastra_*' /path/outside/supabase/ipi801-shadow-backup.dump
+--     /path/outside/supabase/ipi801-shadow-backup.dump
 -- The 16/35/8 shadow rows are the only data destroyed.
 --
 -- Post-apply steps (separate, human-run, AFTER this migration is pushed
