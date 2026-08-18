@@ -57,8 +57,9 @@ const mastraWorkersPgScopeStub = path.join(appDir, "scripts/cf-mastra-workers-pg
  *
  * IPI-844 / post-#658: stub Workers PG scope while MASTRA_STORAGE_MODE=noop —
  * the real module re-duplicates OpenNext/@mastra/pg into the Worker and left
- * main CI over the 9 MiB fail gate (9.012 MiB). Drop the alias when rebuilding
- * for a pg flip (803A A3).
+ * main CI over the 9 MiB fail gate (9.012 MiB).
+ * Preview pg canary (IPI-1014): `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1 npm run build:cf`
+ * omits this one alias so ALS wrap is real. Default CI/production keeps the stub.
  *
  * IPI-620A/B: do NOT alias `@mastra/pg`, `pg`, or `pg-cloudflare` here.
  * - Bare `pg` needs real `Client` for Hyperdrive `queryFresh` (IPI-620A).
@@ -69,6 +70,8 @@ const mastraWorkersPgScopeStub = path.join(appDir, "scripts/cf-mastra-workers-pg
  * both stay in `serverExternalPackages` so OpenNext applies the `workerd` condition.
  * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
  */
+const includeMastraPgScope = process.env.IPIX_CF_INCLUDE_MASTRA_PG_SCOPE === "1";
+
 const cfBundleStubAliases =
   process.env.IPIX_CF_BUNDLE_STUBS === "1"
     ? ({
@@ -82,7 +85,9 @@ const cfBundleStubAliases =
         mermaid: mermaidStub,
         katex: katexStub,
         "@copilotkit/web-inspector": webInspectorStub,
-        "@/lib/db/mastra-workers-pg-scope": mastraWorkersPgScopeStub,
+        ...(includeMastraPgScope
+          ? {}
+          : { "@/lib/db/mastra-workers-pg-scope": mastraWorkersPgScopeStub }),
       } as const)
     : ({} as const);
 

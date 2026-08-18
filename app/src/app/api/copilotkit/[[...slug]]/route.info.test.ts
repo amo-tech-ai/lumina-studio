@@ -541,6 +541,44 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     );
   }, 15_000);
 
+  it("Workers+pg wraps /info with Hyperdrive ALS (does not skip wrap because pathname is /info)", async () => {
+    const wrap = vi.fn(async (fn: () => Promise<Response>) => fn());
+    (globalThis as { WebSocketPair?: unknown }).WebSocketPair = class WebSocketPair {};
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+
+    try {
+      vi.doMock("@opennextjs/cloudflare", () => ({
+        getCloudflareContext: vi.fn(async () => ({
+          env: { HYPERDRIVE_FRESH: { connectionString: "postgres://hd/db" } },
+          ctx: { waitUntil: vi.fn() },
+        })),
+      }));
+      vi.doMock("@/lib/db/mastra-workers-pg-scope", () => ({
+        withMastraWorkersPgStorage: wrap,
+      }));
+      vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+        CopilotRuntime: vi.fn(() => ({})),
+        createCopilotRuntimeHandler: vi.fn(
+          () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+        ),
+        InMemoryAgentRunner: vi.fn(),
+      }));
+
+      const route = await importRouteWithMocks();
+      const response = await route.GET(
+        new Request("http://localhost/api/copilotkit/info"),
+      );
+      expect(response.status).toBe(200);
+      expect(wrap).toHaveBeenCalledTimes(1);
+    } finally {
+      delete (globalThis as { WebSocketPair?: unknown }).WebSocketPair;
+    }
+  }, 15_000);
+
   it("agent run still calls resolveOrgScopedResourceId and fails closed when org is missing", async () => {
     // /info has a clean skip; agent turns use the original
     // resolveOrgScopedResourceId unchanged — no org → 403 org_required.
