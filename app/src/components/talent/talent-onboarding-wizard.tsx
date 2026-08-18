@@ -40,6 +40,7 @@ export function TalentOnboardingWizard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [createdProfileId, setCreatedProfileId] = useState<string | null>(null);
+  const [analysisRequestId, setAnalysisRequestId] = useState(0);
   const [fields, setFields] = useState<Field[]>([
     { key: 'name', label: 'Full name', value: '', draft: '', status: 'ai', confidence: 0, evidence: '', editing: false, evidenceOpen: false },
     { key: 'handle', label: 'Handle', value: '', draft: '', status: 'ai', confidence: 0, evidence: '', editing: false, evidenceOpen: false },
@@ -81,6 +82,10 @@ export function TalentOnboardingWizard() {
     setIsAnalyzing(true);
     setAnalysisError(null);
     
+    // Increment request ID to track this specific analysis
+    const currentRequestId = analysisRequestId + 1;
+    setAnalysisRequestId(currentRequestId);
+    
     try {
       const response = await fetch('/api/talent/analyze', {
         method: 'POST',
@@ -90,19 +95,26 @@ export function TalentOnboardingWizard() {
       
       const data = await response.json();
       
-      if (data.success && data.fields) {
-        setFields(prev => prev.map(field => {
-          const analyzed = data.fields.find((f: AnalyzedField) => f.key === field.key);
-          return analyzed ? { ...field, value: analyzed.value, confidence: analyzed.confidence, evidence: analyzed.evidence } : field;
-        }));
-        setStep(2);
-      } else {
-        setAnalysisError(data.error || 'Analysis failed');
+      // Only update if this is still the latest request
+      if (currentRequestId === analysisRequestId) {
+        if (data.success && data.fields) {
+          setFields(prev => prev.map(field => {
+            const analyzed = data.fields.find((f: AnalyzedField) => f.key === field.key);
+            return analyzed ? { ...field, value: analyzed.value, confidence: analyzed.confidence, evidence: analyzed.evidence } : field;
+          }));
+          setStep(2);
+        } else {
+          setAnalysisError(data.error || 'Analysis failed');
+        }
       }
     } catch (error) {
-      setAnalysisError('Failed to analyze profile. Please try again.');
+      if (currentRequestId === analysisRequestId) {
+        setAnalysisError('Failed to analyze profile. Please try again.');
+      }
     } finally {
-      setIsAnalyzing(false);
+      if (currentRequestId === analysisRequestId) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
