@@ -1,0 +1,28 @@
+diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js b/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
+index be3f893..9eef197 100644
+--- a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
++++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
+@@ -102,6 +102,23 @@ export async function bundleServer(buildOpts, projectOpts) {
+         ],
+         external: ["./middleware/handler.mjs"],
+         alias: {
++            // IPI-1007: Mastra 1.59 workspace AST-edit does `import("@ast-grep/napi")`.
++            // Next turbopack aliases and NFT excludes do not apply to this esbuild.
++            // OpenNext CLI still loads the real native addon in-process; only the
++            // Worker graph is stubbed. Do not npm-override the package — that breaks
++            // OpenNext's own astCodePatcher at build time.
++            ...Object.fromEntries([
++                "@ast-grep/napi",
++                "@ast-grep/napi-darwin-arm64",
++                "@ast-grep/napi-darwin-x64",
++                "@ast-grep/napi-linux-arm64-gnu",
++                "@ast-grep/napi-linux-arm64-musl",
++                "@ast-grep/napi-linux-x64-gnu",
++                "@ast-grep/napi-linux-x64-musl",
++                "@ast-grep/napi-win32-arm64-msvc",
++                "@ast-grep/napi-win32-ia32-msvc",
++                "@ast-grep/napi-win32-x64-msvc",
++            ].map((name) => [name, path.join(appPath, "scripts/cf-ast-grep-stub.mjs")])),
+             // When @vercel/og is not used, alias the edge entry to a throwing shim so the
+             // dynamic `import("next/dist/compiled/@vercel/og/index.edge.js")` call site
+             // emitted by Next.js does not drag the library (~800 KiB) and its
