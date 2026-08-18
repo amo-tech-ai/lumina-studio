@@ -26,7 +26,7 @@ const VALID = {
   location: "London, UK",
   dayRate: "£1,200",
   sourceUrl: "https://instagram.com/kara/",
-  analyzedFields: [{ key: "handle", value: "@kara", confidence: 99, evidence: "url" }],
+  analyzedFields: [{ key: "handle", value: "@kara", confidence: 99, evidence: "url", status: "approved" }],
 };
 
 describe("POST /api/talent/profile-create", () => {
@@ -65,6 +65,7 @@ describe("POST /api/talent/profile-create", () => {
         p_niche: "Running",
         p_location: "London, UK",
         p_half_day: 1200,
+        p_sources: [{ field_name: "handle", confidence: 99, review_status: "approved" }],
       }),
     );
     expect(await res.json()).toMatchObject({ success: true, sourcesInserted: 1, profile: { id: "profile-1" } });
@@ -75,5 +76,15 @@ describe("POST /api/talent/profile-create", () => {
     const { POST } = await import("./route");
     const res = await POST(makePost(VALID));
     expect(res.status).toBe(409);
+  });
+
+  it("rejects fields that are still AI-pending", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(makePost({
+      ...VALID,
+      analyzedFields: [{ key: "handle", value: "@kara", confidence: 99, evidence: "url", status: "ai" }],
+    }));
+    expect(res.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 });

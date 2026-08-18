@@ -129,7 +129,7 @@ export function ApprovalCard({
         )}
       </div>
 
-      {evidenceOpen && evidence && confidence ? (
+      {evidenceOpen && evidence && typeof confidence === "number" ? (
         <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs uppercase tracking-widest text-gray-500">Why this value</span>

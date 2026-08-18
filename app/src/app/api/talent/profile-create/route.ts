@@ -10,6 +10,7 @@ type AnalyzedFieldBody = {
   value?: unknown;
   confidence?: unknown;
   evidence?: unknown;
+  status?: unknown;
 };
 
 export async function POST(req: NextRequest) {
@@ -45,6 +46,27 @@ export async function POST(req: NextRequest) {
   }
 
   const agencyOrgId = typeof body.agencyOrgId === "string" ? body.agencyOrgId : undefined;
+  const parsedFields = analyzedFields.flatMap((field): AnalyzedFieldBody[] =>
+    field && typeof field === "object" ? [field as AnalyzedFieldBody] : [],
+  ).flatMap((field) => {
+    if (typeof field.key !== "string" || typeof field.confidence !== "number") return [];
+    if (field.status !== "approved" && field.status !== "edited") return [];
+    return [{
+      key: field.key,
+      value: typeof field.value === "string" ? field.value : undefined,
+      confidence: field.confidence,
+      evidence: typeof field.evidence === "string" ? field.evidence : undefined,
+      status: field.status,
+    }];
+  });
+
+  if (parsedFields.length === 0) {
+    return NextResponse.json(
+      { success: false, error: "analyzedFields must include approved or edited provenance" },
+      { status: 400 },
+    );
+  }
+
   const args = toCreateTalentProfileRpcArgs({
     displayName,
     bio: typeof body.bio === "string" ? body.bio : undefined,
@@ -57,17 +79,7 @@ export async function POST(req: NextRequest) {
       : [],
     sourceUrl,
     agencyOrgId,
-    analyzedFields: analyzedFields.flatMap((field): AnalyzedFieldBody[] =>
-      field && typeof field === "object" ? [field as AnalyzedFieldBody] : [],
-    ).flatMap((field) => {
-      if (typeof field.key !== "string" || typeof field.confidence !== "number") return [];
-      return [{
-        key: field.key,
-        value: typeof field.value === "string" ? field.value : undefined,
-        confidence: field.confidence,
-        evidence: typeof field.evidence === "string" ? field.evidence : undefined,
-      }];
-    }),
+    analyzedFields: parsedFields,
   });
 
   const { data, error } = await supabase.rpc("create_talent_profile_with_sources", args);

@@ -1,8 +1,11 @@
+export type TalentSourceReviewStatus = "approved" | "edited";
+
 export type AnalyzedPublishField = {
   key: string;
   value?: string;
   confidence: number;
   evidence?: string;
+  status: TalentSourceReviewStatus;
 };
 
 export type CreateTalentProfileInput = {
@@ -40,6 +43,7 @@ export function toCreateTalentProfileRpcArgs(input: CreateTalentProfileInput) {
     p_sources: input.analyzedFields.map((field) => ({
       field_name: field.key,
       confidence: field.confidence,
+      review_status: field.status,
     })),
   };
 }

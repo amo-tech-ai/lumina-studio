@@ -21,8 +21,8 @@ describe("toCreateTalentProfileRpcArgs", () => {
       dayRate: "£1,200",
       sourceUrl: "https://instagram.com/kara",
       analyzedFields: [
-        { key: "handle", confidence: 99 },
-        { key: "rate", confidence: 71 },
+        { key: "handle", confidence: 99, status: "approved" },
+        { key: "rate", confidence: 71, status: "edited" },
       ],
     });
 
@@ -31,8 +31,8 @@ describe("toCreateTalentProfileRpcArgs", () => {
     expect(args.p_location).toBe("London, UK");
     expect(args.p_half_day).toBe(1200);
     expect(args.p_sources).toEqual([
-      { field_name: "handle", confidence: 99 },
-      { field_name: "rate", confidence: 71 },
+      { field_name: "handle", confidence: 99, review_status: "approved" },
+      { field_name: "rate", confidence: 71, review_status: "edited" },
     ]);
   });
 });

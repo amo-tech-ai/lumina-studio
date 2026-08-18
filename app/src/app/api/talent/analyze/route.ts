@@ -12,10 +12,19 @@ interface AnalyzedField {
   evidence: string;
 }
 
-function instagramHandle(url: string): string {
-  if (!url.includes("instagram.com")) return "@unknown";
-  const segment = url.split("/").filter(Boolean).pop();
-  return `@${segment ?? "unknown"}`;
+const MOCK_EVIDENCE = "Placeholder draft — not crawled. Live analysis is not wired yet.";
+const MOCK_CONFIDENCE = 0;
+
+export function instagramHandle(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "@unknown";
+  }
+  if (!parsed.hostname.includes("instagram.com")) return "@unknown";
+  const segment = parsed.pathname.split("/").filter(Boolean)[0];
+  return segment ? `@${segment}` : "@unknown";
 }
 
 export async function POST(req: NextRequest) {
@@ -49,57 +58,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // TODO: Replace mock fields with Gemini/Mastra analysis in a follow-up.
+  try {
+    new URL(url);
+  } catch {
+    return NextResponse.json({ success: false, error: "URL must be a valid absolute URL" }, { status: 400 });
+  }
+
+  // ponytail: mock drafts only. Gemini/Mastra analysis is a follow-up.
   const fields: AnalyzedField[] = [
-    {
-      key: "name",
-      label: "Full name",
-      value: name,
-      confidence: 96,
-      evidence: "Matched from Instagram bio & tagged professional posts.",
-    },
-    {
-      key: "handle",
-      label: "Handle",
-      value: instagramHandle(url),
-      confidence: 99,
-      evidence: "Read directly from the connected Instagram profile.",
-    },
-    {
-      key: "niche",
-      label: "Niche",
-      value: "Running · Athlete lifestyle",
-      confidence: 92,
-      evidence: "Top content themes across 128 posts: running (61%), lifestyle (24%), wellness (15%).",
-    },
-    {
-      key: "tier",
-      label: "Tier",
-      value: "Micro · 42.0K followers",
-      confidence: 88,
-      evidence: "Follower count 42,013 places you in the Micro tier (10K–100K).",
-    },
-    {
-      key: "loc",
-      label: "Location",
-      value: "London, UK",
-      confidence: 84,
-      evidence: "Inferred from post geotags (72% Greater London) and bio.",
-    },
-    {
-      key: "rate",
-      label: "Suggested day rate",
-      value: "£1,200",
-      confidence: 71,
-      evidence: "Benchmarked against Micro-tier running creators with 4%+ engagement. Please confirm.",
-    },
-    {
-      key: "bio",
-      label: "Short bio",
-      value: "Marathoner and running coach sharing authentic training content and race-day energy.",
-      confidence: 79,
-      evidence: "Summarised from bio + 40 most-engaged captions.",
-    },
+    { key: "name", label: "Full name", value: name, confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "handle", label: "Handle", value: instagramHandle(url), confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "niche", label: "Niche", value: "Running · Athlete lifestyle", confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "tier", label: "Tier", value: "Micro · 42.0K followers", confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "loc", label: "Location", value: "London, UK", confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "rate", label: "Suggested day rate", value: "£1,200", confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
+    { key: "bio", label: "Short bio", value: "Marathoner and running coach sharing authentic training content and race-day energy.", confidence: MOCK_CONFIDENCE, evidence: MOCK_EVIDENCE },
   ];
 
   return NextResponse.json({ success: true, fields });

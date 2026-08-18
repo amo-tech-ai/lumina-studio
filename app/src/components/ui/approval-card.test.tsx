@@ -15,4 +15,21 @@ describe("ApprovalCard", () => {
     expect(chip.getAttribute("style") ?? "").toContain("border");
     expect(container.querySelector("[style*='flex-shrink']")).toBeNull();
   });
+
+  it("still shows the Why panel when confidence is 0", () => {
+    render(
+      <ApprovalCard
+        label="Handle"
+        value="@kara"
+        isEditing={false}
+        status="ai"
+        confidence={0}
+        evidence="Placeholder draft — not crawled."
+        evidenceOpen
+      />,
+    );
+    expect(screen.getByText("Why this value")).toBeDefined();
+    expect(screen.getByText("0% confidence")).toBeDefined();
+    expect(screen.getByText("Placeholder draft — not crawled.")).toBeDefined();
+  });
 });

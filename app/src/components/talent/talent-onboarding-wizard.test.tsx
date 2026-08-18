@@ -70,6 +70,11 @@ describe("TalentOnboardingWizard", () => {
       expect(publishing.disabled).toBe(true);
     });
     expect(fetchMock.mock.calls.filter((call) => String(call[0]).includes("profile-create"))).toHaveLength(1);
+    const createCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("profile-create"));
+    const body = JSON.parse(String(createCall?.[1] && typeof createCall[1] === "object" && "body" in createCall[1] ? createCall[1].body : "{}")) as {
+      analyzedFields: Array<{ status: string }>;
+    };
+    expect(body.analyzedFields.every((field) => field.status === "approved")).toBe(true);
   });
 
   it("hides the photography sidebar in the mobile-first grid", () => {

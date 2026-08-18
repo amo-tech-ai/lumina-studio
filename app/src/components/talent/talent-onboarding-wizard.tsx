@@ -45,15 +45,18 @@ export function TalentOnboardingWizard() {
     const timer = setInterval(() => {
       setScanned((prev) => {
         const next = Math.min(128, prev + 9);
-        if (next >= 128) {
-          clearInterval(timer);
-          setTimeout(() => setStep(3), 550);
-        }
+        if (next >= 128) clearInterval(timer);
         return next;
       });
     }, 130);
     return () => clearInterval(timer);
   }, [step]);
+
+  useEffect(() => {
+    if (step !== 2 || scanned < 128) return;
+    const timeout = setTimeout(() => setStep(3), 550);
+    return () => clearTimeout(timeout);
+  }, [step, scanned]);
 
   const handleAnalyse = async () => {
     if (!name || !url || isAnalyzing) return;
@@ -128,6 +131,7 @@ export function TalentOnboardingWizard() {
             value: field.value,
             confidence: field.confidence,
             evidence: field.evidence,
+            status: field.status === "edited" ? "edited" : "approved",
           })),
         }),
       });
