@@ -73,6 +73,8 @@ export function damContext(opts: {
   workId?: string;
   shootId?: string;
   campaignId?: string;
+  talentId?: string;
+  sourceUrl?: string;
 }): Record<string, string> {
   const env = opts.env ?? detectEnv();
   const workType = opts.workType ?? DEFAULT_WORK_TYPE;
@@ -85,6 +87,8 @@ export function damContext(opts: {
   if (opts.workId) ctx.work_id = opts.workId;
   if (opts.shootId) ctx.shoot_id = opts.shootId;
   if (opts.campaignId) ctx.campaign_id = opts.campaignId;
+  if (opts.talentId) ctx.talent_id = opts.talentId;
+  if (opts.sourceUrl) ctx.source_url = opts.sourceUrl;
   return ctx;
 }
 
@@ -127,6 +131,8 @@ export function damContextString(opts: {
   workId?: string;
   shootId?: string;
   campaignId?: string;
+  talentId?: string;
+  sourceUrl?: string;
 }): string {
   return Object.entries(damContext(opts))
     .map(([k, v]) => `${k}=${escapeContextValue(v)}`)
