@@ -6,18 +6,30 @@
 --      public.mastra_workflow_snapshot=8 still flat on Day 1 (2026-08-17) and
 --      Day 3 (2026-08-19) — zero new writes into public.* since the fail-closed
 --      change shipped (PR #949). If any count moved, stop and investigate.
---   2. Backup/PITR: Supabase PITR enabled on nvdlhrodvevgwdsneplk, or written
---      team sign-off accepting daily-WAL-G-only rollback risk (currently
---      pitr_enabled=false, walg_enabled=true).
+--   2. Recovery gate — Supabase Free plan: PITR is a paid feature and is NOT
+--      available on nvdlhrodvevgwdsneplk (pitr_enabled=false). Required:
+--        a. fresh manual logical backup taken immediately BEFORE this
+--           migration is pushed, stored OUTSIDE Supabase:
+--             pg_dump "$DATABASE_URL" -t 'public.mastra_*' \
+--               --no-owner --no-privileges -Fc \
+--               -f /path/outside/supabase/ipi801-shadow-backup.dump
+--        b. backup verified readable: pg_restore -l <dumpfile> (exit 0)
+--        c. restore runbook documented (see Rollback below)
+--        d. explicit team sign-off on IPI-801 that this backup is the
+--           rollback mechanism
+--      (If the project is ever upgraded to a paid plan, PITR enabled also
+--      satisfies this gate.)
 --
--- Behavior: fail-closed. Refuses to run unless the public.mastra_% catalog
--- matches the verified 33-name allowlist exactly (same list as
--- 20260724173755), every allowlisted name is a plain base table, the
+-- Behavior: fail-closed, single guarded transaction. Refuses to run unless the
+-- public.mastra_% catalog matches the verified 33-name allowlist exactly (same
+-- list as 20260724173755), every allowlisted name is a plain base table, the
 -- private mastra.* schema (threads/messages/workflow_snapshot) exists, and
 -- soak row counts still match Day-0 (threads=16, messages=35,
--- workflow_snapshot=8; the other 30 shadows have zero rows). Counts are
--- taken under SHARE locks so a writer cannot sneak in before DROP.
--- catalog_count = 0 is a no-op (fresh replay / already dropped) — Mastra
+-- workflow_snapshot=8; the other 30 shadows have zero rows). Counts are taken
+-- under SHARE locks (bounded by lock_timeout=5s) so a writer cannot sneak in
+-- before DROP. catalog_count = 0 is a TRUE no-op (fresh replay / already
+-- dropped) — the DROP loop lives INSIDE this same guarded block, so the
+-- zero-catalog RETURN cannot reach any destructive statement. Mastra
 -- auto-init created these tables, not an earlier migration.
 -- Drops ONLY the 33 allowlisted names — no LIKE loop, no CASCADE (a dependent
 -- object aborts the migration instead of silently cascading). The private
@@ -28,8 +40,10 @@
 -- Do not invert 004 in this PR — that would fail supabase-verify-rls
 -- without applying the DROP to QA.
 --
--- Rollback: if anything breaks, restore from Supabase backup/PITR (the gate
--- above) — the 16/35/8 shadow rows are the only data destroyed.
+-- Rollback (Free plan): restore the shadow tables from the manual backup:
+--   pg_restore -d "$DATABASE_URL" --no-owner --no-privileges \
+--     -t 'public.mastra_*' /path/outside/supabase/ipi801-shadow-backup.dump
+-- The 16/35/8 shadow rows are the only data destroyed.
 --
 -- Post-apply steps (separate, human-run, AFTER this migration is pushed
 -- to the DB CI tests — QA first, then prod):
@@ -80,6 +94,7 @@ DECLARE
   soak_name text;
   soak_n bigint;
   soak_dirty text;
+  remaining bigint;
 BEGIN
   IF array_length(expected, 1) IS DISTINCT FROM 33 THEN
     RAISE EXCEPTION
@@ -105,7 +120,9 @@ BEGIN
 
   IF catalog_count IS DISTINCT FROM 33 THEN
     -- Already clean (fresh DB built by replaying migrations, or re-applied):
-    -- nothing to drop. Any other count is drift and must abort.
+    -- true no-op — the DROP loop below is inside this same guarded block, so
+    -- this RETURN cannot reach any destructive statement. Any other count is
+    -- drift and must abort.
     IF catalog_count = 0 THEN
       RAISE NOTICE 'IPI-801 · Phase B: zero public.mastra_* relations — nothing to drop';
       RETURN;
@@ -229,48 +246,15 @@ BEGIN
       'IPI-801 · Phase B: other public.mastra_* shadows are not empty: % — aborting',
       soak_dirty;
   END IF;
-END $$;
 
--- Exact, allowlisted DROP — no LIKE loop, no CASCADE. Fail-closed preflight above.
-DROP TABLE IF EXISTS public.mastra_agent_versions;
-DROP TABLE IF EXISTS public.mastra_agents;
-DROP TABLE IF EXISTS public.mastra_ai_spans;
-DROP TABLE IF EXISTS public.mastra_background_tasks;
-DROP TABLE IF EXISTS public.mastra_channel_config;
-DROP TABLE IF EXISTS public.mastra_channel_installations;
-DROP TABLE IF EXISTS public.mastra_dataset_items;
-DROP TABLE IF EXISTS public.mastra_dataset_versions;
-DROP TABLE IF EXISTS public.mastra_datasets;
-DROP TABLE IF EXISTS public.mastra_experiment_results;
-DROP TABLE IF EXISTS public.mastra_experiments;
-DROP TABLE IF EXISTS public.mastra_favorites;
-DROP TABLE IF EXISTS public.mastra_mcp_client_versions;
-DROP TABLE IF EXISTS public.mastra_mcp_clients;
-DROP TABLE IF EXISTS public.mastra_mcp_server_versions;
-DROP TABLE IF EXISTS public.mastra_mcp_servers;
-DROP TABLE IF EXISTS public.mastra_messages;
-DROP TABLE IF EXISTS public.mastra_observational_memory;
-DROP TABLE IF EXISTS public.mastra_prompt_block_versions;
-DROP TABLE IF EXISTS public.mastra_prompt_blocks;
-DROP TABLE IF EXISTS public.mastra_resources;
-DROP TABLE IF EXISTS public.mastra_schedule_triggers;
-DROP TABLE IF EXISTS public.mastra_schedules;
-DROP TABLE IF EXISTS public.mastra_scorer_definition_versions;
-DROP TABLE IF EXISTS public.mastra_scorer_definitions;
-DROP TABLE IF EXISTS public.mastra_scorers;
-DROP TABLE IF EXISTS public.mastra_skill_blobs;
-DROP TABLE IF EXISTS public.mastra_skill_versions;
-DROP TABLE IF EXISTS public.mastra_skills;
-DROP TABLE IF EXISTS public.mastra_threads;
-DROP TABLE IF EXISTS public.mastra_workflow_snapshot;
-DROP TABLE IF EXISTS public.mastra_workspace_versions;
-DROP TABLE IF EXISTS public.mastra_workspaces;
+  -- DROP the exact 33 allowlisted tables INSIDE the guarded flow — no LIKE
+  -- loop, no CASCADE (a dependent object aborts the transaction instead of
+  -- silently cascading). The zero-catalog RETURN above cannot reach here.
+  FOREACH soak_name IN ARRAY expected LOOP
+    EXECUTE format('DROP TABLE IF EXISTS public.%I', soak_name);
+  END LOOP;
 
--- Postflight: zero public.mastra_% relations remain; private mastra.* intact.
-DO $$
-DECLARE
-  remaining bigint;
-BEGIN
+  -- Postflight: zero public.mastra_% relations remain; private mastra.* intact.
   SELECT count(*)
   INTO remaining
   FROM pg_class c
