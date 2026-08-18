@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       {
         key: 'handle',
         label: 'Handle',
-        value: url.includes('instagram.com') ? `@${url.split('/').pop()}` : '@unknown',
+        value: url.includes('instagram.com') ? `@${url.split('/').filter(Boolean).pop()}` : '@unknown',
         confidence: 99,
         evidence: 'Read directly from the connected Instagram profile.'
       },

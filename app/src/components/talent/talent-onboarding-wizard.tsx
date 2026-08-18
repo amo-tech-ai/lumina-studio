@@ -6,7 +6,6 @@ import { Link as LinkIcon, Sparkles, ListChecks, Check, User } from "lucide-reac
 import { WizardStep, type WizardStepMeta } from "@/components/ui/wizard-step";
 import { ApprovalCard } from "@/components/ui/approval-card";
 import { Button } from "@/components/ui/button";
-import { createTalentProfileWithSources } from "@/lib/talent/profile-creation";
 import { useAuthUser } from "@/lib/auth-client";
 
 type Step = 1 | 2 | 3 | 4;
@@ -37,6 +36,10 @@ export function TalentOnboardingWizard() {
   const [scanned, setScanned] = useState(0);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [createdProfileId, setCreatedProfileId] = useState<string | null>(null);
   const [fields, setFields] = useState<Field[]>([
     { key: 'name', label: 'Full name', value: '', draft: '', status: 'ai', confidence: 0, evidence: '', editing: false, evidenceOpen: false },
     { key: 'handle', label: 'Handle', value: '', draft: '', status: 'ai', confidence: 0, evidence: '', editing: false, evidenceOpen: false },
@@ -75,6 +78,9 @@ export function TalentOnboardingWizard() {
   const handleAnalyse = async () => {
     if (!name || !url) return;
     
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    
     try {
       const response = await fetch('/api/talent/analyze', {
         method: 'POST',
@@ -91,10 +97,12 @@ export function TalentOnboardingWizard() {
         }));
         setStep(2);
       } else {
-        console.error('Analysis failed:', data.error);
+        setAnalysisError(data.error || 'Analysis failed');
       }
     } catch (error) {
-      console.error('Analysis error:', error);
+      setAnalysisError('Failed to analyze profile. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -110,12 +118,16 @@ export function TalentOnboardingWizard() {
   const allReviewed = reviewedCount === fields.length;
 
   const handleFinishPublish = async () => {
-    if (!allReviewed) return;
+    if (!allReviewed || isPublishing) return;
+    
+    setIsPublishing(true);
     
     try {
-      const { profile, sourcesInserted } = await createTalentProfileWithSources(
-        {
-          displayName: name,
+      const response = await fetch('/api/talent/profile-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: fields.find(f => f.key === 'name')?.value || name,
           bio: fields.find(f => f.key === 'bio')?.value,
           handle: fields.find(f => f.key === 'handle')?.value,
           niche: fields.find(f => f.key === 'niche')?.value,
@@ -126,23 +138,25 @@ export function TalentOnboardingWizard() {
           sourceUrl: url,
           profileId: user?.id,
           agencyOrgId: undefined,
-        },
-        fields.map(f => ({
-          key: f.key,
-          value: f.value,
-          confidence: f.confidence,
-          evidence: f.evidence,
-        }))
-      );
+          analyzedFields: fields.map(f => ({
+            key: f.key,
+            value: f.value,
+            confidence: f.confidence,
+            evidence: f.evidence,
+          })),
+        }),
+      });
 
-      if (profile) {
-        console.log(`Created profile ${profile.id} with ${sourcesInserted} sources`);
+      const data = await response.json();
+
+      if (data.success && data.profile) {
+        setCreatedProfileId(data.profile.id);
         setStep(4);
-      } else {
-        console.error('Failed to create profile');
       }
     } catch (error) {
       console.error('Profile creation error:', error);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -197,37 +211,52 @@ export function TalentOnboardingWizard() {
         {/* Step 1: Connect */}
         {step === 1 && (
           <div className="flex-1 flex items-center justify-center p-10">
-            <div className="w-full max-w-[440px]">
+            <div className="w-full max-w-[420px]">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Step 1 of 4</div>
               <h2 className="mt-2 mb-1 text-2xl font-bold tracking-tight">Connect your profile</h2>
               <p className="mb-6 text-sm text-gray-600 leading-relaxed">
-                We'll analyse your public content to draft a profile. You review everything next.
+                Paste your Instagram or portfolio link. Our AI will read your content and draft a profile.
               </p>
-              <label className="block text-sm font-medium mb-2">Your name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm outline-none mb-4"
-                placeholder="Kara Nyström"
-              />
-              <label className="block text-sm font-medium mb-2">Instagram or portfolio URL</label>
-              <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3">
-                <LinkIcon className="w-4 h-4 text-gray-500" />
-                <input
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1 py-3 border-none text-sm outline-none"
-                  placeholder="instagram.com/runwithkara"
-                />
+              {analysisError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {analysisError}
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5">Full name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Alex Rivera"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5">Instagram or portfolio URL</label>
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://instagram.com/yourhandle"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!name || !url || isAnalyzing}
+                  onClick={handleAnalyse}
+                  className="w-full"
+                >
+                  {isAnalyzing ? 'Analysing...' : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Analyse profile
+                    </>
+                  )}
+                </Button>
               </div>
-              <button
-                onClick={handleAnalyse}
-                disabled={!name || !url}
-                className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-gray-900 text-white font-semibold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="w-4 h-4" />
-                Analyse my profile
-              </button>
             </div>
           </div>
         )}
@@ -331,11 +360,13 @@ export function TalentOnboardingWizard() {
                 </Button>
                 <Button
                   size="sm"
-                  disabled={!allReviewed}
+                  disabled={!allReviewed || isPublishing}
                   onClick={handleFinishPublish}
                   className={!allReviewed ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}
                 >
-                  {allReviewed ? (
+                  {isPublishing ? (
+                    'Publishing...'
+                  ) : allReviewed ? (
                     <>
                       <Check className="w-4 h-4" />
                       Finish & publish
@@ -364,7 +395,7 @@ export function TalentOnboardingWizard() {
                 Every field was reviewed by you. Brands searching for talent can now discover you.
               </p>
               <Link
-                href="/app/talent/profile"
+                href={createdProfileId ? `/app/talent/profile?talentId=${createdProfileId}` : "/app/talent/profile"}
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-gray-900 text-white text-sm font-semibold"
               >
                 <User className="w-4 h-4" />

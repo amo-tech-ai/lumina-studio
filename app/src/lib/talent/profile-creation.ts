@@ -90,7 +90,6 @@ export async function createTalentProfileWithSources(
     .single();
 
   if (profileError || !profile) {
-    console.error("Failed to create talent profile:", profileError);
     return { profile: null, sourcesInserted: 0 };
   }
 
