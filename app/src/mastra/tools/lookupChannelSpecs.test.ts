@@ -69,11 +69,11 @@ describe("lookupChannelSpecs", () => {
   });
 
   it("returns null spec with warning for unknown channel — never fabricates", async () => {
-    const result = await lookupChannelSpecs.execute!({ channels: ["pinterest"] }, {} as never);
+    const result = await lookupChannelSpecs.execute!({ channels: ["facebook_story"] }, {} as never);
 
     expect(result.results).toHaveLength(1);
     const entry = result.results[0];
-    expect(entry.channel).toBe("pinterest");
+    expect(entry.channel).toBe("facebook_story");
     expect(entry.spec).toBeNull();
     expect(entry.warning).toMatch(/Unknown channel/);
     expect(mockFrom).not.toHaveBeenCalled();
@@ -93,13 +93,13 @@ describe("lookupChannelSpecs", () => {
         image_type_defs: { slug: "feed", name: "Feed" },
       }));
 
-    const result = await lookupChannelSpecs.execute!({ channels: ["facebook", "youtube"] }, {} as never);
+    const result = await lookupChannelSpecs.execute!({ channels: ["facebook", "facebook_story"] }, {} as never);
 
     expect(result.results).toHaveLength(2);
     const fb = result.results.find((r) => r.channel === "facebook");
-    const yt = result.results.find((r) => r.channel === "youtube");
+    const story = result.results.find((r) => r.channel === "facebook_story");
     expect(fb?.spec?.widthPx).toBe(1200);
-    expect(yt?.spec).toBeNull();
-    expect(yt?.warning).toMatch(/Unknown channel/);
+    expect(story?.spec).toBeNull();
+    expect(story?.warning).toMatch(/Unknown channel/);
   });
 });

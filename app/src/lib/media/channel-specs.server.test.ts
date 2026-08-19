@@ -6,6 +6,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAllChannelSpecs, getChannelSpec } from "./channel-specs.server";
+import { PREVIEW_CHANNELS } from "./channel-specs";
 
 type RuleRow = { image_type_slugs: string[]; platform_slugs: string[] } | null;
 type SpecRow = Record<string, unknown> | null;
@@ -189,42 +190,38 @@ describe("getChannelSpec", () => {
 });
 
 describe("getAllChannelSpecs", () => {
-  it("returns a record keyed by all 4 PREVIEW_CHANNELS with independent per-channel results", async () => {
-    // Only facebook has a real rule/spec; the other 3 channels resolve null,
-    // each for a different reason (no rule / empty slugs / no spec row) —
-    // proving getAllChannelSpecs doesn't let one channel's success leak
-    // into another's result via shared mutable state.
+  it("returns a record keyed by all PREVIEW_CHANNELS with independent per-channel results", async () => {
+    // Only facebook has a real rule/spec; a few others resolve null for
+    // different reasons — proving getAllChannelSpecs doesn't let one
+    // channel's success leak into another's result via shared mutable state.
     const ruleEqCalls = mockSupabase({
       rule: (channel) => {
         if (channel === "facebook") return { image_type_slugs: ["feed_post"], platform_slugs: ["facebook"] };
         if (channel === "instagram_feed") return { image_type_slugs: [], platform_slugs: ["instagram"] };
         if (channel === "instagram_story") return null;
-        return { image_type_slugs: ["story"], platform_slugs: ["tiktok"] }; // tiktok
+        if (channel === "tiktok") return { image_type_slugs: ["story"], platform_slugs: ["tiktok"] };
+        return { image_type_slugs: ["pin"], platform_slugs: [channel] };
       },
       spec: (channel) => {
         if (channel === "facebook") return { ...FULL_SPEC_ROW, platforms: { slug: "facebook", name: "Facebook" } };
-        if (channel === "tiktok") return null; // rule resolves, but no spec row
+        if (channel === "tiktok") return null;
         return FULL_SPEC_ROW;
       },
     });
 
     const result = await getAllChannelSpecs();
 
-    expect(Object.keys(result).sort()).toEqual(
-      ["facebook", "instagram_feed", "instagram_story", "tiktok"].sort(),
-    );
+    expect(Object.keys(result).sort()).toEqual([...PREVIEW_CHANNELS].sort());
     expect(result.facebook?.platformSlug).toBe("facebook");
-    expect(result.instagram_feed).toBeNull(); // empty image_type_slugs
-    expect(result.instagram_story).toBeNull(); // no rule row
-    expect(result.tiktok).toBeNull(); // rule resolves, but spec lookup misses
+    expect(result.instagram_feed).toBeNull();
+    expect(result.instagram_story).toBeNull();
+    expect(result.tiktok).toBeNull();
 
-    // All 4 parallel getChannelSpec() calls must filter recommendation_rules
-    // on rule_type, not just condition_value — same contract as the single-
-    // channel test above, checked here too since getAllChannelSpecs has its
-    // own query-fanout code path.
-    for (const channel of ["facebook", "instagram_feed", "instagram_story", "tiktok"]) {
+    for (const channel of PREVIEW_CHANNELS) {
       expect(ruleEqCalls).toContainEqual(["condition_value", channel]);
     }
-    expect(ruleEqCalls.filter(([col, val]) => col === "rule_type" && val === "channel_required")).toHaveLength(4);
+    expect(
+      ruleEqCalls.filter(([col, val]) => col === "rule_type" && val === "channel_required"),
+    ).toHaveLength(PREVIEW_CHANNELS.length);
   });
 });
