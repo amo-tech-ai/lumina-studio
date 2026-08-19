@@ -252,6 +252,106 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(updateTaskAction).not.toHaveBeenCalled();
   });
 
+  it("STALE_VERSION Review latest keeps the draft and Retry is not offered", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockResolvedValue({
+      ok: false,
+      error: {
+        code: "STALE_VERSION",
+        message: "This task changed since you last viewed it. Refresh and try again.",
+      },
+    });
+    const onRefreshSelection = vi.fn().mockResolvedValue({
+      task: task({
+        title: "Server title",
+        description: "from server",
+        updatedAt: "2026-03-03T00:00:00.000Z",
+      }),
+      canUpdateTasks: true,
+      assignees: [],
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Local draft title" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    const title = screen.getByTestId("planner-task-title");
+    await user.clear(title);
+    await user.type(title, "My unsaved edit");
+    await user.click(screen.getByTestId("planner-task-save"));
+
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe("stale");
+    expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("planner-task-action-error-review")),
+    );
+
+    await user.click(screen.getByTestId("planner-task-action-error-review"));
+    await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("My unsaved edit");
+  });
+
+  it("FORBIDDEN explains permission and does not offer Retry", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockResolvedValue({
+      ok: false,
+      error: { code: "FORBIDDEN", message: "You don't have permission to edit this task." },
+    });
+
+    render(
+      <PlannerTaskDetail task={task({ status: "todo" })} onClose={() => {}} canUpdateTasks />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "unauthorized",
+    );
+    expect(screen.getByTestId("planner-task-action-error").textContent).toMatch(/permission/i);
+    expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
+    expect(screen.queryByTestId("planner-task-reload")).toBeNull();
+  });
+
+  it("network failure offers Retry with the same idempotency key and keeps the draft", async () => {
+    const user = userEvent.setup();
+    updateTaskAction
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { replayed: false, taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" },
+      });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Fitting notes" })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await user.type(screen.getByTestId("planner-task-title"), " — hold");
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error-retry")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "network",
+    );
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toMatch(/Fitting notes/);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("planner-task-action-error-retry")),
+    );
+
+    const firstKey = updateTaskAction.mock.calls[0][4];
+    await user.click(screen.getByTestId("planner-task-action-error-retry"));
+    await waitFor(() => expect(updateTaskAction).toHaveBeenCalledTimes(2));
+    expect(updateTaskAction.mock.calls[1][4]).toBe(firstKey);
+  });
+
   it("STALE_VERSION preserves draft values and offers Reload latest", async () => {
     const user = userEvent.setup();
     updateTaskAction.mockResolvedValue({
@@ -497,13 +597,14 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     expect(shiftTaskAction).not.toHaveBeenCalled();
   });
 
-  it("surfaces typed shift errors without confirming the move", async () => {
+  it("surfaces typed shift errors, rolls back the uncommitted move, and does not retry", async () => {
     const user = userEvent.setup();
     shiftTaskAction.mockResolvedValue({
       ok: false,
       error: {
         code: "DEPENDENCY_CHANGED",
-        message: "This plan's schedule changed since you last viewed it. Refresh and try again.",
+        message:
+          'Cannot shift "Fitting" before predecessor "Casting" (requires 0-day lag after 2026-03-06).',
       },
     });
 
@@ -518,7 +619,91 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     await user.click(screen.getByTestId("planner-task-move-later"));
     await user.click(screen.getByTestId("planner-task-shift-confirm"));
     await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-shift-error").getAttribute("data-recovery-kind")).toBe(
+      "dependency",
+    );
+    expect(screen.getByTestId("planner-task-shift-error").textContent).toMatch(/Fitting/);
+    expect(screen.queryByTestId("planner-task-shift-preview")).toBeNull();
+    expect(screen.queryByTestId("planner-task-shift-error-retry")).toBeNull();
+  });
+
+  it("failed shift STALE_VERSION keeps typed notes and offers Review latest", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: false,
+      error: {
+        code: "STALE_VERSION",
+        message: "This task changed since you last viewed it. Refresh and try again.",
+      },
+    });
+    const onRefreshSelection = vi.fn().mockResolvedValue({
+      task: task({
+        title: "Fitting",
+        startDate: "2026-03-10",
+        endDate: "2026-03-12",
+        updatedAt: "2026-03-04T00:00:00.000Z",
+      }),
+      canUpdateTasks: true,
+      assignees: [],
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          title: "Fitting",
+          startDate: "2026-03-04",
+          endDate: "2026-03-06",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.type(screen.getByTestId("planner-task-description"), "Need extra rack time");
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+    expect(screen.queryByTestId("planner-task-shift-preview")).toBeNull();
+
+    await user.click(screen.getByTestId("planner-task-shift-error-review"));
+    await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
+    expect((screen.getByTestId("planner-task-description") as HTMLTextAreaElement).value).toBe(
+      "Need extra rack time",
+    );
+  });
+
+  it("failed shift network keeps the proposal and retries with the same key", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { replayed: false, changedTasks: [{ taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" }] },
+      });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={vi.fn().mockResolvedValue({
+          task: task({ startDate: "2026-03-05", endDate: "2026-03-07" }),
+          canUpdateTasks: true,
+          assignees: [],
+        })}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error-retry")).toBeDefined());
     expect(screen.getByTestId("planner-task-shift-preview")).toBeDefined();
+    const firstKey = shiftTaskAction.mock.calls[0][3];
+    await user.click(screen.getByTestId("planner-task-shift-error-retry"));
+    await waitFor(() => expect(shiftTaskAction).toHaveBeenCalledTimes(2));
+    expect(shiftTaskAction.mock.calls[1][3]).toBe(firstKey);
   });
 
   it("hides schedule controls for Viewer", () => {
