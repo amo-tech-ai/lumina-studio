@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
-import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
+import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval-after";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 

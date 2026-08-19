@@ -5,20 +5,25 @@ const mockGetMastra = vi.fn();
 const mockPromote = vi.fn();
 const mockDiscard = vi.fn();
 
-/** Official Next.js `after()` + Vitest `vi.waitFor` — no setTimeout(0) race. */
+/** Deferred resume scheduler + Vitest `vi.waitFor` — no setTimeout(0) race. */
 const afterWork = vi.hoisted(() => ({
   pending: Promise.resolve() as Promise<unknown>,
 }));
 
-vi.mock("next/server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("next/server")>();
-  return {
-    ...actual,
-    after: (task: () => unknown) => {
+async function processApproval(params: {
+  runId: string;
+  approved: boolean;
+  operatorId: string;
+  expectedBrandId?: string;
+}) {
+  const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+  return processBrandIntelligenceDraftApproval({
+    ...params,
+    scheduleWork: (task) => {
       afterWork.pending = Promise.resolve().then(task);
     },
-  };
-});
+  });
+}
 
 vi.mock("@/app/api/_lib/supabase-admin", () => ({
   createSupabaseAdminClient: () => ({ from: (...args: unknown[]) => mockFrom(...args) }),
@@ -101,8 +106,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -143,8 +147,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     });
     mockPromote.mockResolvedValue({ ok: true });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -185,8 +188,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     });
     mockPromote.mockResolvedValue({ ok: false, error: "Brand DNA is incomplete or invalid" });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -225,8 +227,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OTHER,
@@ -246,8 +247,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -288,8 +288,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     });
     mockDiscard.mockResolvedValue({ ok: true });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -330,8 +329,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     });
     mockDiscard.mockResolvedValue({ ok: false, error: "discard failed" });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -365,8 +363,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -409,8 +406,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -431,8 +427,7 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       return chain({ data: null, error: null });
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OTHER,
@@ -570,8 +565,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
     mockPromote.mockResolvedValue({ ok: false, error: RAW_PROMOTE });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -593,8 +587,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
     mockPromote.mockResolvedValue({ ok: false, error: RAW_PROMOTE });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -615,8 +608,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
       error: "Brand DNA is incomplete or invalid",
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: true,
       operatorId: OPERATOR,
@@ -633,8 +625,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
     mockDiscard.mockResolvedValue({ ok: false, error: RAW_DISCARD });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -653,8 +644,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
     mockDiscard.mockResolvedValue({ ok: false, error: RAW_DISCARD });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -675,8 +665,7 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
       error: "You do not have permission to perform this action.",
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
@@ -695,13 +684,24 @@ describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", ()
       error: "Brand is not in draft_ready state",
     });
 
-    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
-    const result = await processBrandIntelligenceDraftApproval({
+    const result = await processApproval({
       runId: RUN,
       approved: false,
       operatorId: OPERATOR,
       expectedBrandId: BRAND,
     });
     expect(result).toEqual({ ok: true, approved: false, brandId: BRAND });
+  });
+});
+
+describe("IPI-1018 next/server boundary", () => {
+  it("framework-neutral approval module does not import next/*", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, "process-draft-approval.ts"), "utf8");
+    expect(src).not.toMatch(/from\s+["']next\//);
+    expect(src).not.toMatch(/next\/server\.js/);
   });
 });
