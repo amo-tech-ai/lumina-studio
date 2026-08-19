@@ -1,5 +1,4 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
-import { after } from "next/server";
 import {
   DRAFT_ACTION_DOMAIN,
   DRAFT_ACTION_MESSAGES,
@@ -25,6 +24,20 @@ const SAFE_DRAFT_ACTION_ERRORS = new Set<string>([
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
+
+/**
+ * Defers Mastra workflow resume. Next Route Handlers / Server Actions pass
+ * `after` from `next/server`. Mastra tools omit this and use `queueMicrotask`.
+ */
+export type ScheduleDraftResume = (task: () => void | Promise<void>) => void;
+
+export type ProcessDraftApprovalParams = {
+  runId: string;
+  approved: boolean;
+  operatorId: string;
+  expectedBrandId?: string;
+  scheduleWork?: ScheduleDraftResume;
+};
 
 /**
  * Never forward raw Supabase/PostgREST strings to API / Server Action / UI callers.
@@ -149,13 +162,10 @@ async function resolveIdempotentApproval(params: {
 }
 
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
-export async function processBrandIntelligenceDraftApproval(params: {
-  runId: string;
-  approved: boolean;
-  operatorId: string;
-  expectedBrandId?: string;
-}): Promise<ProcessDraftApprovalResult> {
-  const { runId, approved, operatorId, expectedBrandId } = params;
+export async function processBrandIntelligenceDraftApproval(
+  params: ProcessDraftApprovalParams,
+): Promise<ProcessDraftApprovalResult> {
+  const { runId, approved, operatorId, expectedBrandId, scheduleWork } = params;
   const sb = createSupabaseAdminClient();
 
   let draftQuery = sb
@@ -235,7 +245,7 @@ export async function processBrandIntelligenceDraftApproval(params: {
     }
     // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
     if (promoteResult.ok || promoteResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
-      scheduleDraftWorkflowResume(runId, true);
+      scheduleDraftWorkflowResume(runId, true, scheduleWork);
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
@@ -248,7 +258,7 @@ export async function processBrandIntelligenceDraftApproval(params: {
     }
     // Schedule Mastra workflow resume out-of-band for genuine HITL runs.
     if (discardResult.ok || discardResult.error === IDEMPOTENT_DRAFT_STATE_ERROR) {
-      scheduleDraftWorkflowResume(runId, false);
+      scheduleDraftWorkflowResume(runId, false, scheduleWork);
     }
   }
 
@@ -256,15 +266,27 @@ export async function processBrandIntelligenceDraftApproval(params: {
 }
 
 /**
- * Schedule Mastra workflow resume via Next.js `after()` so it runs after the
- * response is sent, without blocking the server-action flight on cold start.
+ * Schedule Mastra workflow resume after the caller returns.
+ * Next request paths pass `after()` via `scheduleWork`; Mastra Studio / tests
+ * use `queueMicrotask` so this module never imports `next/server`.
+ * Resume uses `with-workflow-mastra-pg-scope` (no NextResponse).
  * Logs failures but never throws — edge onboarding runIds are not suspended
  * Mastra runs and will error "not suspended", which is expected.
  */
-function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
+function defaultScheduleResume(task: () => void | Promise<void>) {
+  queueMicrotask(() => {
+    void task();
+  });
+}
+
+function scheduleDraftWorkflowResume(
+  runId: string,
+  approved: boolean,
+  scheduleWork: ScheduleDraftResume = defaultScheduleResume,
+) {
   const schedule = async () => {
     try {
-      const { withWorkflowMastraPg } = await import("./with-workflow-mastra-pg");
+      const { withWorkflowMastraPg } = await import("./with-workflow-mastra-pg-scope");
       await withWorkflowMastraPg(async () => {
         const { getMastra } = await import("@/mastra");
         const mastra = getMastra();
@@ -280,12 +302,5 @@ function scheduleDraftWorkflowResume(runId: string, approved: boolean) {
       }
     }
   };
-  try {
-    after(schedule);
-  } catch {
-    // `after()` is only available within a Next.js request scope (route handler,
-    // server action). Outside that context (e.g. test environments), it throws.
-    // Fall back to queueMicrotask to avoid blocking the response.
-    queueMicrotask(schedule);
-  }
+  scheduleWork(schedule);
 }
