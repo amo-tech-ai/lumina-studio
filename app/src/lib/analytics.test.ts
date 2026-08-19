@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AnalyticsPayload, CampaignPerformancePayload } from "./analytics";
-import { isUnavailableMetricsNull } from "./analytics";
+import type { AnalyticsPayload, CampaignPerformancePayload, CampaignPerformanceRow } from "./analytics";
+import { isUnavailableMetricsNull, resolveValidCampaign } from "./analytics";
 
 describe("analytics contract null semantics", () => {
   it("keeps unavailable metrics null", () => {
@@ -69,5 +69,45 @@ describe("analytics contract null semantics", () => {
     expect(payload.campaigns).toHaveLength(2);
     expect(payload.campaigns[0].campaignId).toBe("111");
     expect(payload.campaigns[1].status).toBe("planning");
+  });
+});
+
+describe("resolveValidCampaign", () => {
+  const lookbook: CampaignPerformanceRow = {
+    campaignId: "lookbook",
+    name: "Summer Lookbook",
+    status: "live",
+    brandId: "brand-123",
+    orgId: "org-1",
+  };
+  const holiday: CampaignPerformanceRow = {
+    campaignId: "holiday",
+    name: "Holiday Drop",
+    status: "active",
+    brandId: "brand-456",
+    orgId: "org-1",
+  };
+  const campaigns = [lookbook, holiday];
+
+  it("accepts a same-brand campaign from ?c=", () => {
+    expect(resolveValidCampaign(campaigns, "lookbook", "brand-123")).toEqual(lookbook);
+  });
+
+  it("rejects an invalid campaign id", () => {
+    expect(resolveValidCampaign(campaigns, "missing", "brand-123")).toBeNull();
+  });
+
+  it("rejects a cross-brand campaign even if the id is in the list", () => {
+    expect(resolveValidCampaign(campaigns, "holiday", "brand-123")).toBeNull();
+  });
+
+  it("falls back when selected id or brand is missing", () => {
+    expect(resolveValidCampaign(campaigns, null, "brand-123")).toBeNull();
+    expect(resolveValidCampaign(campaigns, "lookbook", null)).toBeNull();
+  });
+
+  it("rejects a stale selection after the active brand changes", () => {
+    expect(resolveValidCampaign(campaigns, "lookbook", "brand-123")).toEqual(lookbook);
+    expect(resolveValidCampaign(campaigns, "lookbook", "brand-456")).toBeNull();
   });
 });
