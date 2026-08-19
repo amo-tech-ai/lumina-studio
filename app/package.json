@@ -110,7 +110,9 @@
         "@ai-sdk/provider-utils": "2.2.8"
       }
     },
-    "@mastra/deployer": "1.46.0"
+    "mastra": {
+      "@mastra/deployer": "1.46.0"
+    }
   },
   "packageManager": "npm@11.5.0"
 }
