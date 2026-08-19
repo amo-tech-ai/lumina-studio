@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
-import { fetchTalentProfile, fetchTalentAvailability, getTalentHandle, type TalentProfileDetail, type TalentAvailabilitySlot } from "@/lib/talent/profile";
+import { fetchTalentProfile, fetchTalentAvailability, getTalentHandle, storedTag, type TalentProfileDetail, type TalentAvailabilitySlot } from "@/lib/talent/profile";
 
 import styles from "./talent-profile.module.css";
 
@@ -110,8 +110,8 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
   const handle = getTalentHandle(profile);
   const isVerified = profile.verification_status === "verified";
   const avatarUrl = profile.avatarUrl;
-  const tier = (profile.rates as Record<string, unknown>)?.["tier"] as string | undefined ?? "—";
-  const dayRate = (profile.rates as Record<string, unknown>)?.["day_rate"] as string | number | undefined ?? "—";
+  const tier = profile.rate_tier ?? "—";
+  const dayRate = "—";
   const fitScore = profile.verification_status === "verified" ? 94 : profile.verification_status === "pending" ? 82 : 68;
   const fitPct = `${fitScore}%`;
 
@@ -149,7 +149,7 @@ export function TalentProfileWorkspace({ talentId }: { talentId: string }) {
             </div>
             <div className={styles.heroText}>
               <div className={styles.heroTitleRow}>
-                <h1 className={styles.heroTitle}>{handle}</h1>
+                <h1 className={styles.heroTitle}>{profile.display_name}</h1>
                 {isVerified && (
                   <span className={styles.verified}>
                     <StatusChip dot="#059669" label="Verified" />
@@ -239,8 +239,10 @@ function PortfolioPanel() {
 
 function DetailsPanel({ profile }: { profile: TalentProfileDetail }) {
   const details = [
-    { k: "Handle", v: getTalentHandle(profile) },
+    { k: "Handle", v: storedTag(profile, "handle") ?? "—" },
     { k: "Display name", v: profile.display_name },
+    { k: "Niche", v: storedTag(profile, "niche") ?? "—" },
+    { k: "Location", v: storedTag(profile, "location") ?? "—" },
     { k: "Bio", v: profile.bio ?? "—" },
     { k: "Languages", v: profile.languages.join(", ") || "—" },
     { k: "Travel ready", v: profile.travel_ready ? "Yes" : "No" },
