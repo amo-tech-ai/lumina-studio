@@ -707,6 +707,7 @@ describe("IPI-1018 next/server boundary", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const src = readFileSync(join(here, "process-draft-approval.ts"), "utf8");
     expect(src).not.toMatch(/from\s+["']next\//);
+    expect(src).not.toMatch(/import\s*\(\s*["']next\//);
     expect(src).not.toMatch(/next\/server\.js/);
     expect(src).not.toMatch(/import\("\.\/with-workflow-mastra-pg"\)/);
     expect(src).toMatch(/import\("\.\/with-workflow-mastra-pg-scope"\)/);

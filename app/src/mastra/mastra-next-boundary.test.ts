@@ -2,7 +2,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const NEXT_RUNTIME = /from\s+["']next\/(server|headers|cookies|cache)(?:\.js)?["']/;
+const NEXT_RUNTIME =
+  /(?:from\s+|import\s*\(\s*)["']next\/(server|headers|cookies|cache)(?:\.js)?["']/;
 
 function walkTs(dir: string): string[] {
   const out: string[] = [];
@@ -25,6 +26,14 @@ const MASTRA_REACHABLE_LIB = [
 ];
 
 describe("IPI-1018 Mastra next/server boundary", () => {
+  it("NEXT_RUNTIME matches static and dynamic next/* imports", () => {
+    expect('import { after } from "next/server"').toMatch(NEXT_RUNTIME);
+    expect('await import("next/headers")').toMatch(NEXT_RUNTIME);
+    expect("import('next/cookies')").toMatch(NEXT_RUNTIME);
+    expect('import("next/cache.js")').toMatch(NEXT_RUNTIME);
+    expect('from "./process-draft-approval"').not.toMatch(NEXT_RUNTIME);
+  });
+
   it("app/src/mastra/** does not import Next request/runtime APIs", () => {
     const hits = walkTs(__dirname).filter((file) =>
       NEXT_RUNTIME.test(readFileSync(file, "utf8")),
