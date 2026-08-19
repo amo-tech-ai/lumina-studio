@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapMutationFailure,
   mapPlannerMutationError,
+  mapRefreshAfterCommitFailure,
   mapThrownPlannerFailure,
   restorePlannerFocus,
 } from "./mutation-recovery";
@@ -67,13 +68,36 @@ describe("mapPlannerMutationError", () => {
     expect(recovery.reloadLatest).toBe(false);
   });
 
-  it("maps UNKNOWN_ERROR from the server as unknown — explicit retry only", () => {
+  it("maps UNKNOWN_ERROR from the server as unknown — Retry keeps the uncommitted proposal", () => {
     const recovery = mapMutationFailure({
       ok: false,
       error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
     });
     expect(recovery.kind).toBe("unknown");
+    expect(recovery.retrySafe).toBe(true);
+    expect(recovery.reloadLatest).toBe(false);
+    expect(recovery.dismissSelection).toBe(false);
+  });
+
+  it("maps NOT_FOUND to close the stale selection, not review/reload", () => {
+    const recovery = mapPlannerMutationError({
+      code: "NOT_FOUND",
+      message: "This task is no longer available.",
+    });
+    expect(recovery.kind).toBe("not_found");
     expect(recovery.retrySafe).toBe(false);
+    expect(recovery.reviewLatest).toBe(false);
+    expect(recovery.reloadLatest).toBe(false);
+    expect(recovery.dismissSelection).toBe(true);
+  });
+
+  it("maps a post-commit refresh failure as refresh, never another write", () => {
+    const recovery = mapRefreshAfterCommitFailure();
+    expect(recovery.kind).toBe("refresh");
+    expect(recovery.retrySafe).toBe(false);
+    expect(recovery.reviewLatest).toBe(true);
+    expect(recovery.reloadLatest).toBe(true);
+    expect(recovery.dismissSelection).toBe(false);
   });
 
   it("maps IDEMPOTENCY_CONFLICT to review, not retry", () => {

@@ -13,7 +13,8 @@ export type PlannerRecoveryKind =
   | "unknown"
   | "not_found"
   | "terminal"
-  | "idempotency";
+  | "idempotency"
+  | "refresh";
 
 export type PlannerRecoveryField = "title" | "startDate" | "endDate";
 
@@ -22,12 +23,14 @@ export type PlannerRecoveryState = {
   code: string;
   title: string;
   message: string;
-  /** Network-before-commit only — same logical mutation, same idempotency key. */
+  /** Uncommitted write — retry with the same idempotency key (transport or UNKNOWN_ERROR). */
   retrySafe: boolean;
   /** Refresh last successful query data; keep unsaved draft fields. */
   reviewLatest: boolean;
   /** Accept server values (replace draft with authoritative row). */
   reloadLatest: boolean;
+  /** Task is gone — close the stale detail instead of advertising refresh. */
+  dismissSelection: boolean;
   field?: PlannerRecoveryField;
 };
 
@@ -41,6 +44,7 @@ const TITLES: Record<PlannerRecoveryKind, string> = {
   not_found: "This task is no longer available.",
   terminal: "This plan can no longer be edited.",
   idempotency: "This request is already in progress.",
+  refresh: "The change saved, but this view is out of date.",
 };
 
 function kindForCode(code: string, transport: boolean): PlannerRecoveryKind {
@@ -79,16 +83,33 @@ export function mapPlannerMutationError(
 ): PlannerRecoveryState {
   const kind = kindForCode(error.code, opts?.transport === true);
   const reviewLatest =
-    kind === "stale" || kind === "dependency" || kind === "idempotency" || kind === "not_found";
+    kind === "stale" || kind === "dependency" || kind === "idempotency";
   return {
     kind,
     code: error.code,
     title: TITLES[kind],
     message: error.message,
-    retrySafe: kind === "network",
+    // UNKNOWN_ERROR from an uncommitted RPC is the same class as transport:
+    // Retry must keep the in-flight proposal / idempotency key.
+    retrySafe: kind === "network" || kind === "unknown",
     reviewLatest,
     reloadLatest: reviewLatest,
+    dismissSelection: kind === "not_found",
     field: kind === "validation" ? inferField(error.message) : undefined,
+  };
+}
+
+/** Write already committed; only the follow-up selection refresh failed. */
+export function mapRefreshAfterCommitFailure(): PlannerRecoveryState {
+  return {
+    kind: "refresh",
+    code: "UNKNOWN_ERROR",
+    title: TITLES.refresh,
+    message: "Reload to see the latest plan. The save already completed.",
+    retrySafe: false,
+    reviewLatest: true,
+    reloadLatest: true,
+    dismissSelection: false,
   };
 }
 

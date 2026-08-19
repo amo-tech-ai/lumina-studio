@@ -297,6 +297,81 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("My unsaved edit");
   });
 
+  it("NOT_FOUND closes the stale Fitting panel instead of advertising refresh", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    updateTaskAction.mockResolvedValue({
+      ok: false,
+      error: { code: "NOT_FOUND", message: "This task is no longer available." },
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Fitting" })}
+        onClose={onClose}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "not_found",
+    );
+    expect(screen.queryByTestId("planner-task-action-error-review")).toBeNull();
+    expect(screen.queryByTestId("planner-task-reload")).toBeNull();
+    await user.click(screen.getByTestId("planner-task-action-error-close"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a post-commit refresh failure as a refresh problem, not a failed save", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockResolvedValue({
+      ok: true,
+      data: { replayed: false, taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" },
+    });
+    const onRefreshSelection = vi.fn().mockRejectedValue(new Error("transport"));
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Lookbook notes" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "refresh",
+    );
+    expect(screen.getByTestId("planner-task-action-error").textContent).toMatch(/already completed/i);
+    expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
+    expect(screen.getByTestId("planner-task-action-error-review")).toBeDefined();
+    expect(updateTaskAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("points aria-describedby at the recovery alert for a server title validation failure", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockResolvedValue({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "Title is too long." },
+    });
+
+    render(
+      <PlannerTaskDetail task={task({ status: "todo" })} onClose={() => {}} canUpdateTasks />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    const title = screen.getByTestId("planner-task-title");
+    const describedBy = title.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(screen.getByTestId("planner-task-action-error").id).toBe(describedBy);
+    expect(screen.queryByTestId("planner-task-field-error")).toBeNull();
+  });
+
   it("FORBIDDEN explains permission and does not offer Retry", async () => {
     const user = userEvent.setup();
     updateTaskAction.mockResolvedValue({
@@ -672,6 +747,99 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     expect((screen.getByTestId("planner-task-description") as HTMLTextAreaElement).value).toBe(
       "Need extra rack time",
     );
+  });
+
+  it("failed shift UNKNOWN_ERROR keeps the proposal so Retry can confirm again", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { replayed: false, changedTasks: [{ taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" }] },
+      });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={vi.fn().mockResolvedValue({
+          task: task({ startDate: "2026-03-05", endDate: "2026-03-07" }),
+          canUpdateTasks: true,
+          assignees: [],
+        })}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error-retry")).toBeDefined());
+    expect(screen.getByTestId("planner-task-shift-error").getAttribute("data-recovery-kind")).toBe(
+      "unknown",
+    );
+    expect(screen.getByTestId("planner-task-shift-preview")).toBeDefined();
+    const firstKey = shiftTaskAction.mock.calls[0][3];
+    await user.click(screen.getByTestId("planner-task-shift-error-retry"));
+    await waitFor(() => expect(shiftTaskAction).toHaveBeenCalledTimes(2));
+    expect(shiftTaskAction.mock.calls[1][3]).toBe(firstKey);
+    expect(shiftTaskAction.mock.calls[1][2]).toBe(1);
+  });
+
+  it("FORBIDDEN shift focuses the recovery alert after the proposal is removed", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: false,
+      error: { code: "FORBIDDEN", message: "You don't have permission to edit this task." },
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+    expect(screen.queryByTestId("planner-task-shift-preview")).toBeNull();
+    expect(screen.queryByTestId("planner-task-shift-error-retry")).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("planner-task-shift-error")),
+    );
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it("failed shift NOT_FOUND offers Close instead of unusable refresh actions", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    shiftTaskAction.mockResolvedValue({
+      ok: false,
+      error: { code: "NOT_FOUND", message: "This task is no longer available." },
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Fitting", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={onClose}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-shift-error").getAttribute("data-recovery-kind")).toBe(
+      "not_found",
+    );
+    expect(screen.queryByTestId("planner-task-shift-error-review")).toBeNull();
+    expect(screen.queryByTestId("planner-task-shift-error-reload")).toBeNull();
+    await user.click(screen.getByTestId("planner-task-shift-error-close"));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("failed shift network keeps the proposal and retries with the same key", async () => {
