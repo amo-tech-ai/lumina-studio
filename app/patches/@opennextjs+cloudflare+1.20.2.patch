@@ -1,8 +1,30 @@
 diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js b/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
-index be3f893..9eef197 100644
+index be3f893..5d863f1 100644
 --- a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
 +++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
-@@ -102,6 +102,23 @@ export async function bundleServer(buildOpts, projectOpts) {
+@@ -97,11 +97,45 @@ export async function bundleServer(buildOpts, projectOpts) {
+             patchDepdDeprecations(updater),
+             patchResolveCache(updater, buildOpts),
+             patchSetWorkingDirectory(updater, buildOpts),
++            // IPI-1016: Mastra 1.59 Agent statically imports hashed
++            // `workspace-<hash>.js` (desktop FS/sandbox/execa). iPix never
++            // configures `config.workspace`. Next aliases do not apply here.
++            {
++                name: "ipi-stub-mastra-workspace",
++                setup(build) {
++                    const workspaceStub = path.join(appPath, "scripts/cf-mastra-workspace-stub.mjs");
++                    build.onResolve({ filter: /(?:^|[\\/])workspace-[A-Za-z0-9]+\.js$/ }, (args) => {
++                        if ((args.path || "").includes("workspace-skills"))
++                            return;
++                        if (!(args.importer || "").includes("@mastra/core"))
++                            return;
++                        return { path: workspaceStub };
++                    });
++                    build.onResolve({ filter: /^@mastra\/core\/workspace$/ }, () => ({ path: workspaceStub }));
++                },
++            },
+             // Apply updater updates, must be the last plugin
+             updater.plugin,
          ],
          external: ["./middleware/handler.mjs"],
          alias: {
