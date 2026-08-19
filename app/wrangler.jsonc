@@ -150,6 +150,8 @@
         // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586)
         // or ENABLE_HYPERDRIVE_PG_SMOKE=true (IPI-620B).
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+        // IPI-1019: NVIDIA_API_KEY is optional runtime (allowlist + Infisical), not required.
+        // secrets_store_secrets needs a real account store_id — do not bind a placeholder.
       }
     },
     "production": {
@@ -196,6 +198,8 @@
       "secrets": {
         // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+        // IPI-1019: NVIDIA_API_KEY is optional runtime (allowlist + Infisical), not required.
+        // secrets_store_secrets needs a real account store_id — do not bind a placeholder.
       }
     }
   }

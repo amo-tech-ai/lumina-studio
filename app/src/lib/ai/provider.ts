@@ -8,6 +8,13 @@ import {
 } from "./gemini-registry";
 import { DEFAULT_AI_GATEWAY_URL } from "./provider-adapter";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
+import {
+  NVIDIA_CHAT_MODEL_IDS,
+  NVIDIA_EMBEDDING_MODEL_ID,
+  NVIDIA_NIM_BASE_URL,
+  nvidiaChatTierFromAgentTier,
+  type NvidiaChatTier,
+} from "./nvidia-models";
 
 /**
  * CF-MIG-210: static JSON bundled for Cloudflare Workers (no runtime readFileSync).
@@ -29,6 +36,13 @@ export {
   GEMINI_MODELS,
   resolveGeminiModel,
 } from "./gemini-registry";
+export {
+  NVIDIA_CHAT_MODEL_IDS,
+  NVIDIA_EMBEDDING_MODEL_ID,
+  NVIDIA_NIM_BASE_URL,
+  nvidiaChatTierFromAgentTier,
+} from "./nvidia-models";
+export type { NvidiaChatTier, NvidiaModelTier } from "./nvidia-models";
 
 // `groqModelsSsot` is a static bundled import (no runtime load), so these can
 // be plain module-level constants instead of lazy-initialized caches.
@@ -134,6 +148,8 @@ export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
  */
 export function shouldRouteTierViaGateway(tier: GroqModelTier): boolean {
   if (resolveAiRoutingMode() !== "gateway") return false;
+  // Direct NVIDIA NIM must not be stolen by the Worker openai-compat path.
+  if (resolveAiProvider() === "nvidia") return false;
 
   // Tool-free marketing path — only Worker-safe text tier in production gateway mode.
   if (tier === "fast") return true;
@@ -209,17 +225,50 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
   return groq(resolveGroqModelId(tier));
 }
 
+function requireNvidiaApiKey(): string {
+  const apiKey = process.env.NVIDIA_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("NVIDIA_API_KEY is required when AI_PROVIDER=nvidia.");
+  }
+  return apiKey;
+}
+
+function createNvidiaCompatible() {
+  return createOpenAICompatible({
+    name: "nvidia-nim",
+    baseURL: NVIDIA_NIM_BASE_URL,
+    apiKey: requireNvidiaApiKey(),
+  });
+}
+
+export function resolveNvidiaLanguageModel(
+  tier: NvidiaChatTier = "default",
+): ResolvedLanguageModel {
+  return createNvidiaCompatible().chatModel(NVIDIA_CHAT_MODEL_IDS[tier]);
+}
+
+export function resolveNvidiaEmbeddingModel() {
+  // Installed @ai-sdk/openai-compatible v1 exposes textEmbeddingModel (AI SDK 5).
+  return createNvidiaCompatible().textEmbeddingModel(NVIDIA_EMBEDDING_MODEL_ID);
+}
+
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
+  const provider = resolveAiProvider();
+  // NVIDIA first: skip gateway steal of `fast` and Groq vision→Gemini steal of `vision`.
+  if (provider === "nvidia") {
+    return resolveNvidiaLanguageModel(nvidiaChatTierFromAgentTier(tier));
+  }
+
   // IPI-454 AC-F: Mastra agents keep calling resolveModel(); flip AI_ROUTING_MODE=gateway
   // for Worker-safe tiers (see shouldRouteTierViaGateway). Vision + tool tiers stay direct.
   if (shouldRouteTierViaGateway(tier)) {
     return createGatewayLanguageModel(tier);
   }
 
-  if (tier === "vision" && !isGroqVisionConfigured()) {
+  if (provider === "groq" && (tier === "vision" || tier === "visionExperimental") && !isGroqVisionConfigured()) {
     return createGeminiLanguageModel();
   }
-  const provider = resolveAiProvider();
+
   if (provider === "gemini") {
     return createGeminiLanguageModel();
   }
@@ -227,7 +276,7 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
     return createGroqLanguageModel(tier);
   }
   throw new Error(
-    `AI_PROVIDER="${provider}" is not wired for AI_ROUTING_MODE=direct (use gemini or groq). ` +
+    `AI_PROVIDER="${provider}" is not wired for AI_ROUTING_MODE=direct (use gemini, groq, or nvidia). ` +
       `Set AI_ROUTING_MODE=gateway to use @ai-sdk/openai-compatible → AI_GATEWAY_URL, ` +
       `or use createProviderAdapter() for non-Mastra REST (IPI-454).`,
   );

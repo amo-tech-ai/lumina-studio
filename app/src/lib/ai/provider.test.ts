@@ -9,11 +9,16 @@ import {
   GEMINI_MODELS,
   getGroqModelEntry,
   loadGroqModelsConfig,
+  NVIDIA_CHAT_MODEL_IDS,
+  NVIDIA_EMBEDDING_MODEL_ID,
+  NVIDIA_NIM_BASE_URL,
   resolveAiProvider,
   resolveAiRoutingMode,
   resolveGatewayModelId,
   resolveGroqModelId,
   resolveModel,
+  resolveNvidiaEmbeddingModel,
+  resolveNvidiaLanguageModel,
   resolveProviderOptions,
   shouldRouteTierViaGateway,
 } from "./provider";
@@ -30,6 +35,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     AI_MODEL_STRUCTURED: process.env.AI_MODEL_STRUCTURED,
     AI_GATEWAY_ALLOW_TOOL_TIERS: process.env.AI_GATEWAY_ALLOW_TOOL_TIERS,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
+    NVIDIA_API_KEY: process.env.NVIDIA_API_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
     GROQ_MODEL_DEFAULT: process.env.GROQ_MODEL_DEFAULT,
@@ -169,6 +175,72 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     delete process.env.GROQ_API_KEY;
     delete process.env.AI_ROUTING_MODE;
     expect(() => resolveModel("default")).toThrow(/GROQ_API_KEY is required/);
+  });
+
+  describe("AI_PROVIDER=nvidia (IPI-1019 · CF-AI-007b)", () => {
+    it("constructs Nemotron Lightning for default and fast", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      delete process.env.AI_ROUTING_MODE;
+      for (const tier of ["default", "fast"] as const) {
+        const model = resolveModel(tier);
+        expect(model.provider).toBe("nvidia-nim.chat");
+        expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.default);
+      }
+      expect(NVIDIA_NIM_BASE_URL).toBe("https://integrate.api.nvidia.com/v1");
+    });
+
+    it("maps structured to Nemotron Ultra (reasoning)", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      delete process.env.AI_ROUTING_MODE;
+      expect(resolveModel("structured").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.reasoning);
+      expect(resolveModel("structuredHeavy").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.reasoning);
+    });
+
+    it("maps vision to Inkling instead of Gemini", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      delete process.env.GROQ_MODEL_VISION;
+      delete process.env.AI_ROUTING_MODE;
+      const model = resolveModel("vision");
+      expect(model.provider).toBe("nvidia-nim.chat");
+      expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.vision);
+    });
+
+    it("throws without NVIDIA_API_KEY", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      delete process.env.NVIDIA_API_KEY;
+      delete process.env.AI_ROUTING_MODE;
+      expect(() => resolveModel("default")).toThrow(/NVIDIA_API_KEY is required/);
+    });
+
+    it("does not send nvidia fast through the Worker gateway", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_GATEWAY_URL = "http://gateway.test:8787";
+      expect(shouldRouteTierViaGateway("fast")).toBe(false);
+      const model = resolveModel("fast");
+      expect(model.provider).toBe("nvidia-nim.chat");
+      expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.fast);
+    });
+
+    it("resolves extra NVIDIA-only chat tiers from the registry", () => {
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      expect(resolveNvidiaLanguageModel("agent").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.agent);
+      expect(resolveNvidiaLanguageModel("video").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.video);
+      expect(resolveNvidiaLanguageModel("multimodal").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.multimodal);
+      expect(resolveNvidiaLanguageModel("coding").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.coding);
+      expect(resolveNvidiaLanguageModel("longContext").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.longContext);
+    });
+
+    it("uses embeddingModel for nemotron-3-embed-1b, not chatModel", () => {
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      const model = resolveNvidiaEmbeddingModel();
+      expect(model.provider).toBe("nvidia-nim.embedding");
+      expect(model.modelId).toBe(NVIDIA_EMBEDDING_MODEL_ID);
+    });
   });
 
   describe("AI_ROUTING_MODE=gateway (IPI-454 AC-F)", () => {

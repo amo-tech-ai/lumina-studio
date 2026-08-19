@@ -66,6 +66,12 @@ describe("cloudflare-secret-allowlist", () => {
     expect(RUNTIME_REQUIRED_SECRET_NAMES).not.toContain("COPILOTKIT_LICENSE_TOKEN");
   });
 
+  it("NVIDIA_API_KEY is allowlisted optional, not bootstrap-required", () => {
+    expect(RUNTIME_SECRET_NAMES).toContain("NVIDIA_API_KEY");
+    expect(RUNTIME_OPTIONAL_SECRET_NAMES).toContain("NVIDIA_API_KEY");
+    expect(RUNTIME_REQUIRED_SECRET_NAMES).not.toContain("NVIDIA_API_KEY");
+  });
+
   it("keeps CI-only, runtime, build-time, and wrangler-var allowlists disjoint", () => {
     const runtimeSet = new Set(RUNTIME_SECRET_NAMES);
     const buildSet = new Set(BUILD_TIME_SECRET_NAMES);
