@@ -23,7 +23,13 @@ export function processBrandIntelligenceDraftApproval(
   return processDraftApproval({
     ...params,
     scheduleWork: (task) => {
-      after(task);
+      try {
+        after(task);
+      } catch {
+        queueMicrotask(() => {
+          void task();
+        });
+      }
     },
   });
 }

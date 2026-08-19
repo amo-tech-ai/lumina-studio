@@ -41,6 +41,11 @@ vi.mock("@/mastra", () => ({
   getMastra: () => mockGetMastra(),
 }));
 
+/** Resume must not load the real pg/Mastra stack in unit tests (Codex P1 timeout). */
+vi.mock("./with-workflow-mastra-pg-scope", () => ({
+  withWorkflowMastraPg: async <T>(fn: () => T | Promise<T>) => fn(),
+}));
+
 const OPERATOR = "55555555-5555-4555-8555-555555555555";
 const OTHER = "66666666-6666-4666-8666-666666666666";
 const BRAND = "77777777-7777-4777-8777-777777777777";

@@ -33,4 +33,25 @@ describe("process-draft-approval-after (IPI-1018)", () => {
     passed.scheduleWork(task);
     expect(mockAfter).toHaveBeenCalledWith(task);
   });
+
+  it("falls back to queueMicrotask when after() throws outside Next context", async () => {
+    mockAfter.mockImplementationOnce(() => {
+      throw new Error("outside next request");
+    });
+    const { processBrandIntelligenceDraftApproval } = await import(
+      "./process-draft-approval-after"
+    );
+    await processBrandIntelligenceDraftApproval({
+      runId: "run-2",
+      approved: true,
+      operatorId: "op-1",
+    });
+    const passed = mockProcess.mock.calls.at(-1)?.[0] as {
+      scheduleWork: (task: () => void) => void;
+    };
+    const task = vi.fn();
+    passed.scheduleWork(task);
+    await Promise.resolve();
+    expect(task).toHaveBeenCalledTimes(1);
+  });
 });
