@@ -58,23 +58,39 @@ export function DeviceFramePreview({
     return CHANNEL_FALLBACK_RATIO[channel];
   }, [spec, channel]);
 
+  const media = (
+    <Media
+      assetUrl={assetUrl}
+      kind={kind}
+      ratio={ratio}
+      spec={spec}
+      showSafeZones={showSafeZones}
+      fill={layout === "fullscreen"}
+    />
+  );
+
+  if (layout === "generic") {
+    return (
+      <div className="flex max-w-full flex-col items-center gap-3">
+        <div
+          className="overflow-hidden rounded-xl border border-neutral-300 bg-white"
+          style={{ width: DEVICE_WIDTH }}
+        >
+          {media}
+        </div>
+        <SpecCaption channel={channel} spec={spec} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex max-w-full flex-col items-center gap-3">
       <Phone>
         {layout === "fullscreen" ? (
           <FullscreenChrome
             channel={channel}
             ratio={ratio}
-            asset={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-                fill
-              />
-            }
+            asset={media}
             brandName={brandName}
             caption={caption}
           />
@@ -82,29 +98,13 @@ export function DeviceFramePreview({
           <FacebookChrome
             brandName={brandName}
             caption={caption}
-            media={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-              />
-            }
+            media={media}
           />
         ) : (
           <InstagramFeedChrome
             brandName={brandName}
             caption={caption}
-            media={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-              />
-            }
+            media={media}
           />
         )}
       </Phone>
@@ -465,7 +465,7 @@ function SpecCaption({
           {spec.maxFileSizeMb ? ` · ≤${spec.maxFileSizeMb}MB` : ""}
         </div>
       ) : (
-        <div className="text-amber-600">No spec seeded for this channel</div>
+        <div className="text-amber-600">No spec available</div>
       )}
     </div>
   );
