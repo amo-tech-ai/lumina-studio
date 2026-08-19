@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Download, Info, Sparkles } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,16 +10,22 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveBrand } from "@/context/active-brand-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { CampaignPerformancePayload, CampaignPerformanceRow } from "@/lib/analytics";
-import { campaignStatusLabel, campaignStatusDot, type CampaignStatus } from "@/lib/campaigns";
+import {
+  resolveValidCampaign,
+  type CampaignPerformancePayload,
+  type CampaignPerformanceRow,
+} from "@/lib/analytics";
+import { campaignStatusLabel, campaignStatusDot } from "@/lib/campaigns";
 
 type LoadState = CampaignPerformancePayload | null;
 
 export function CampaignPerformanceWorkspace() {
   const { activeBrandId } = useActiveBrand();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const selectedCampaignId = searchParams.get("c");
-  
+
   const [data, setData] = useState<LoadState>(null);
   const [error, setError] = useState<string | null>(null);
   const loadGen = useRef(0);
@@ -85,15 +91,27 @@ export function CampaignPerformanceWorkspace() {
     data !== null &&
     data.campaigns.length === 0;
 
-  const selectedCampaign = selectedCampaignId
-    ? data?.campaigns.find((c) => c.campaignId === selectedCampaignId)
-    : null;
+  const validSelectedCampaign = resolveValidCampaign(
+    data?.campaigns ?? [],
+    selectedCampaignId,
+    activeBrandId,
+  );
 
-  // Validate selected campaign belongs to active brand
-  const validSelectedCampaign =
-    selectedCampaign && selectedCampaign.brandId === activeBrandId
-      ? selectedCampaign
-      : null;
+  // Same pattern as usePlannerSelection: only touch `c`, keep other params.
+  const selectCampaign = useCallback(
+    (campaignId: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (campaignId) {
+        params.set("c", campaignId);
+      } else {
+        params.delete("c");
+      }
+      const queryString = params.toString();
+      const url = queryString ? `${pathname}?${queryString}` : pathname;
+      router.replace(url, { scroll: false });
+    },
+    [searchParams, pathname, router],
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: "var(--color-bg-page, #fff)" }}>
@@ -186,15 +204,7 @@ export function CampaignPerformanceWorkspace() {
                     return (
                       <button
                         key={c.campaignId}
-                        onClick={() => {
-                          const url = new URL(window.location.href);
-                          if (isSelected) {
-                            url.searchParams.delete("c");
-                          } else {
-                            url.searchParams.set("c", c.campaignId);
-                          }
-                          window.history.pushState({}, "", url.toString());
-                        }}
+                        onClick={() => selectCampaign(isSelected ? null : c.campaignId)}
                         aria-label={isSelected ? `Deselect ${c.name}` : `View ${c.name}`}
                         aria-pressed={isSelected}
                         style={{

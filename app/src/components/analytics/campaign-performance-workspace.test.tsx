@@ -1,85 +1,140 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @vitest-environment jsdom
+ */
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("CampaignPerformanceWorkspace - data logic", () => {
-  it("should validate selected campaign belongs to active brand", () => {
-    const campaigns = [
-      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
-      { campaignId: "c2", name: "Campaign 2", status: "active" as const, brandId: "brand-456", orgId: "org-1" },
-    ];
-    
-    const selectedId = "c2";
-    const activeBrandId = "brand-123";
-    
-    const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
-    const validSelectedCampaign = selectedCampaign && selectedCampaign.brandId === activeBrandId ? selectedCampaign : null;
-    
-    // Cross-brand campaign should be rejected
-    expect(validSelectedCampaign).toBeNull();
+import { resolveValidCampaign } from "@/lib/analytics";
+
+const replace = vi.fn();
+let paramsString = "";
+let pathname = "/app/analytics/campaigns";
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(paramsString),
+  usePathname: () => pathname,
+  useRouter: () => ({ replace }),
+}));
+
+const activeBrandIdMock = vi.fn(() => ({ activeBrandId: "brand-123" }));
+vi.mock("@/context/active-brand-context", () => ({
+  useActiveBrand: () => activeBrandIdMock(),
+}));
+
+const fromMock = vi.fn();
+vi.mock("@/lib/supabase/client", () => ({
+  createSupabaseBrowserClient: () => ({ from: fromMock }),
+}));
+
+import { CampaignPerformanceWorkspace } from "./campaign-performance-workspace";
+
+const LOOKBOOK = {
+  id: "lookbook",
+  name: "Summer Lookbook",
+  status: "live",
+  brand_id: "brand-123",
+  org_id: "org-1",
+};
+const HOLIDAY = {
+  id: "holiday",
+  name: "Holiday Drop",
+  status: "active",
+  brand_id: "brand-123",
+  org_id: "org-1",
+};
+
+function mockCampaigns(rows: typeof LOOKBOOK[]) {
+  fromMock.mockImplementation((table: string) => {
+    if (table === "campaigns") {
+      return {
+        select: () => ({
+          eq: () => ({
+            order: () => Promise.resolve({ data: rows, error: null }),
+          }),
+        }),
+      };
+    }
+    return { select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) };
+  });
+}
+
+beforeEach(() => {
+  replace.mockClear();
+  paramsString = "";
+  pathname = "/app/analytics/campaigns";
+  activeBrandIdMock.mockReturnValue({ activeBrandId: "brand-123" });
+});
+
+afterEach(() => cleanup());
+
+describe("CampaignPerformanceWorkspace", () => {
+  it("imports the real resolveValidCampaign helper (not an in-file copy)", () => {
+    expect(typeof resolveValidCampaign).toBe("function");
   });
 
-  it("should accept same-brand campaign selection", () => {
-    const campaigns = [
-      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
-    ];
-    
-    const selectedId = "c1";
-    const activeBrandId = "brand-123";
-    
-    const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
-    const validSelectedCampaign = selectedCampaign && selectedCampaign.brandId === activeBrandId ? selectedCampaign : null;
-    
-    // Same-brand campaign should be accepted
-    expect(validSelectedCampaign).toEqual(campaigns[0]);
+  it("preselects a valid ?c= campaign and shows Unavailable KPIs", async () => {
+    paramsString = "c=lookbook";
+    mockCampaigns([LOOKBOOK, HOLIDAY]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /Deselect Summer Lookbook/i })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Summer Lookbook" })).toBeTruthy();
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(6);
   });
 
-  it("should handle invalid campaign ID gracefully", () => {
-    const campaigns = [
-      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
-    ];
-    
-    const selectedId = "invalid-id";
-    const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
-    
-    // Invalid ID should return undefined
-    expect(selectedCampaign).toBeUndefined();
+  it("falls back when ?c= is an invalid id", async () => {
+    paramsString = "c=missing";
+    mockCampaigns([LOOKBOOK, HOLIDAY]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /View Summer Lookbook/i })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Summer Lookbook" })).toBeNull();
+    expect(screen.queryByText(/ID: missing/)).toBeNull();
   });
 
-  it("should maintain campaign identity with real campaignId", () => {
-    const campaign = {
-      campaignId: "real-uuid-123",
-      name: "Summer Lookbook",
-      status: "live" as const,
-      brandId: "brand-123",
-      orgId: "org-1",
-    };
-    
-    expect(campaign.campaignId).toBe("real-uuid-123");
-    expect(typeof campaign.campaignId).toBe("string");
-    expect(campaign.campaignId.length).toBeGreaterThan(0);
+  it("rejects a cross-brand campaign even if it appears in the loaded set", async () => {
+    paramsString = "c=other-brand";
+    mockCampaigns([
+      LOOKBOOK,
+      { ...HOLIDAY, id: "other-brand", name: "Other Brand Drop", brand_id: "brand-999" },
+    ]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /View Other Brand Drop/i })).toBeTruthy());
+    expect(screen.queryByRole("heading", { name: "Other Brand Drop" })).toBeNull();
   });
 
-  it("should reject stale selection when active brand changes", () => {
-    const campaigns = [
-      { campaignId: "c1", name: "Campaign 1", status: "live" as const, brandId: "brand-123", orgId: "org-1" },
-    ];
-    
-    const selectedId = "c1";
-    const originalBrandId = "brand-123";
-    const newBrandId = "brand-456";
-    
-    const selectedCampaign = campaigns.find((c) => c.campaignId === selectedId);
-    
-    // Valid under original brand
-    const validOriginal = selectedCampaign && selectedCampaign.brandId === originalBrandId ? selectedCampaign : null;
-    expect(validOriginal).toEqual(campaigns[0]);
-    
-    // Invalid after brand switch
-    const validAfterSwitch = selectedCampaign && selectedCampaign.brandId === newBrandId ? selectedCampaign : null;
-    expect(validAfterSwitch).toBeNull();
+  it("clicking a campaign calls router.replace with ?c= and preserves other params", async () => {
+    paramsString = "from=overview";
+    mockCampaigns([LOOKBOOK, HOLIDAY]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /View Holiday Drop/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /View Holiday Drop/i }));
+
+    expect(replace).toHaveBeenCalledWith("/app/analytics/campaigns?from=overview&c=holiday", {
+      scroll: false,
+    });
   });
 
-  it("should handle null selected campaign ID", () => {
-    const selectedId = null;
-    expect(selectedId).toBeNull();
+  it("clicking the selected campaign clears ?c= via router.replace", async () => {
+    paramsString = "c=lookbook";
+    mockCampaigns([LOOKBOOK, HOLIDAY]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /Deselect Summer Lookbook/i })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Deselect Summer Lookbook/i }));
+
+    expect(replace).toHaveBeenCalledWith("/app/analytics/campaigns", { scroll: false });
+  });
+
+  it("keeps ranking names shrinkable at 390px (min-width:0)", async () => {
+    mockCampaigns([LOOKBOOK]);
+    render(<CampaignPerformanceWorkspace />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /View Summer Lookbook/i })).toBeTruthy());
+    const nameCell = screen.getByText("Summer Lookbook").parentElement;
+    expect(nameCell?.className).toContain("campaign-name");
+    expect(nameCell?.style.minWidth).toBe("0px");
   });
 });
