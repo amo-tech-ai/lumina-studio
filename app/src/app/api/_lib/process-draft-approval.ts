@@ -269,6 +269,7 @@ export async function processBrandIntelligenceDraftApproval(
  * Schedule Mastra workflow resume after the caller returns.
  * Next request paths pass `after()` via `scheduleWork`; Mastra Studio / tests
  * use `queueMicrotask` so this module never imports `next/server`.
+ * Resume uses `with-workflow-mastra-pg-scope` (no NextResponse).
  * Logs failures but never throws — edge onboarding runIds are not suspended
  * Mastra runs and will error "not suspended", which is expected.
  */
@@ -285,7 +286,7 @@ function scheduleDraftWorkflowResume(
 ) {
   const schedule = async () => {
     try {
-      const { withWorkflowMastraPg } = await import("./with-workflow-mastra-pg");
+      const { withWorkflowMastraPg } = await import("./with-workflow-mastra-pg-scope");
       await withWorkflowMastraPg(async () => {
         const { getMastra } = await import("@/mastra");
         const mastra = getMastra();

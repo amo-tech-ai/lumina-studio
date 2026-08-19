@@ -703,5 +703,17 @@ describe("IPI-1018 next/server boundary", () => {
     const src = readFileSync(join(here, "process-draft-approval.ts"), "utf8");
     expect(src).not.toMatch(/from\s+["']next\//);
     expect(src).not.toMatch(/next\/server\.js/);
+    expect(src).not.toMatch(/import\("\.\/with-workflow-mastra-pg"\)/);
+    expect(src).toMatch(/import\("\.\/with-workflow-mastra-pg-scope"\)/);
+  });
+
+  it("storage-only pg scope module does not import next/*", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, "with-workflow-mastra-pg-scope.ts"), "utf8");
+    expect(src).not.toMatch(/from\s+["']next\//);
+    expect(src).not.toMatch(/import\(["']next\//);
   });
 });
