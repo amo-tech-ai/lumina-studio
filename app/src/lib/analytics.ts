@@ -56,6 +56,22 @@ export type CampaignPerformancePayload = {
   campaigns: CampaignPerformanceRow[];
 };
 
+/**
+ * Shareable `?c=` drill-down: only a campaign in the RLS-returned set
+ * that belongs to the active brand can be selected. Invalid / cross-brand
+ * IDs fall back to null so another brand's campaign cannot leak.
+ */
+export function resolveValidCampaign(
+  campaigns: CampaignPerformanceRow[],
+  selectedId: string | null,
+  activeBrandId: string | null,
+): CampaignPerformanceRow | null {
+  if (!selectedId || !activeBrandId) return null;
+  const selected = campaigns.find((c) => c.campaignId === selectedId);
+  if (!selected) return null;
+  return selected.brandId === activeBrandId ? selected : null;
+}
+
 /** Helper: assert unavailable metrics stay null (ponytail: prevents accidental fake). */
 export function isUnavailableMetricsNull(p: AnalyticsPayload): boolean {
   return (
