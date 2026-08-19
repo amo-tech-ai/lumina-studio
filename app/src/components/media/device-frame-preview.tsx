@@ -71,11 +71,8 @@ export function DeviceFramePreview({
 
   if (layout === "generic") {
     return (
-      <div className="flex max-w-full flex-col items-center gap-3">
-        <div
-          className="overflow-hidden rounded-xl border border-neutral-300 bg-white"
-          style={{ width: DEVICE_WIDTH }}
-        >
+      <div className="flex w-full min-w-0 max-w-[320px] flex-col items-center gap-3">
+        <div className="w-full overflow-hidden rounded-xl border border-neutral-300 bg-white">
           {media}
         </div>
         <SpecCaption channel={channel} spec={spec} />
@@ -84,7 +81,7 @@ export function DeviceFramePreview({
   }
 
   return (
-    <div className="flex max-w-full flex-col items-center gap-3">
+    <div className="flex w-full min-w-0 max-w-[320px] flex-col items-center gap-3">
       <Phone>
         {layout === "fullscreen" ? (
           <FullscreenChrome
@@ -115,15 +112,12 @@ export function DeviceFramePreview({
 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="relative rounded-[2.5rem] border-[10px] border-neutral-900 bg-black shadow-xl"
-      style={{ width: DEVICE_WIDTH + 20 }}
-    >
+    <div className="relative w-full min-w-0 max-w-[320px] rounded-[2.5rem] border-[10px] border-neutral-900 bg-black shadow-xl">
       {/* notch */}
       <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-neutral-900" />
       <div
-        className="relative overflow-hidden rounded-[1.9rem] bg-white"
-        style={{ width: DEVICE_WIDTH, height: 600 }}
+        className="relative w-full overflow-hidden rounded-[1.9rem] bg-white"
+        style={{ aspectRatio: `${DEVICE_WIDTH} / 600` }}
       >
         {children}
       </div>

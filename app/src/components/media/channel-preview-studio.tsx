@@ -118,7 +118,7 @@ export function ChannelPreviewStudio({
             return (
               <label
                 key={platform}
-                className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+                className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
               >
                 <input
                   type="checkbox"
@@ -151,13 +151,13 @@ export function ChannelPreviewStudio({
         >
           <TabsList
             aria-label="Selected platforms"
-            className="flex h-auto min-h-10 w-full flex-wrap justify-start gap-1"
+            className="flex h-auto min-h-11 w-full flex-wrap justify-start gap-1"
           >
             {selectedInOrder.map((platform) => (
               <TabsTrigger
                 key={platform}
                 value={platform}
-                className="min-h-10 gap-1.5"
+                className="min-h-11 gap-1.5"
               >
                 <span aria-hidden="true">
                   <PlatformBrandIcon platform={platform} className="size-4" />
@@ -168,7 +168,7 @@ export function ChannelPreviewStudio({
           </TabsList>
           {selectedInOrder.map((platform) => (
             <TabsContent key={platform} value={platform} className="mt-6">
-              <div className="flex max-w-full flex-wrap justify-center gap-8">
+              <div className="flex max-w-full min-w-0 flex-wrap justify-center gap-8">
                 {channelsForPlatform(platform).map((channel) => (
                   <DeviceFramePreview
                     key={channel}

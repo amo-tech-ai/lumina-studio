@@ -194,4 +194,41 @@ describe("ChannelPreviewStudio", () => {
     expect(screen.getByText("No spec available")).toBeDefined();
     expect(screen.queryByText("Facebook Story")).toBeNull();
   });
+
+  it("keeps the official Instagram glyph path on the default platform", () => {
+    const { container } = render(<ChannelPreviewStudio specs={MIXED_SPECS} />);
+    const glyphs = [...container.querySelectorAll('svg[aria-label="Instagram"] path')];
+    expect(glyphs.length).toBeGreaterThan(0);
+    for (const path of glyphs) {
+      const d = path.getAttribute("d") ?? "";
+      expect(d).toContain("6.162-2.76 6.162-6.162");
+      expect(d).toContain("4 1.79 4 4-1.79 4-4 4");
+      expect(d).not.toContain("6.162 2.76 6.162-6.162");
+    }
+  });
+
+  it("uses 44px minimum touch targets for platform checkboxes and tabs", () => {
+    render(<ChannelPreviewStudio specs={MIXED_SPECS} />);
+    const checkboxLabel = screen
+      .getByRole("checkbox", { name: "Instagram" })
+      .closest("label");
+    expect(checkboxLabel?.className).toMatch(/min-h-11|min-h-\[44px\]/);
+    expect(screen.getByRole("tablist").className).toMatch(
+      /min-h-11|min-h-\[44px\]/,
+    );
+    expect(screen.getByRole("tab", { name: "Instagram" }).className).toMatch(
+      /min-h-11|min-h-\[44px\]/,
+    );
+  });
+
+  it("lets phone frames shrink to the available width instead of a fixed 320px", () => {
+    const { container } = render(<ChannelPreviewStudio specs={MIXED_SPECS} />);
+    const phones = [...container.querySelectorAll(".border-neutral-900.bg-black")];
+    expect(phones.length).toBeGreaterThan(0);
+    for (const phone of phones) {
+      expect(phone.className).toMatch(/w-full/);
+      expect(phone.className).toMatch(/max-w-\[320px\]/);
+      expect((phone as HTMLElement).style.width).toBe("");
+    }
+  });
 });
