@@ -29,7 +29,7 @@ vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
   createUserScopedClient: (...args: unknown[]) => mockCreateUserScopedClient(...args),
 }));
 
-vi.mock("@/app/api/_lib/process-draft-approval", () => ({
+vi.mock("@/app/api/_lib/process-draft-approval-after", () => ({
   processBrandIntelligenceDraftApproval: (...args: unknown[]) => mockProcessApproval(...args),
 }));
 
