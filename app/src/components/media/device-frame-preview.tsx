@@ -58,23 +58,36 @@ export function DeviceFramePreview({
     return CHANNEL_FALLBACK_RATIO[channel];
   }, [spec, channel]);
 
+  const media = (
+    <Media
+      assetUrl={assetUrl}
+      kind={kind}
+      ratio={ratio}
+      spec={spec}
+      showSafeZones={showSafeZones && channel === "instagram_story"}
+      fill={layout === "fullscreen"}
+    />
+  );
+
+  if (layout === "generic") {
+    return (
+      <div className="flex w-full min-w-0 max-w-[320px] flex-col items-center gap-3">
+        <div className="w-full overflow-hidden rounded-xl border border-neutral-300 bg-white">
+          {media}
+        </div>
+        <SpecCaption channel={channel} spec={spec} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex w-full min-w-0 max-w-[320px] flex-col items-center gap-3">
       <Phone>
         {layout === "fullscreen" ? (
           <FullscreenChrome
             channel={channel}
             ratio={ratio}
-            asset={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-                fill
-              />
-            }
+            asset={media}
             brandName={brandName}
             caption={caption}
           />
@@ -82,29 +95,13 @@ export function DeviceFramePreview({
           <FacebookChrome
             brandName={brandName}
             caption={caption}
-            media={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-              />
-            }
+            media={media}
           />
         ) : (
           <InstagramFeedChrome
             brandName={brandName}
             caption={caption}
-            media={
-              <Media
-                assetUrl={assetUrl}
-                kind={kind}
-                ratio={ratio}
-                spec={spec}
-                showSafeZones={showSafeZones}
-              />
-            }
+            media={media}
           />
         )}
       </Phone>
@@ -115,15 +112,12 @@ export function DeviceFramePreview({
 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="relative rounded-[2.5rem] border-[10px] border-neutral-900 bg-black shadow-xl"
-      style={{ width: DEVICE_WIDTH + 20 }}
-    >
+    <div className="relative w-full min-w-0 max-w-[320px] rounded-[2.5rem] border-[10px] border-neutral-900 bg-black shadow-xl">
       {/* notch */}
       <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-neutral-900" />
       <div
-        className="relative overflow-hidden rounded-[1.9rem] bg-white"
-        style={{ width: DEVICE_WIDTH, height: 600 }}
+        className="relative w-full overflow-hidden rounded-[1.9rem] bg-white"
+        style={{ aspectRatio: `${DEVICE_WIDTH} / 600` }}
       >
         {children}
       </div>
@@ -465,7 +459,7 @@ function SpecCaption({
           {spec.maxFileSizeMb ? ` · ≤${spec.maxFileSizeMb}MB` : ""}
         </div>
       ) : (
-        <div className="text-amber-600">No spec seeded for this channel</div>
+        <div className="text-amber-600">No spec available</div>
       )}
     </div>
   );

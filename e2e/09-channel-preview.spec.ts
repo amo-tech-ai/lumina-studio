@@ -11,11 +11,10 @@ import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
  * client-side studio is pure local React state. So there's nothing to
  * mock here, and no risk of a real AI/workflow/commit call — this test
  * deliberately hits the REAL Supabase-backed getAllChannelSpecs() query
- * path, which is exactly the "real DB logic, zero tests" risk this
- * screen was flagged for. The Vitest suite (channel-specs.server.test.ts)
- * already covers that query's logic against a mocked Supabase client;
- * this test is what proves the real integration — real query, real
- * render — actually works end to end.
+ * path. The Vitest suite (channel-specs.server.test.ts) already covers
+ * that query's logic against a mocked Supabase client; this test is what
+ * proves the real integration — real query, real render — actually works
+ * end to end.
  *
  * 05-mobile-operator-matrix.spec.ts already covers /app/preview for
  * horizontal-overflow at 4 breakpoints — that's a layout-only check, not
@@ -43,11 +42,9 @@ function stubOperatorShellApis(page: import("@playwright/test").Page) {
 }
 
 test.describe("Channel Preview", () => {
-  test("renders all 4 channel frames from a real getAllChannelSpecs() call, and studio edits are interactive", async ({ page }, testInfo) => {
+  test("platform-first selector groups Instagram placements and a verified non-Instagram channel", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium-desktop", "desktop-only functional proof");
 
-    // Installed before login — the operator shell's /api/brands fetch fires
-    // as soon as the post-login /app shell mounts.
     await stubOperatorShellApis(page);
 
     const loggedIn = await loginOperatorIfConfigured(page);
@@ -57,33 +54,26 @@ test.describe("Channel Preview", () => {
     await expect(page.locator("body")).not.toContainText("Internal Server Error");
     await expect(page.getByRole("heading", { name: "Channel Preview" })).toBeVisible();
 
-    // One caption per PREVIEW_CHANNELS entry — proves getAllChannelSpecs()
-    // resolved (real Supabase query) and all 4 device frames rendered,
-    // regardless of whether each channel happens to have a seeded spec.
-    await expect(page.getByText("Facebook Feed")).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "Instagram" })).toBeChecked();
+    await expect(page.getByRole("tab", { name: "Instagram" })).toBeVisible();
+
     await expect(page.getByText("Instagram Feed")).toBeVisible();
     await expect(page.getByText("Instagram Story")).toBeVisible();
-    await expect(page.getByText("TikTok")).toBeVisible();
+    await expect(page.getByText("Instagram Reel")).toBeVisible();
+    await expect(page.getByText("Facebook Feed")).toHaveCount(0);
+    await expect(page.getByText("No spec available")).toHaveCount(0);
 
-    // The 4 caption labels above are static (CHANNEL_LABELS[channel]) and
-    // render regardless of whether a spec was found — SpecCaption only
-    // switches the *sub-line* between spec data and the "No spec seeded"
-    // fallback (see device-frame-preview.tsx). So the assertions above alone
-    // would still pass even if getAllChannelSpecs() silently returned all
-    // nulls (a real Supabase bridge/seed regression). All 4 PREVIEW_CHANNELS
-    // are seeded by migration 20260627180000_media_spec_tables.sql via
-    // recommendation_rules(rule_type='channel_required') — so on a healthy
-    // DB, the null-spec fallback should never appear here at all. Asserting
-    // its absence is what actually proves the spec data came through.
-    await expect(page.getByText("No spec seeded for this channel")).toHaveCount(0);
+    await page.getByRole("checkbox", { name: "Facebook" }).check();
+    await page.getByRole("tab", { name: "Facebook" }).click();
+    await expect(page.getByText("Facebook Feed")).toBeVisible();
+    await expect(page.getByText("Facebook Story")).toHaveCount(0);
+    await expect(page.getByText("Instagram Feed")).toHaveCount(0);
+    await expect(page.getByText("No spec available")).toHaveCount(0);
 
-    // Interactivity proof: editing the brand name (client-side local state)
-    // updates the rendered Facebook chrome, which shows the raw brand name.
     const brandInput = page.getByLabel("Brand name");
     await brandInput.fill("E2E Test Brand");
     await expect(page.getByText("E2E Test Brand").first()).toBeVisible();
 
-    // Toggling to video swaps every rendered <img alt="Asset preview"> for a <video>.
     await expect(page.getByAltText("Asset preview").first()).toBeVisible();
     await page.getByRole("button", { name: "video" }).click();
     await expect(page.locator("video").first()).toBeVisible();

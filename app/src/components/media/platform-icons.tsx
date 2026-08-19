@@ -1,12 +1,12 @@
 // Official brand glyphs (Simple Icons path data) — avoids a runtime icon dependency.
-import type { PreviewChannel } from "@/lib/media/channel-specs";
+import type { PreviewChannel, PreviewPlatform } from "@/lib/media/channel-specs";
+import { CHANNEL_PLATFORM, PLATFORM_LABELS } from "@/lib/media/channel-specs";
 
 type Brand = "facebook" | "instagram" | "tiktok";
 
-const CHANNEL_BRAND: Record<PreviewChannel, Brand> = {
+const PLATFORM_BRAND: Partial<Record<PreviewPlatform, Brand>> = {
   facebook: "facebook",
-  instagram_feed: "instagram",
-  instagram_story: "instagram",
+  instagram: "instagram",
   tiktok: "tiktok",
 };
 
@@ -25,6 +25,40 @@ const COLORS: Record<Brand, string> = {
   tiktok: "#010101",
 };
 
+function Glyph({
+  brand,
+  label,
+  className,
+  brandColor,
+}: {
+  brand: Brand | undefined;
+  label: string;
+  className: string;
+  brandColor: boolean;
+}) {
+  if (!brand) {
+    return (
+      <span
+        aria-label={label}
+        className={`inline-flex items-center justify-center rounded-sm bg-neutral-800 text-[9px] font-semibold uppercase text-white ${className}`}
+      >
+        {label.charAt(0)}
+      </span>
+    );
+  }
+  return (
+    <svg
+      role="img"
+      aria-label={label}
+      viewBox="0 0 24 24"
+      className={className}
+      fill={brandColor ? COLORS[brand] : "currentColor"}
+    >
+      <path d={PATHS[brand]} />
+    </svg>
+  );
+}
+
 export function PlatformIcon({
   channel,
   className = "h-4 w-4",
@@ -34,16 +68,32 @@ export function PlatformIcon({
   className?: string;
   brandColor?: boolean;
 }) {
-  const brand = CHANNEL_BRAND[channel];
+  const platform = CHANNEL_PLATFORM[channel];
   return (
-    <svg
-      role="img"
-      aria-label={brand}
-      viewBox="0 0 24 24"
+    <Glyph
+      brand={PLATFORM_BRAND[platform]}
+      label={PLATFORM_LABELS[platform]}
       className={className}
-      fill={brandColor ? COLORS[brand] : "currentColor"}
-    >
-      <path d={PATHS[brand]} />
-    </svg>
+      brandColor={brandColor}
+    />
+  );
+}
+
+export function PlatformBrandIcon({
+  platform,
+  className = "h-4 w-4",
+  brandColor = true,
+}: {
+  platform: PreviewPlatform;
+  className?: string;
+  brandColor?: boolean;
+}) {
+  return (
+    <Glyph
+      brand={PLATFORM_BRAND[platform]}
+      label={PLATFORM_LABELS[platform]}
+      className={className}
+      brandColor={brandColor}
+    />
   );
 }

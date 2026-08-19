@@ -19,7 +19,7 @@ export default async function ChannelPreviewPage() {
         Channel Preview
       </h1>
       <p className="mt-2 max-w-2xl text-[var(--muted-foreground)]">
-        See how an image or video renders in each placement before you publish.
+        Pick a platform, then review its verified placements before you publish.
         Frames use the live spec dimensions and safe zones from{" "}
         <code className="text-xs">image_specs</code>.
       </p>
