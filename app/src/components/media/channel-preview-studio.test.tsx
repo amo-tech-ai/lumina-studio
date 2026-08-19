@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ChannelPreviewStudio } from "./channel-preview-studio";
@@ -153,13 +153,44 @@ describe("ChannelPreviewStudio", () => {
     expect(container.querySelectorAll("video")).toHaveLength(3);
   });
 
-  it("safe-zone overlay only appears for a channel whose spec has a non-zero safe zone", () => {
-    render(<ChannelPreviewStudio specs={MIXED_SPECS} />);
+  it("safe-zone overlay is Story-only even when Feed also has a nonzero safe zone", () => {
+    const nonzeroSafeZone = { top: 250, bottom: 350, left: 16, right: 16 };
+    const specs = {
+      ...MIXED_SPECS,
+      instagram_feed: {
+        ...SPEC_WITH_SAFE_ZONE,
+        safeZone: { top: 100, bottom: 200, left: 10, right: 20 },
+      },
+      instagram_story: {
+        ...SPEC_WITH_SAFE_ZONE,
+        channel: "instagram_story" as const,
+        imageTypeSlug: "story",
+        imageTypeName: "Story",
+        widthPx: 1080,
+        heightPx: 1920,
+        aspectRatioW: 9,
+        aspectRatioH: 16,
+        aspectRatioLabel: "9:16",
+        safeZone: nonzeroSafeZone,
+      },
+    };
+
+    render(<ChannelPreviewStudio specs={specs} />);
 
     expect(screen.queryByText("safe zone")).toBeNull();
 
     fireEvent.click(screen.getByLabelText("Show safe zones"));
 
+    const storyFrame = screen
+      .getByText("Instagram Story")
+      .closest("div.flex.flex-col.items-center");
+    const feedFrame = screen
+      .getByText("Instagram Feed")
+      .closest("div.flex.flex-col.items-center");
+    expect(storyFrame).toBeTruthy();
+    expect(feedFrame).toBeTruthy();
+    expect(within(storyFrame as HTMLElement).getByText("safe zone")).toBeDefined();
+    expect(within(feedFrame as HTMLElement).queryByText("safe zone")).toBeNull();
     expect(screen.getAllByText("safe zone")).toHaveLength(1);
   });
 

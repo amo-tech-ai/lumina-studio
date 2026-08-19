@@ -64,7 +64,7 @@ export function DeviceFramePreview({
       kind={kind}
       ratio={ratio}
       spec={spec}
-      showSafeZones={showSafeZones}
+      showSafeZones={showSafeZones && channel === "instagram_story"}
       fill={layout === "fullscreen"}
     />
   );
