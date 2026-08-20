@@ -226,6 +226,13 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.fast);
     });
 
+    it("still rejects an invalid AI_ROUTING_MODE before returning NVIDIA models", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      process.env.AI_ROUTING_MODE = "gateawy";
+      expect(() => resolveModel("default")).toThrow(/AI_ROUTING_MODE/);
+    });
+
     it("resolves extra NVIDIA-only chat tiers from the registry", () => {
       process.env.NVIDIA_API_KEY = "test-nvidia-key";
       expect(resolveNvidiaLanguageModel("agent").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.agent);

@@ -255,7 +255,9 @@ export function resolveNvidiaEmbeddingModel() {
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
   const provider = resolveAiProvider();
   // NVIDIA first: skip gateway steal of `fast` and Groq vision→Gemini steal of `vision`.
+  // Still validate AI_ROUTING_MODE so a typo fails closed on every provider.
   if (provider === "nvidia") {
+    resolveAiRoutingMode();
     return resolveNvidiaLanguageModel(nvidiaChatTierFromAgentTier(tier));
   }
 
