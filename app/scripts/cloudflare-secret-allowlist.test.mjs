@@ -72,6 +72,27 @@ describe("cloudflare-secret-allowlist", () => {
     expect(RUNTIME_REQUIRED_SECRET_NAMES).not.toContain("NVIDIA_API_KEY");
   });
 
+  it("AI_PROVIDER is an optional wrangler var, not a required bootstrap var", () => {
+    expect(WRANGLER_VAR_NAMES).toContain("AI_PROVIDER");
+    expect(WRANGLER_REQUIRED_VAR_NAMES).not.toContain("AI_PROVIDER");
+  });
+
+  it("cloudflare-secrets-sync.yml forwards AI_PROVIDER and GitHub-source NVIDIA_API_KEY", () => {
+    const workflowPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.github/workflows/cloudflare-secrets-sync.yml",
+    );
+    const yaml = readFileSync(workflowPath, "utf8");
+    expect(yaml).toContain("AI_PROVIDER: ${{ vars.AI_PROVIDER }}");
+    const nvidiaLiteral = yaml.match(/NVIDIA_API_KEY: \$\{\{ secrets\.NVIDIA_API_KEY \}\}/g);
+    expect(nvidiaLiteral?.length ?? 0).toBeGreaterThanOrEqual(2);
+
+    const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
+    const wrangler = readFileSync(wranglerPath, "utf8");
+    const geminiDecls = wrangler.match(/"AI_PROVIDER"\s*:\s*"gemini"/g);
+    expect(geminiDecls?.length ?? 0).toBe(3);
+  });
+
   it("keeps CI-only, runtime, build-time, and wrangler-var allowlists disjoint", () => {
     const runtimeSet = new Set(RUNTIME_SECRET_NAMES);
     const buildSet = new Set(BUILD_TIME_SECRET_NAMES);

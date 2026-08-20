@@ -61,7 +61,9 @@
     // IPI-822 · CF-DB-009b — thread canary stays dark in Git; preview-only flip via GitHub env var.
     "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
     // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
-    "DAM_ENV": "staging"
+    "DAM_ENV": "staging",
+    // IPI-1019 — default Gemini. Preview/production opt-in via GitHub env var AI_PROVIDER=nvidia.
+    "AI_PROVIDER": "gemini"
   },
   // Wrangler-only aliases (do not affect Node next-dev / Vitest).
   // IPI-490 · CF-MIG-210: stub packages proven in dry-run Worker graph but unused
@@ -119,6 +121,7 @@
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "staging",
+        "AI_PROVIDER": "gemini",
         // OAuth callback redirectOrigin() — preview workers.dev is excluded from SITE_URL by design.
         "TRUSTED_OAUTH_FORWARDED_HOSTS": "ipix-operator-preview.sk-498.workers.dev"
       },
@@ -171,7 +174,8 @@
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
-        "DAM_ENV": "prod"
+        "DAM_ENV": "prod",
+        "AI_PROVIDER": "gemini"
       },
       "ai": {
         "binding": "AI"
