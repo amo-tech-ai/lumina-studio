@@ -8,6 +8,7 @@ import {
   classifyConsoleError,
   classifyNetworkResponse,
   countInfo503Responses,
+  extractTerminalAgUiRunId,
   info503ExceedsThreshold,
 } from "./info-503-threshold.mjs";
 
@@ -115,6 +116,51 @@ const tests = [
   },
 
   // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT after streamComplete without runIds - blocking",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT same runId as completed - tolerated",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-a"}',
+      type: "error",
+    },
+    context: { streamComplete: true, completedRunId: "run-a" },
+    expected: false,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT different runId than completed - blocking",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-b"}',
+      type: "error",
+    },
+    context: { streamComplete: true, completedRunId: "run-a" },
+    expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT without streamComplete - blocking",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
+      type: "error",
+    },
+    context: { streamComplete: false },
+    expected: true,
+  },
+  {
+    name: "Console: agent_run_error_event 401 still blocking when streamComplete",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: Received 401 Unauthorized. Check your API key.",
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: true,
+  },
   {
     name: "Console: Cloudflare Error 1102 Worker exceeded resource limits - blocking",
     input: { text: "Cloudflare Error 1102: Worker exceeded resource limits", type: "error" },
@@ -292,6 +338,30 @@ const tests = [
     input: 3,
     expected: true,
   },
+  {
+    name: "extractTerminal: RUN_FINISHED runId from SSE not chat text",
+    input: 'data: {"type":"RUN_FINISHED","threadId":"t1","runId":"run-a"}\n\n',
+    expected: "run-a",
+  },
+  {
+    name: "extractTerminal: rendered assistant text has no runId",
+    input: "preview journey ok",
+    expected: null,
+  },
+  {
+    name: "Console: completed SSE runId does not suppress timeout for a different run",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-b"}',
+      type: "error",
+    },
+    context: {
+      streamComplete: true,
+      completedRunId: extractTerminalAgUiRunId(
+        'data: {"type":"RUN_FINISHED","runId":"run-a"}\n\n',
+      ),
+    },
+    expected: true,
+  },
 ];
 
 let passed = 0;
@@ -301,13 +371,15 @@ for (const test of tests) {
   let result;
   
   if (test.name.startsWith("Console:")) {
-    result = classifyConsoleError(test.input);
+    result = classifyConsoleError(test.input, test.context);
   } else if (test.name.startsWith("Network:")) {
     result = classifyNetworkResponse(test.input, test.info503Count, test.phase);
   } else if (test.name.startsWith("countInfo503Responses:")) {
     result = countInfo503Responses(test.input);
   } else if (test.name.startsWith("info503ExceedsThreshold:")) {
     result = info503ExceedsThreshold(test.input);
+  } else if (test.name.startsWith("extractTerminal:")) {
+    result = extractTerminalAgUiRunId(test.input);
   }
   
   if (result === test.expected) {
