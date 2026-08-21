@@ -34,16 +34,6 @@ import {
   shouldRouteTierViaGateway,
 } from "./provider";
 
-vi.mock("@ai-sdk/openai-compatible", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@ai-sdk/openai-compatible")>();
-  return {
-    ...actual,
-    createOpenAICompatible: vi.fn((opts: Parameters<typeof actual.createOpenAICompatible>[0]) =>
-      actual.createOpenAICompatible(opts),
-    ),
-  };
-});
-
 describe("AI provider (GROQ-002 / GROQ-004)", () => {
   const original = {
     AI_PROVIDER: process.env.AI_PROVIDER,
