@@ -1,0 +1,72 @@
+---
+title: "audit-summary"
+---
+
+# iPix CopilotKit \+ Mastra Audit — Summary
+
+## Executive Verdict
+
+**Production readiness: 60%** — functional for basic shoot planning and asset DNA review, but thread loss on reload and no shared state limit production use. HITL gates and security are solid.
+
+**Core feature completion: 55%** — partially active with critical gaps. **Advanced feature utilization: 15%** — only generative UI Level 1 and headless chat pattern active.
+
+---
+
+## Scorecard /100
+
+| Area | Score |
+| --- | --- |
+| CopilotKit architecture | 75 |
+| AG-UI integration | 80 |
+| Mastra integration | 70 |
+| Context engineering | 65 |
+| Chat UX | 78 |
+| Tools | 70 |
+| Generative UI | 55 |
+| Shared state | 20 |
+| HITL | 80 |
+| Threads/persistence | 40 |
+| Memory | 30 |
+| Multi-agent UX | 70 |
+| Error/loading UX | 75 |
+| Security | 80 |
+| Cloudflare compatibility | 80 |
+| **Overall** | **65** |
+
+---
+
+## What Works
+
+- ✅ Agent connectivity (production-planner \+ creative-director load via AG-UI)
+- ✅ HITL gates (3 gates in production-planner; draft tools always pending approval)
+- ✅ Org-scoped thread ownership (403 for cross-org, IPI-146 guard)
+- ✅ 3 frontend tools (navigateTo, navigateToCrm, setActiveBrand)
+- ✅ Generative UI for CRM follow-up (`useRenderTool` draftFollowUp)
+- ✅ Route-based agent mapping (15 routes → 5 agent types)
+- ✅ Intelligence panel (right column: DNA scores, approvals, recommendations)
+
+---
+
+## Top 3 Problems
+
+| Rank | Issue | Impact |
+| --- | --- | --- |
+| **P0** | Threads die on page reload (in-memory only) | 🔴 Critical — operator loses conversation context |
+| **P1** | No shared state between agent and UI | 🟠 High — agent can't see operator edits; UI can't see agent recommendations |
+| **P2** | Only 1 generative UI tool (draftFollowUp) | 🟡 Medium — no shot list, asset DNA, booking, campaign renderers |
+
+---
+
+## Top 3 Recommendations
+
+1. **Fix thread persistence** — Add Hyperdrive Postgres or Supabase-backed thread storage. Threads must survive page reloads.
+2. **Add 3 proactive intelligence surfaces** — "3 shots missing for Amazon", "2 talent bookings need confirmation", "14 assets failed DNA".
+3. **Expand frontend tools \+ generative UI** — Add 5 tools (openShoot, selectAsset, applyFilter, openApproval, highlightObject) and 4 `useRenderTool` registrations (generateShotList, assetDNA, bookingProposal, campaignBrief).
+
+---
+
+## Core vs Advanced
+
+**CORE (should have now)**: AG-UI streaming, route-aware agent context, chat/headless intelligence panel, 3 frontend tools, Mastra backend tools, HITL, basic error/loading UX.
+
+**ADVANCED (add where ROI exists)**: Shared state sync, generative UI expansion, proactive intelligence, persistent preference memory. Skip: A2UI, MCP Apps, Channels SDK, agent swarms.
