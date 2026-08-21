@@ -119,7 +119,7 @@
         "MASTRA_SCHEMA": "mastra",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
-        "ENABLE_HYPERDRIVE_PG_SMOKE": "true",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "staging",
         // OAuth callback redirectOrigin() — preview workers.dev is excluded from SITE_URL by design.
