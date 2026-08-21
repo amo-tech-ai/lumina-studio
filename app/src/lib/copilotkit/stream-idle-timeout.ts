@@ -25,7 +25,12 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
   const reader = body.getReader();
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-  // Carry a small tail so `"type":"RUN_FINISHED"` split across chunks still matches.
+  // Overlap only — match against the combined decode, then keep a short tail
+  // so `"type":"RUN_FINISHED"` split across pulls still matches. Do not slice
+  // before matching: a Mastra RUN_FINISHED with threadId+runId UUIDs is >96 bytes
+  // and the type field sits at the front of the JSON.
+  const SSE_TAIL_OVERLAP = 32;
+  const AGUI_TERMINAL_TYPE = /"type"\s*:\s*"(?:RUN_FINISHED|RUN_ERROR)"/;
   let sseTail = "";
 
   const stream = new ReadableStream<Uint8Array>({
@@ -59,11 +64,12 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
         return;
       }
       controller.enqueue(value);
-      sseTail = (sseTail + decoder.decode(value, { stream: true })).slice(-96);
-      // Terminal AG-UI event ends the turn. Close immediately so a keep-alive
-      // SSE body cannot later trip STREAM_IDLE_TIMEOUT (stale CopilotKit
-      // agent_run_error_event after the dock already showed a complete reply).
-      if (/"type"\s*:\s*"(?:RUN_FINISHED|RUN_ERROR)"/.test(sseTail)) {
+      const combined = sseTail + decoder.decode(value, { stream: true });
+      const sawTerminal = AGUI_TERMINAL_TYPE.test(combined);
+      sseTail = combined.slice(-SSE_TAIL_OVERLAP);
+      // Terminal AG-UI event ends the turn. The full pull is already enqueued.
+      // Close so a keep-alive SSE body cannot later trip STREAM_IDLE_TIMEOUT.
+      if (sawTerminal) {
         controller.close();
         reader.cancel("terminal ag-ui event").catch(() => {});
       }

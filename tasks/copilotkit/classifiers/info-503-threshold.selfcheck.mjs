@@ -8,6 +8,7 @@ import {
   classifyConsoleError,
   classifyNetworkResponse,
   countInfo503Responses,
+  extractTerminalAgUiRunId,
   info503ExceedsThreshold,
 } from "./info-503-threshold.mjs";
 
@@ -116,13 +117,13 @@ const tests = [
 
   // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
   {
-    name: "Console: stale STREAM_IDLE_TIMEOUT after streamComplete - tolerated",
+    name: "Console: STREAM_IDLE_TIMEOUT after streamComplete without runIds - blocking",
     input: {
       text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
       type: "error",
     },
     context: { streamComplete: true },
-    expected: false,
+    expected: true,
   },
   {
     name: "Console: STREAM_IDLE_TIMEOUT same runId as completed - tolerated",
@@ -337,6 +338,30 @@ const tests = [
     input: 3,
     expected: true,
   },
+  {
+    name: "extractTerminal: RUN_FINISHED runId from SSE not chat text",
+    input: 'data: {"type":"RUN_FINISHED","threadId":"t1","runId":"run-a"}\n\n',
+    expected: "run-a",
+  },
+  {
+    name: "extractTerminal: rendered assistant text has no runId",
+    input: "preview journey ok",
+    expected: null,
+  },
+  {
+    name: "Console: completed SSE runId does not suppress timeout for a different run",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-b"}',
+      type: "error",
+    },
+    context: {
+      streamComplete: true,
+      completedRunId: extractTerminalAgUiRunId(
+        'data: {"type":"RUN_FINISHED","runId":"run-a"}\n\n',
+      ),
+    },
+    expected: true,
+  },
 ];
 
 let passed = 0;
@@ -353,6 +378,8 @@ for (const test of tests) {
     result = countInfo503Responses(test.input);
   } else if (test.name.startsWith("info503ExceedsThreshold:")) {
     result = info503ExceedsThreshold(test.input);
+  } else if (test.name.startsWith("extractTerminal:")) {
+    result = extractTerminalAgUiRunId(test.input);
   }
   
   if (result === test.expected) {

@@ -20,6 +20,7 @@ import {
   classifyNetworkResponse,
   countInfo503Responses,
   extractAgUiRunId,
+  extractTerminalAgUiRunId,
   info503ExceedsThreshold,
 } from "../../../copilotkit/classifiers/info-503-threshold.mjs";
 import {
@@ -520,6 +521,7 @@ async function main() {
     let streamComplete = false;
     let streamInterrupted = false;
     let assistantText = "";
+    let completedRunId = null;
 
     const chatStart = Date.now();
     // Listen for SSE / streaming responses
@@ -579,6 +581,9 @@ async function main() {
             { status: postRes.status(), ...cfDiag },
           );
         } else {
+        // Copy of SSE (Playwright buffers independently of the page). Race so an
+        // unclosed body cannot hang the journey after the dock already updated.
+        const sseBodyPromise = postRes.text().catch(() => "");
         // Wait for assistant content to grow
         const before = await page.getByTestId("operator-chat-dock").innerText();
         try {
@@ -608,6 +613,12 @@ async function main() {
           800,
         );
 
+        const sseText = await Promise.race([
+          sseBodyPromise,
+          new Promise((resolve) => setTimeout(() => resolve(""), 3000)),
+        ]);
+        completedRunId = extractTerminalAgUiRunId(sseText);
+
         mark(
           "07_chat_send",
           streaming && postRes.status() < 400,
@@ -635,7 +646,6 @@ async function main() {
 
     // 9. Console / network critical failures
     // IPI-967: Use classifier for console error classification
-    const completedRunId = extractAgUiRunId(assistantText);
     const blockingConsole = consoleLog.errors.filter((e) =>
       classifyConsoleError(e, {
         streamComplete,

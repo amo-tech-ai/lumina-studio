@@ -48,6 +48,13 @@ const tests = [
     },
   },
   {
+    name: "HTTP 200 HTML is not a successful streamed chat send",
+    fn: () => {
+      const v = copilotKitPostChatVerdict(200, "text/html");
+      return v.ok === false && v.streaming === false;
+    },
+  },
+  {
     name: "HTTP 1102-class 503 stays failed even with event-stream type",
     fn: () => copilotKitPostChatVerdict(503, "text/event-stream").ok === false,
   },

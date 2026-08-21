@@ -74,6 +74,25 @@ describe("withStreamIdleTimeout", () => {
     expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
   });
 
+  it("detects a Mastra-sized RUN_FINISHED with threadId and runId before slicing the tail", async () => {
+    const encoder = new TextEncoder();
+    const finished =
+      'data: {"type":"RUN_FINISHED","threadId":"11111111-1111-1111-1111-111111111111","runId":"22222222-2222-2222-2222-222222222222"}\n\n';
+    expect(finished.length).toBeGreaterThan(96);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"RUN_STARTED"}\n\n'));
+        controller.enqueue(encoder.encode(finished));
+      },
+    });
+
+    const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
+    const text = await readAllText(wrapped);
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).toContain("22222222-2222-2222-2222-222222222222");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
   it("detects RUN_FINISHED split across SSE chunks", async () => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
@@ -87,6 +106,23 @@ describe("withStreamIdleTimeout", () => {
     const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
     const text = await readAllText(wrapped);
     expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
+  it("detects RUN_ERROR split across SSE chunks", async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"RUN_STA'));
+        controller.enqueue(encoder.encode('RTED"}\n\ndata: {"type":"RUN_ERR'));
+        controller.enqueue(encoder.encode('OR","message":"model failed","code":"MODEL"}\n\n'));
+      },
+    });
+
+    const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
+    const text = await readAllText(wrapped);
+    expect(text).toContain("RUN_ERROR");
+    expect(text).toContain("model failed");
     expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
   });
 

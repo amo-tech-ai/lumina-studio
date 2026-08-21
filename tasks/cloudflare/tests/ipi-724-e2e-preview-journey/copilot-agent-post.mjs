@@ -48,7 +48,7 @@ export function formatCopilotKitPostFailure(status, contentType, diagnostics) {
  * @returns {{ ok: boolean, streaming: boolean, reason: string }}
  */
 export function copilotKitPostChatVerdict(status, contentType = "") {
-  const ct = contentType || "";
+  const ct = String(contentType || "").toLowerCase();
   if (status >= 500) {
     return {
       ok: false,
@@ -59,8 +59,7 @@ export function copilotKitPostChatVerdict(status, contentType = "") {
   const streaming =
     ct.includes("text/event-stream") ||
     ct.includes("text/plain") ||
-    ct.includes("application/octet-stream") ||
-    status === 200;
+    ct.includes("application/octet-stream");
   const ok = streaming && status < 400;
   return {
     ok,

@@ -44,6 +44,29 @@ export function extractAgUiRunId(text) {
   return m?.[1] ?? null;
 }
 
+/** Last RUN_FINISHED / RUN_ERROR `runId` in an SSE body (not rendered chat text). */
+export function extractTerminalAgUiRunId(sseText) {
+  let found = null;
+  for (const block of String(sseText || "").split("\n\n")) {
+    const line = block.split("\n").find((l) => l.startsWith("data:"));
+    if (!line) continue;
+    try {
+      const ev = JSON.parse(line.slice(5).trim());
+      if (
+        ev &&
+        (ev.type === "RUN_FINISHED" || ev.type === "RUN_ERROR") &&
+        typeof ev.runId === "string" &&
+        ev.runId
+      ) {
+        found = ev.runId;
+      }
+    } catch {
+      // ponytail: incomplete SSE frame; wait for a later complete data: line
+    }
+  }
+  return found;
+}
+
 /**
  * Classify a console error as blocking or tolerated
  *
@@ -51,24 +74,19 @@ export function extractAgUiRunId(text) {
  * @param {string} error.text - Error text
  * @param {string} error.type - Error type
  * @param {{ streamComplete?: boolean, completedRunId?: string|null, errorRunId?: string|null }} [context]
- *   `streamComplete` means 08 already saw assistant content. A later
- *   STREAM_IDLE_TIMEOUT is then stale (SSE body left open after RUN_FINISHED),
- *   not a failed turn — but only for the same run when both runIds are known.
- *   Genuine idle (no completed stream) stays blocking.
+ *   Tolerate STREAM_IDLE_TIMEOUT only when both runIds are known and equal
+ *   (same completed AG-UI run). Missing IDs or a different run stay blocking.
  *   Other `agent_run_error_event` lines are never ignored via this flag.
  */
 export function classifyConsoleError(error, context = {}) {
   const t = error.text || "";
 
-  // Stale idle timeout after a proven complete stream — not a blanket ignore
+  // Stale idle timeout for the same completed run — not a blanket ignore
   // of agent_run_error_event (401 / invalid-model still block below).
   if (context.streamComplete && isStreamIdleTimeoutError(t)) {
     const errorRunId = context.errorRunId || extractAgUiRunId(t);
     const completedRunId = context.completedRunId || null;
-    if (errorRunId && completedRunId && errorRunId !== completedRunId) {
-      return true;
-    }
-    return false;
+    return !(errorRunId && completedRunId && errorRunId === completedRunId);
   }
   
   // --- Tolerated: documented retryable transients ---
