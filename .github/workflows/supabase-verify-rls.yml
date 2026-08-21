@@ -216,8 +216,22 @@ jobs:
 
       - name: pgTAP — RLS/grant/policy structural tests (IPI-245 · SB-TEST-002)
         if: steps.gate.outputs.mode == 'run'
+        env:
+          # Explicit QA vs production for 004 — do not infer from catalog count
+          # (a restored 33-table public.mastra_* set on prod must still fail).
+          IPIX_VERIFY_TARGET: ${{ steps.gate.outputs.target }}
         run: |
           set -euo pipefail
+          case "${IPIX_VERIFY_TARGET}" in
+            QA|qa) guc=qa ;;
+            production|prod) guc=production ;;
+            *)
+              echo "::error::pgTAP needs explicit QA/production target, got '${IPIX_VERIFY_TARGET}'"
+              exit 1
+              ;;
+          esac
+          # Custom GUC must contain a dot. supabase test db / psql inherit PGOPTIONS.
+          export PGOPTIONS="${PGOPTIONS:+$PGOPTIONS }-c app.ipix_verify_target=${guc}"
           supabase test db --db-url "$DATABASE_URL" supabase/tests/database
 
       - name: verify-rls (fail-closed service role)
