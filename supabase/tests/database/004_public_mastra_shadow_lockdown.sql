@@ -1,16 +1,21 @@
 -- IPI-801 · MASTRA-PG-011 — public.mastra_* catalog after Path B DROP
--- IPI-1021 · SB-MIG-001 — dual-mode so QA (shadows still present) and
--- production (shadows dropped 2026-08-21) both stay honest.
+-- IPI-1021 · SB-MIG-001 — mode from explicit verify target, not catalog count.
 --
--- QA still has the 33 locked shadows (ledger far behind prod; do not
--- --include-all apply there). Production has 0 public.mastra_* tables.
--- Catalog count must be 0 or 33 — never a partial leftover set.
+-- Do not infer QA from "there are 33 tables". A Brand Hub / Planner backup
+-- restore onto production can recreate the locked 33-name catalog; that must
+-- still fail anti-recreation, not silently take the 234-test lockdown path.
+--
+-- Target resolution (first match):
+--   1. GUC app.ipix_verify_target = production|qa
+--      (CI: supabase-verify-rls.yml sets PGOPTIONS from gate TARGET)
+--   2. Else: DROP migration 20260816000000 in schema_migrations
+--      → production/post-DROP (expect 0)
+--      else pre-DROP / QA (expect 33)
 --
 -- Plan math:
---   always: 1 allowlist + 1 catalog-mode + 1 extras
---   + if n=33: 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count) = 231 → 234
---   + if n=0:  33×(must not reappear) = 33 → 36
---   + if n∉{0,33}: stop after the 3 always-tests (plan 3) so extras/catalog fail closed
+--   always: 1 allowlist + 1 catalog + 1 extras
+--   + expect 33: 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count) = 231 → 234
+--   + expect 0:  33×(must not reappear) = 33 → 36
 
 set search_path to public, extensions;
 
@@ -63,11 +68,45 @@ where n.nspname = 'public'
   and c.relkind in ('r', 'p', 'v', 'm', 'f')
   and c.relname like 'mastra\_%' escape '\';
 
+create temporary table verify_target (
+  guc text,
+  drop_applied boolean,
+  expected_n bigint,
+  anti_recreate boolean
+) on commit drop;
+
+insert into verify_target (guc, drop_applied, expected_n, anti_recreate)
+select
+  guc,
+  drop_applied,
+  case
+    when guc in ('production', 'prod') then 0
+    when guc = 'qa' then 33
+    when drop_applied then 0
+    else 33
+  end,
+  case
+    when guc in ('production', 'prod') then true
+    when guc = 'qa' then false
+    else drop_applied
+  end
+from (
+  select
+    nullif(
+      btrim(lower(coalesce(current_setting('app.ipix_verify_target', true), ''))),
+      ''
+    ) as guc,
+    exists (
+      select 1
+      from supabase_migrations.schema_migrations
+      where version = '20260816000000'
+    ) as drop_applied
+) s;
+
 select plan(
-  case (select n from shadow_state)
+  case (select expected_n from verify_target)
     when 0 then 36
-    when 33 then 234
-    else 3
+    else 234
   end
 );
 
@@ -77,10 +116,14 @@ select is(
   'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: expected 33 public shadow names'
 );
 
-select ok(
-  (select n from shadow_state) in (0, 33),
+select is(
+  (select n from shadow_state),
+  (select expected_n from verify_target),
   format(
-    'IPI-801 · MASTRA-PG-011 — catalog public.mastra_* is 0 (prod DROP) or 33 (QA lockdown), got %s',
+    'IPI-801 · MASTRA-PG-011 — public.mastra_* catalog must be %s (guc=%s drop_applied=%s), got %s',
+    (select expected_n from verify_target),
+    coalesce((select guc from verify_target), 'unset'),
+    (select drop_applied from verify_target),
     (select n from shadow_state)
   )
 );
@@ -105,7 +148,7 @@ select ok(
     format('public.%I must not reappear after IPI-801 DROP', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 0
+where (select anti_recreate from verify_target)
 order by t.tablename;
 
 -- QA / pre-DROP: Phase A lockdown still holds.
@@ -114,7 +157,7 @@ select ok(
     format('public.%I still exists (lockdown must not DROP)', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -128,7 +171,7 @@ select ok(
     format('public.%I has RLS enabled', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select is(
@@ -138,7 +181,7 @@ select is(
     format('public.%I has zero RLS policies (fail-closed)', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -156,7 +199,7 @@ select ok(
     format('deny roles have zero ACL entries on public.%I', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -173,7 +216,7 @@ select ok(
     format('PUBLIC has no ACL entries on public.%I', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -187,7 +230,7 @@ select ok(
     format('public.%I is not owned by a PostgREST role (no DROP OWNED BY needed)', t.tablename)
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select lives_ok(
@@ -198,7 +241,7 @@ select lives_ok(
     )
   )
 from public_mastra_shadows t
-where (select n from shadow_state) = 33
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select * from finish();
