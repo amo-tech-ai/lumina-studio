@@ -7,10 +7,12 @@
 --
 -- Target resolution (first match):
 --   1. GUC app.ipix_verify_target = production|qa
---      (CI: supabase-verify-rls.yml sets PGOPTIONS from gate TARGET)
+--      (only if the pgTAP session actually has the GUC. CLI 2.109.1
+--      `supabase test db` does not pass host PGOPTIONS into pg_prove Docker.)
 --   2. Else: DROP migration 20260816000000 in schema_migrations
 --      → production/post-DROP (expect 0)
 --      else pre-DROP / QA (expect 33)
+-- CI on main uses path 2. A 33-table restore that keeps the stamp still fails.
 --
 -- Plan math:
 --   always: 1 allowlist + 1 catalog + 1 extras
