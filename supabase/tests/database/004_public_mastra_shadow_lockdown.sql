@@ -1,24 +1,25 @@
--- IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables
--- Phase A lockdown proof for the 33 public.mastra_* shadow tables.
+-- IPI-801 · MASTRA-PG-011 — public.mastra_* catalog after Path B DROP
+-- IPI-1021 · SB-MIG-001 — mode from explicit verify target, not catalog count.
 --
--- Asserts: tables still exist (not dropped), RLS on, zero policies,
--- deny-role + PUBLIC ACLs empty (all privilege_type / grantable bits),
--- ownership is not a PostgREST role (DROP OWNED BY is not used —
--- deny roles own zero public.mastra_* objects; owner is postgres),
--- and allow-path: owning/bypass session can count(*) without error
--- (rows preserved for rollback/inspection — counts only, no row payloads).
+-- Do not infer QA from "there are 33 tables". A Brand Hub / Planner backup
+-- restore onto production can recreate the locked 33-name catalog; that must
+-- still fail anti-recreation, not silently take the 234-test lockdown path.
+--
+-- Target resolution (first match):
+--   1. GUC app.ipix_verify_target = production|qa
+--      (CI: supabase-verify-rls.yml sets PGOPTIONS from gate TARGET)
+--   2. Else: DROP migration 20260816000000 in schema_migrations
+--      → production/post-DROP (expect 0)
+--      else pre-DROP / QA (expect 33)
 --
 -- Plan math:
---   1 allowlist count
---   + 1 catalog count (no unexpected public.mastra_%)
---   + 1 extras count (allowlist membership)
---   + 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count)
---   = 234
+--   always: 1 allowlist + 1 catalog + 1 extras
+--   + expect 33: 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count) = 231 → 234
+--   + expect 0:  33×(must not reappear) = 33 → 36
 
 set search_path to public, extensions;
 
 begin;
-select plan(234);
 
 create temporary table public_mastra_shadows (tablename text) on commit drop;
 
@@ -58,24 +59,73 @@ values
   ('mastra_workspace_versions'),
   ('mastra_workspaces');
 
+create temporary table shadow_state (n bigint) on commit drop;
+insert into shadow_state (n)
+select count(*)::bigint
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relkind in ('r', 'p', 'v', 'm', 'f')
+  and c.relname like 'mastra\_%' escape '\';
+
+create temporary table verify_target (
+  guc text,
+  drop_applied boolean,
+  expected_n bigint,
+  anti_recreate boolean
+) on commit drop;
+
+insert into verify_target (guc, drop_applied, expected_n, anti_recreate)
+select
+  guc,
+  drop_applied,
+  case
+    when guc in ('production', 'prod') then 0
+    when guc = 'qa' then 33
+    when drop_applied then 0
+    else 33
+  end,
+  case
+    when guc in ('production', 'prod') then true
+    when guc = 'qa' then false
+    else drop_applied
+  end
+from (
+  select
+    nullif(
+      btrim(lower(coalesce(current_setting('app.ipix_verify_target', true), ''))),
+      ''
+    ) as guc,
+    exists (
+      select 1
+      from supabase_migrations.schema_migrations
+      where version = '20260816000000'
+    ) as drop_applied
+) s;
+
+select plan(
+  case (select expected_n from verify_target)
+    when 0 then 36
+    else 234
+  end
+);
+
 select is(
   (select count(*) from public_mastra_shadows),
   33::bigint,
   'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: expected 33 public shadow names'
 );
 
--- Fail closed: catalog must have exactly the allowlist — no new Mastra auto-init shadows.
 select is(
-  (
-    select count(*)::bigint
-    from pg_class c
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
-      and c.relkind in ('r', 'p', 'v', 'm', 'f')
-      and c.relname like 'mastra\_%' escape '\'
-  ),
-  33::bigint,
-  'IPI-801 · MASTRA-PG-011 — catalog has exactly 33 public.mastra_* relations (no extras)'
+  (select n from shadow_state),
+  (select expected_n from verify_target),
+  format(
+    'IPI-801 · MASTRA-PG-011 — public.mastra_* catalog must be %s (guc=%s drop_applied=%s), got %s',
+    (select expected_n from verify_target),
+    coalesce((select guc from verify_target), 'unset'),
+    (select drop_applied from verify_target),
+    (select n from shadow_state)
+  )
 );
 
 select is(
@@ -92,11 +142,22 @@ select is(
   'IPI-801 · MASTRA-PG-011 — no public.mastra_* relation outside the 33-name allowlist'
 );
 
+-- Production / post-DROP: tables must not reappear (anti-recreation).
+select ok(
+    to_regclass(format('public.%I', t.tablename)) is null,
+    format('public.%I must not reappear after IPI-801 DROP', t.tablename)
+  )
+from public_mastra_shadows t
+where (select anti_recreate from verify_target)
+order by t.tablename;
+
+-- QA / pre-DROP: Phase A lockdown still holds.
 select ok(
     to_regclass(format('public.%I', t.tablename)) is not null,
     format('public.%I still exists (lockdown must not DROP)', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -110,6 +171,7 @@ select ok(
     format('public.%I has RLS enabled', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select is(
@@ -119,9 +181,9 @@ select is(
     format('public.%I has zero RLS policies (fail-closed)', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
--- ACL fail-closed for anon/authenticated/service_role (any privilege_type / grantable).
 select ok(
     not exists(
       select 1
@@ -137,6 +199,7 @@ select ok(
     format('deny roles have zero ACL entries on public.%I', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -153,6 +216,7 @@ select ok(
     format('PUBLIC has no ACL entries on public.%I', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select ok(
@@ -166,11 +230,9 @@ select ok(
     format('public.%I is not owned by a PostgREST role (no DROP OWNED BY needed)', t.tablename)
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
--- Allow path: session is owner/bypass (postgres in CI). Prove SELECT count(*)
--- still works after lockdown — rows preserved for rollback/inspection.
--- lives_ok: no error, no row payloads printed into the TAP stream.
 select lives_ok(
     format('select count(*)::bigint from public.%I', t.tablename),
     format(
@@ -179,6 +241,7 @@ select lives_ok(
     )
   )
 from public_mastra_shadows t
+where not (select anti_recreate from verify_target)
 order by t.tablename;
 
 select * from finish();
