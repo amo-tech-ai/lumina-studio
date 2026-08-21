@@ -115,7 +115,7 @@ jobs:
           trap 'rm -f "$tmp_types"' EXIT
           supabase gen types typescript \
             --project-id "$SUPABASE_PROJECT_ID" \
-            --schema public,planner,graphql_public \
+            --schema public,planner,graphql_public,mastra \
             > "$tmp_types"
           test -s "$tmp_types"
           diff --unified app/src/types/supabase.ts "$tmp_types"
