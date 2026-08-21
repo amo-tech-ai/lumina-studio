@@ -7,5 +7,8 @@ NEXTJS_ENV=development
 INTELLIGENCE_API_URL=http://localhost:4201
 INTELLIGENCE_GATEWAY_WS_URL=ws://localhost:4401
 AI_GATEWAY_URL=http://localhost:8787
+# IPI-1019 · CF-AI-007b — Add NVIDIA NIM as an opt-in direct AI provider.
+# Optional; default gemini. Set nvidia only when NVIDIA_API_KEY is in secrets.
+AI_PROVIDER=gemini
 CLOUDINARY_CLOUD_NAME=dzqy2ixl0
 CLOUDINARY_API_KEY=
