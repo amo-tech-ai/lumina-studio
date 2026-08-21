@@ -34,8 +34,42 @@ const RETRYABLE_AI_PROVIDER_PATTERNS = [
  * @param {string} error.type - Error type
  * @returns {boolean} - True if blocking, false if tolerated
  */
-export function classifyConsoleError(error) {
+function isStreamIdleTimeoutError(text) {
+  return /STREAM_IDLE_TIMEOUT|no stream activity for \d+ms/i.test(text || "");
+}
+
+/** Prefer quoted AG-UI `runId` when CopilotKit/console includes it. */
+export function extractAgUiRunId(text) {
+  const m = String(text || "").match(/"runId"\s*:\s*"([^"]+)"/);
+  return m?.[1] ?? null;
+}
+
+/**
+ * Classify a console error as blocking or tolerated
+ *
+ * @param {Object} error - Console error object
+ * @param {string} error.text - Error text
+ * @param {string} error.type - Error type
+ * @param {{ streamComplete?: boolean, completedRunId?: string|null, errorRunId?: string|null }} [context]
+ *   `streamComplete` means 08 already saw assistant content. A later
+ *   STREAM_IDLE_TIMEOUT is then stale (SSE body left open after RUN_FINISHED),
+ *   not a failed turn — but only for the same run when both runIds are known.
+ *   Genuine idle (no completed stream) stays blocking.
+ *   Other `agent_run_error_event` lines are never ignored via this flag.
+ */
+export function classifyConsoleError(error, context = {}) {
   const t = error.text || "";
+
+  // Stale idle timeout after a proven complete stream — not a blanket ignore
+  // of agent_run_error_event (401 / invalid-model still block below).
+  if (context.streamComplete && isStreamIdleTimeoutError(t)) {
+    const errorRunId = context.errorRunId || extractAgUiRunId(t);
+    const completedRunId = context.completedRunId || null;
+    if (errorRunId && completedRunId && errorRunId !== completedRunId) {
+      return true;
+    }
+    return false;
+  }
   
   // --- Tolerated: documented retryable transients ---
   

@@ -24,6 +24,9 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
 
   const reader = body.getReader();
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  // Carry a small tail so `"type":"RUN_FINISHED"` split across chunks still matches.
+  let sseTail = "";
 
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
@@ -56,6 +59,14 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
         return;
       }
       controller.enqueue(value);
+      sseTail = (sseTail + decoder.decode(value, { stream: true })).slice(-96);
+      // Terminal AG-UI event ends the turn. Close immediately so a keep-alive
+      // SSE body cannot later trip STREAM_IDLE_TIMEOUT (stale CopilotKit
+      // agent_run_error_event after the dock already showed a complete reply).
+      if (/"type"\s*:\s*"(?:RUN_FINISHED|RUN_ERROR)"/.test(sseTail)) {
+        controller.close();
+        reader.cancel("terminal ag-ui event").catch(() => {});
+      }
     },
     cancel(reason) {
       reader.cancel(reason).catch(() => {});

@@ -116,6 +116,51 @@ const tests = [
 
   // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
   {
+    name: "Console: stale STREAM_IDLE_TIMEOUT after streamComplete - tolerated",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: false,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT same runId as completed - tolerated",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-a"}',
+      type: "error",
+    },
+    context: { streamComplete: true, completedRunId: "run-a" },
+    expected: false,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT different runId than completed - blocking",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-b"}',
+      type: "error",
+    },
+    context: { streamComplete: true, completedRunId: "run-a" },
+    expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT without streamComplete - blocking",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
+      type: "error",
+    },
+    context: { streamComplete: false },
+    expected: true,
+  },
+  {
+    name: "Console: agent_run_error_event 401 still blocking when streamComplete",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: AI_APICallError: Received 401 Unauthorized. Check your API key.",
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: true,
+  },
+  {
     name: "Console: Cloudflare Error 1102 Worker exceeded resource limits - blocking",
     input: { text: "Cloudflare Error 1102: Worker exceeded resource limits", type: "error" },
     expected: true,
@@ -301,7 +346,7 @@ for (const test of tests) {
   let result;
   
   if (test.name.startsWith("Console:")) {
-    result = classifyConsoleError(test.input);
+    result = classifyConsoleError(test.input, test.context);
   } else if (test.name.startsWith("Network:")) {
     result = classifyNetworkResponse(test.input, test.info503Count, test.phase);
   } else if (test.name.startsWith("countInfo503Responses:")) {

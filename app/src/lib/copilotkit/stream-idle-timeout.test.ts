@@ -38,6 +38,58 @@ describe("withStreamIdleTimeout", () => {
     expect(text).not.toContain("RUN_ERROR");
   });
 
+  it("does not emit STREAM_IDLE_TIMEOUT after RUN_FINISHED if the body stays open", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"RUN_STARTED"}\n\n'));
+        controller.enqueue(new TextEncoder().encode('data: {"type":"RUN_FINISHED"}\n\n'));
+        // ponytail: preview SSE often never calls close() after RUN_FINISHED
+      },
+    });
+
+    const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
+    const text = await readAllText(wrapped);
+
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+    expect(text).not.toContain("RUN_ERROR");
+  });
+
+  it("does not emit STREAM_IDLE_TIMEOUT after RUN_ERROR if the body stays open", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"RUN_STARTED"}\n\n'));
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"type":"RUN_ERROR","message":"model failed","code":"MODEL"}\n\n',
+          ),
+        );
+      },
+    });
+
+    const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
+    const text = await readAllText(wrapped);
+    expect(text).toContain('"type":"RUN_ERROR"');
+    expect(text).toContain("model failed");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
+  it("detects RUN_FINISHED split across SSE chunks", async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"type":"RUN_STA'));
+        controller.enqueue(encoder.encode('RTED"}\n\ndata: {"type":"RUN_FINI'));
+        controller.enqueue(encoder.encode('SHED"}\n\n'));
+      },
+    });
+
+    const wrapped = withStreamIdleTimeout(sseResponse(stream), 50);
+    const text = await readAllText(wrapped);
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
   it("emits a RUN_ERROR event and closes when the stream stalls (never hangs)", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
