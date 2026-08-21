@@ -230,7 +230,12 @@ jobs:
               exit 1
               ;;
           esac
-          # Custom GUC must contain a dot. supabase test db / psql inherit PGOPTIONS.
+          # CLI 2.109.1 `supabase test db` runs pg_prove in Docker with only
+          # PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE — host PGOPTIONS never
+          # reaches that session (supabase/cli v2.109.1 internal/db/test/test.go).
+          # 004 therefore selects production vs QA from schema_migrations
+          # (DROP stamp 20260816000000), not this GUC. Keep the export so a
+          # future CLI that forwards env, or a local `psql` run, still works.
           export PGOPTIONS="${PGOPTIONS:+$PGOPTIONS }-c app.ipix_verify_target=${guc}"
           supabase test db --db-url "$DATABASE_URL" supabase/tests/database
 
