@@ -16,11 +16,18 @@ describe("shootWizardWorkflow inputSchema (Mastra 1.59 step chaining)", () => {
   });
 
   it("rejects an invalid product_category enum", () => {
-    expect(() =>
-      shootWizardWorkflow.inputSchema.parse({
-        ...requiredWithoutCategory,
-        product_category: "not-a-category",
-      }),
-    ).toThrow(/product_category|Invalid enum/i);
+    const result = shootWizardWorkflow.inputSchema.safeParse({
+      ...requiredWithoutCategory,
+      product_category: "not-a-category",
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(
+      result.error.issues.some(
+        (issue) =>
+          issue.path.includes("product_category") &&
+          issue.code === "invalid_enum_value",
+      ),
+    ).toBe(true);
   });
 });

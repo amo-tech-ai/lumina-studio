@@ -127,7 +127,7 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(openNextEsbuildPatch).toMatch(/scripts\/cf-ast-grep-stub\.mjs/);
   });
 
-  it("IPI-1016 · CF-BUNDLE-224 CF stubs Mastra desktop workspace in OpenNext esbuild (size, not pg)", () => {
+  it("IPI-1016 · CF-BUNDLE-224 — CF stubs Mastra desktop workspace in OpenNext esbuild (size, not pg)", () => {
     const openNextEsbuildPatch = readFileSync(
       resolve(__dirname, "../../patches/@opennextjs+cloudflare+1.20.2.patch"),
       "utf8",
