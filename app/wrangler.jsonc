@@ -51,13 +51,15 @@
   // CF-SEC-010: committed vars are static flags only. Environment-specific URLs/ids are injected
   // at deploy via GitHub environment variables → upload script `--var` (Wrangler is SSOT).
   "vars": {
-    "MASTRA_STORAGE_MODE": "pg",
+    "MASTRA_STORAGE_MODE": "noop",
     "OPERATOR_AUTH_ENABLED": "true",
     // IPI-586: internal smoke route stays dark until explicitly flipped for a preview proof.
     "ENABLE_CF_AI_SMOKE": "false",
     // IPI-620 (Part B): PostgresStore + Hyperdrive compatibility spike route stays dark
     // until explicitly flipped for a preview proof — see cloudflare-workflow smoke pattern.
-    "ENABLE_HYPERDRIVE_PG_SMOKE": "true",
+    // ⚠️ Production persistence disabled until preview proof passes HITL regression,
+    // tenant-isolation checks, and Cloudflare logs verify durability.
+    "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
     // IPI-822 · CF-DB-009b — thread canary stays dark in Git; preview-only flip via GitHub env var.
     "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
     // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
@@ -164,10 +166,10 @@
         "binding": "WORKER_VERSION_METADATA"
       },
       "vars": {
-        "MASTRA_STORAGE_MODE": "pg",
+        "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
-        "ENABLE_HYPERDRIVE_PG_SMOKE": "true",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "prod"
       },
