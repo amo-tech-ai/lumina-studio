@@ -33,8 +33,29 @@ const tests = [
   {
     name: "HTTP 503 formats status and cf-ray",
     fn: () =>
-      formatCopilotKitPostFailure(503, "text/html", "a2eacda28f2269dd-ORD") ===
+      formatCopilotKitPostFailure(503, "text/html", { "cf-ray": "a2eacda28f2269dd-ORD" }) ===
       "POST status=503 ct=text/html cf-ray=a2eacda28f2269dd-ORD",
+  },
+  {
+    name: "HTTP 503 formats Cloudflare error type and origin when present",
+    fn: () =>
+      formatCopilotKitPostFailure(503, "text/html", {
+        "cf-ray": "a2eacda28f2269dd-ORD",
+        "cf-error-type": "1102",
+        "cf-error-origin": "edge",
+      }) ===
+      "POST status=503 ct=text/html cf-ray=a2eacda28f2269dd-ORD cf-error-type=1102 cf-error-origin=edge",
+  },
+  {
+    name: "copilotKitCfDiagnostics reads cf-error headers",
+    fn: () => {
+      const d = copilotKitCfDiagnostics({
+        "cf-ray": "abc",
+        "cf-error-type": "1102",
+        "cf-error-origin": "edge",
+      });
+      return d.cfRay === "abc" && d.cfErrorType === "1102" && d.cfErrorOrigin === "edge";
+    },
   },
   {
     name: "single submit: visible Send uses click, not Enter",

@@ -117,13 +117,13 @@ const tests = [
 
   // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
   {
-    name: "Console: STREAM_IDLE_TIMEOUT after streamComplete without runIds - blocking",
+    name: "Console: STREAM_IDLE_TIMEOUT after streamComplete without runIds - tolerated",
     input: {
       text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
       type: "error",
     },
     context: { streamComplete: true },
-    expected: true,
+    expected: false,
   },
   {
     name: "Console: STREAM_IDLE_TIMEOUT same runId as completed - tolerated",

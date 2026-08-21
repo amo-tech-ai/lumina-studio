@@ -28,10 +28,16 @@ export function copilotKitCfDiagnostics(headers = {}) {
 }
 
 export function formatCopilotKitPostFailure(status, contentType, diagnostics) {
-  const d =
+  const raw =
     diagnostics && typeof diagnostics === "object" && !Array.isArray(diagnostics)
       ? diagnostics
-      : { cfRay: diagnostics || null };
+      : { "cf-ray": diagnostics || null };
+  const fromHeaders = copilotKitCfDiagnostics(raw);
+  const d = {
+    cfRay: raw.cfRay || fromHeaders.cfRay,
+    cfErrorType: raw.cfErrorType || fromHeaders.cfErrorType,
+    cfErrorOrigin: raw.cfErrorOrigin || fromHeaders.cfErrorOrigin,
+  };
   const parts = [
     `POST status=${status}`,
     `ct=${contentType || "none"}`,

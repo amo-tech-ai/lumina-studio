@@ -81,12 +81,16 @@ export function extractTerminalAgUiRunId(sseText) {
 export function classifyConsoleError(error, context = {}) {
   const t = error.text || "";
 
-  // Stale idle timeout for the same completed run — not a blanket ignore
-  // of agent_run_error_event (401 / invalid-model still block below).
+  // Stale idle timeout after a proven complete stream. Prefer runId when both
+  // sides have it so run B cannot hide behind run A's completion. CopilotKit
+  // console lines often omit runId — then streamComplete alone is enough.
   if (context.streamComplete && isStreamIdleTimeoutError(t)) {
     const errorRunId = context.errorRunId || extractAgUiRunId(t);
     const completedRunId = context.completedRunId || null;
-    return !(errorRunId && completedRunId && errorRunId === completedRunId);
+    if (errorRunId && completedRunId && errorRunId !== completedRunId) {
+      return true;
+    }
+    return false;
   }
   
   // --- Tolerated: documented retryable transients ---
