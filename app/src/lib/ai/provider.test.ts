@@ -1,7 +1,19 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@ai-sdk/openai-compatible", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@ai-sdk/openai-compatible")>();
+  return {
+    ...actual,
+    createOpenAICompatible: vi.fn((opts: Parameters<typeof actual.createOpenAICompatible>[0]) =>
+      actual.createOpenAICompatible(opts),
+    ),
+  };
+});
+
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import { findGroqModelsConfigPath } from "./groq-models-path";
 import {
@@ -11,7 +23,6 @@ import {
   loadGroqModelsConfig,
   NVIDIA_CHAT_MODEL_IDS,
   NVIDIA_EMBEDDING_MODEL_ID,
-  NVIDIA_NIM_BASE_URL,
   resolveAiProvider,
   resolveAiRoutingMode,
   resolveGatewayModelId,
@@ -22,6 +33,16 @@ import {
   resolveProviderOptions,
   shouldRouteTierViaGateway,
 } from "./provider";
+
+vi.mock("@ai-sdk/openai-compatible", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@ai-sdk/openai-compatible")>();
+  return {
+    ...actual,
+    createOpenAICompatible: vi.fn((opts: Parameters<typeof actual.createOpenAICompatible>[0]) =>
+      actual.createOpenAICompatible(opts),
+    ),
+  };
+});
 
 describe("AI provider (GROQ-002 / GROQ-004)", () => {
   const original = {
@@ -182,12 +203,17 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.AI_PROVIDER = "nvidia";
       process.env.NVIDIA_API_KEY = "test-nvidia-key";
       delete process.env.AI_ROUTING_MODE;
+      vi.mocked(createOpenAICompatible).mockClear();
       for (const tier of ["default", "fast"] as const) {
         const model = resolveModel(tier);
         expect(model.provider).toBe("nvidia-nim.chat");
         expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.default);
       }
-      expect(NVIDIA_NIM_BASE_URL).toBe("https://integrate.api.nvidia.com/v1");
+      const nvidiaCalls = vi
+        .mocked(createOpenAICompatible)
+        .mock.calls.filter(([opts]) => opts.name === "nvidia-nim");
+      expect(nvidiaCalls.length).toBeGreaterThan(0);
+      expect(nvidiaCalls[0][0].baseURL).toBe("https://integrate.api.nvidia.com/v1");
     });
 
     it("maps structured to Nemotron Ultra (reasoning)", () => {
@@ -215,15 +241,24 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       expect(() => resolveModel("default")).toThrow(/NVIDIA_API_KEY is required/);
     });
 
-    it("does not send nvidia fast through the Worker gateway", () => {
+    it("does not send nvidia default/fast/structured through the Worker gateway", () => {
       process.env.AI_PROVIDER = "nvidia";
       process.env.NVIDIA_API_KEY = "test-nvidia-key";
       process.env.AI_ROUTING_MODE = "gateway";
       process.env.AI_GATEWAY_URL = "http://gateway.test:8787";
+      process.env.AI_GATEWAY_ALLOW_TOOL_TIERS = "1";
       expect(shouldRouteTierViaGateway("fast")).toBe(false);
-      const model = resolveModel("fast");
-      expect(model.provider).toBe("nvidia-nim.chat");
-      expect(model.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.fast);
+      expect(shouldRouteTierViaGateway("default")).toBe(false);
+      expect(shouldRouteTierViaGateway("structured")).toBe(false);
+      const fast = resolveModel("fast");
+      expect(fast.provider).toBe("nvidia-nim.chat");
+      expect(fast.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.fast);
+      const def = resolveModel("default");
+      expect(def.provider).toBe("nvidia-nim.chat");
+      expect(def.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.default);
+      const structured = resolveModel("structured");
+      expect(structured.provider).toBe("nvidia-nim.chat");
+      expect(structured.modelId).toBe(NVIDIA_CHAT_MODEL_IDS.reasoning);
     });
 
     it("still rejects an invalid AI_ROUTING_MODE before returning NVIDIA models", () => {
@@ -234,12 +269,23 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     });
 
     it("resolves extra NVIDIA-only chat tiers from the registry", () => {
+      // agent/video/multimodal/coding/longContext are not GroqModelTier values, so
+      // resolveModel() cannot take them. resolveNvidiaLanguageModel is the public extra-tier API.
       process.env.NVIDIA_API_KEY = "test-nvidia-key";
       expect(resolveNvidiaLanguageModel("agent").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.agent);
       expect(resolveNvidiaLanguageModel("video").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.video);
       expect(resolveNvidiaLanguageModel("multimodal").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.multimodal);
       expect(resolveNvidiaLanguageModel("coding").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.coding);
       expect(resolveNvidiaLanguageModel("longContext").modelId).toBe(NVIDIA_CHAT_MODEL_IDS.longContext);
+    });
+
+    it("throws from resolveModel for Groq tiers with no NVIDIA equivalent", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      delete process.env.AI_ROUTING_MODE;
+      for (const tier of ["compound", "compoundMini", "stt", "safety"] as const) {
+        expect(() => resolveModel(tier)).toThrow(/no NVIDIA NIM equivalent/);
+      }
     });
 
     it("uses embeddingModel for nemotron-3-embed-1b, not chatModel", () => {

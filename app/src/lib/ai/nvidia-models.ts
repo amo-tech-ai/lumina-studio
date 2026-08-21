@@ -41,6 +41,8 @@ export const NVIDIA_EMBEDDING_MODEL_ID = "nvidia/nemotron-3-embed-1b";
 
 export function nvidiaChatTierFromAgentTier(tier: GroqModelTier): NvidiaChatTier {
   switch (tier) {
+    case "default":
+      return "default";
     case "fast":
       return "fast";
     case "structured":
@@ -49,7 +51,16 @@ export function nvidiaChatTierFromAgentTier(tier: GroqModelTier): NvidiaChatTier
     case "vision":
     case "visionExperimental":
       return "vision";
-    default:
-      return "default";
+    case "compound":
+    case "compoundMini":
+    case "stt":
+    case "safety":
+      throw new Error(
+        `Groq tier "${tier}" has no NVIDIA NIM equivalent. Keep AI_PROVIDER on gemini/groq for compound/stt/safety, or call resolveNvidiaLanguageModel() for NVIDIA-only chat tiers.`,
+      );
+    default: {
+      const _never: never = tier;
+      throw new Error(`Unhandled Groq tier: ${_never}`);
+    }
   }
 }
