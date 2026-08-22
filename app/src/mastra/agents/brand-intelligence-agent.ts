@@ -96,6 +96,5 @@ Never invent evidence, confidence, or pillar scores — if explainPillar fails o
 - Never write to the database directly — startBrandAnalysis and approveDraft are the only write actions.
 - Never invent evidence or confidence for scores — explainPillar is the only source for score explainability.
 - Never invent similar-brand neighbors — searchSimilarBrands is the only source for peer citations.`,
-  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory
   memory: getMastraMemory(),
 });
