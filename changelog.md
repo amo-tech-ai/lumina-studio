@@ -17,6 +17,62 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-22 — Catch-up: Planner recovery, Mastra Postgres cutover, Copilot persistence, Cloudflare AI routing
+
+**50 commits across `1db29d855..697467b7d`.** Written 2026-08-22 to clear `changelog-staleness`
+(main was 50 commits past its last `changelog.md` touch, budget 12). Docs-only. Grouped by
+theme; every PR listed has a `merged_at`. **Not recorded here:** work still sitting in open
+PRs at write time.
+
+**📅 Planner — failed saves and moves now recover in the panel (IPI-906 · PLN-UX-002)**
+
+- **Show clear errors and recover failed Planner changes** (`697467b7d`, [#964](https://github.com/amo-tech-ai/lumina-studio/pull/964)) — Fitting save/shift failures used to look silent or offer dead Retry/Reload. Shared `mapPlannerMutationError` now maps typed `MutationResult` codes to recovery: keep typed notes, retry only when the write did not commit, close a deleted task instead of fake refresh, and keep the original stale/forbidden alert if Review/Reload cannot refresh. Title `aria-describedby` only attaches when the title field is actually invalid. Verified on the PR: focused Planner recovery tests + required CI (`app-build`, `supabase-verify-rls`, `supabase-linked-gates`, `cloudflare-worker-tests`).
+- **New Plan setup keeps the operator name and local date** (`a0edf7cc1`, [#923](https://github.com/amo-tech-ai/lumina-studio/pull/923)) — **IPI-716 · PLN-HUB-002B**.
+
+**🐘 Mastra — stop writing to `public.*`, keep Studio and local `mastra dev` alive**
+
+- **Stop Mastra writing to `public.*` when `MASTRA_SCHEMA` is missing** (`f3e226a3e`, [#949](https://github.com/amo-tech-ai/lumina-studio/pull/949)) — **IPI-1011 · MASTRA-PG-015**. Follow-ups: rollback runbook (`fe1db65ab`, [#951](https://github.com/amo-tech-ai/lumina-studio/pull/951)); fail local chat before start if the schema is missing (`63e737c1e`, [#952](https://github.com/amo-tech-ai/lumina-studio/pull/952)).
+- **Drop the 33 old `public.mastra_*` shadow tables** (`b6213626a`, [#954](https://github.com/amo-tech-ai/lumina-studio/pull/954)) — **IPI-801 · MASTRA-PG-011**, after soak + backup gates. Types and pgTAP then realigned (`5257ecc42`, [#970](https://github.com/amo-tech-ai/lumina-studio/pull/970), **IPI-1021 · SB-MIG-001**).
+- **Keep Shoot Wizard and Brand Intelligence workflows on Cloudflare Postgres** (`2d9530623`, [#955](https://github.com/amo-tech-ai/lumina-studio/pull/955)) — **IPI-1015 · CF-DB-015**. Preview canaries include real Mastra PG scope and wrap CopilotKit `/info` (`782f440da`, [#956](https://github.com/amo-tech-ai/lumina-studio/pull/956), **IPI-1014 · CF-DB-014**).
+- **Pin Mastra 1.59 family** (`c8df5af9b`, [#948](https://github.com/amo-tech-ai/lumina-studio/pull/948)) — **IPI-1006 · MASTRA-UPG-001**. Local `mastra dev` then unblocked: package versions (`6ee002fee`, [#959](https://github.com/amo-tech-ai/lumina-studio/pull/959), **IPI-1017**); bundler uncoupled from `next/server` (`474f42750`, [#960](https://github.com/amo-tech-ai/lumina-studio/pull/960), **IPI-1018**).
+- **Add `mastra.mastra_workflow_definitions`** (`8e11ad4eb`, [#975](https://github.com/amo-tech-ai/lumina-studio/pull/975)) — **IPI-1008 · MASTRA-UPG-003**. Remote already had `20260822070000`; this PR is the canonical file so unrelated PRs stop failing `supabase-linked-gates`. pgTAP `002` is dual-mode (33 tables on QA until the table exists, 34 on production) and `plan()` is integer (CLI 2.109.1 / pgTAP does not accept `bigint`). **IPI-1023 · SB-TEST-004** (`c83194247`, [#971](https://github.com/amo-tech-ai/lumina-studio/pull/971)) documents that `supabase test db` does not forward `PGOPTIONS`.
+
+**💬 CopilotKit — conversations persist; streams do not die idle; 1.61.2**
+
+- **Preserve iPix AI conversations across refresh / restart / isolate** (`a19cec2e2`, [#969](https://github.com/amo-tech-ai/lumina-studio/pull/969)) — **IPI-1020 · COPILOT-PERSIST-001**.
+- **Fix stale stream timeout and preview verifier accuracy** (`2b0519b77`, [#968](https://github.com/amo-tech-ai/lumina-studio/pull/968)) — **IPI-1022 · COPILOT-STREAM-001**.
+- **Upgrade CopilotKit 1.61.0 → 1.61.2** (`49d67b2f0`, [#939](https://github.com/amo-tech-ai/lumina-studio/pull/939)).
+- **Centralize generative UI registration** (`cf6673603`, [#930](https://github.com/amo-tech-ai/lumina-studio/pull/930)) — **IPI-128 · AIOR-012**.
+- **Prove thread ownership + stage authenticated Cloudflare SSE** (`26dd7e387`, [#929](https://github.com/amo-tech-ai/lumina-studio/pull/929)); preview `/info` exposes safe 503 detail (`98f035057`, [#932](https://github.com/amo-tech-ai/lumina-studio/pull/932)).
+
+**☁️ Cloudflare AI — native routing + optional NVIDIA NIM**
+
+- **Shared model resolution resume-safe** (`b33e5a436`, [#919](https://github.com/amo-tech-ai/lumina-studio/pull/919)) — **IPI-750 · CF-MIG-230-W0-HARDEN**. Then agents: Production Planner (`4220bc054`, [#918](https://github.com/amo-tech-ai/lumina-studio/pull/918), **IPI-752**); Brand Intelligence (`4ad8516b6`, [#944](https://github.com/amo-tech-ai/lumina-studio/pull/944), **IPI-754**); CRM Assistant (`d235428e9`, [#945](https://github.com/amo-tech-ai/lumina-studio/pull/945), **IPI-755**); remaining agents (`b495756ac`, [#946](https://github.com/amo-tech-ai/lumina-studio/pull/946), **IPI-756**). Tracker resync (`d232565a6`, [#942](https://github.com/amo-tech-ai/lumina-studio/pull/942); `17bba8333`, [#917](https://github.com/amo-tech-ai/lumina-studio/pull/917)).
+- **NVIDIA NIM as opt-in provider** (`bbf2f55b4`, [#965](https://github.com/amo-tech-ai/lumina-studio/pull/965)) — **IPI-1019 · CF-AI-007b**. Catalog/EOL IDs (`8b4f0515e`, [#972](https://github.com/amo-tech-ai/lumina-studio/pull/972), **IPI-1026 · CF-AI-007c**). Gemini stays default.
+
+**👤 Talent, matching, Cloudinary**
+
+- **SCR-24 talent onboarding wizard** (`d73f3a86b`, [#957](https://github.com/amo-tech-ai/lumina-studio/pull/957)) — **IPI-585**. Step styles / completion state (`36e085251`, [#947](https://github.com/amo-tech-ai/lumina-studio/pull/947), **IPI-1012 · UI-TYPE-001**).
+- **Talent profile (portfolio, rates, availability)** (`0587d3182`, [#927](https://github.com/amo-tech-ai/lumina-studio/pull/927)) — **IPI-409 · SCR-20**.
+- **Verified Cloudinary talent avatars on Matching** (`029b8e803`, [#911](https://github.com/amo-tech-ai/lumina-studio/pull/911)).
+- **Cloudinary moderation updates atomic and auditable** (`816c9c518` / `91cb6c6c8`, [#916](https://github.com/amo-tech-ai/lumina-studio/pull/916)) — **IPI-639 · CLD-APPROVAL-001**.
+
+**📊 Campaigns and trusted analytics**
+
+- **Campaigns from brief to delivery** (`f3daa3c50`, [#933](https://github.com/amo-tech-ai/lumina-studio/pull/933)) — **IPI-249 · DESIGN-058**.
+- **Trusted analytics overview from verified data** (`ce53e67c3`, [#937](https://github.com/amo-tech-ai/lumina-studio/pull/937)) — **IPI-296 · DESIGN-090**. Backend contract frozen as verified no-op (`4e5d58f6c`, [#935](https://github.com/amo-tech-ai/lumina-studio/pull/935), **IPI-399 · BE-D2**).
+- **Campaign compare using verified data**, then App Router `?c=` drill-down (`8061a3639`, [#943](https://github.com/amo-tech-ai/lumina-studio/pull/943); `1616279e6`, [#963](https://github.com/amo-tech-ai/lumina-studio/pull/963)) — **IPI-297 · DESIGN-091**.
+- **Pick a platform first, then verified placements** (`1a8a42a6b`, [#961](https://github.com/amo-tech-ai/lumina-studio/pull/961)) — **IPI-191 · MI-03a**.
+
+**🛠️ Docs and CI (no product behavior)**
+
+- Mintlify `docs.json` created then restored to full nav (`f71824774`, [#921](https://github.com/amo-tech-ai/lumina-studio/pull/921); `c204a8977`, [#922](https://github.com/amo-tech-ai/lumina-studio/pull/922)); fail if a PR deletes it (`e028c335b`, [#941](https://github.com/amo-tech-ai/lumina-studio/pull/941)). CopilotKit Mintlify pages (`a9778dff4`, [#928](https://github.com/amo-tech-ai/lumina-studio/pull/928)).
+- Always explain with real iPix examples (`9ee3d2033`, [#924](https://github.com/amo-tech-ai/lumina-studio/pull/924); `ae2234a04`, [#931](https://github.com/amo-tech-ai/lumina-studio/pull/931)).
+- Merge-regression / docs-contamination guard (`af6619da7`, [#926](https://github.com/amo-tech-ai/lumina-studio/pull/926)); skip those jobs on push to `main` (`0e35404e0`, [#936](https://github.com/amo-tech-ai/lumina-studio/pull/936)).
+- `SHIPPED.md` week of 2026-08-10 (`43974902a`, [#940](https://github.com/amo-tech-ai/lumina-studio/pull/940)).
+
+**Verification:** docs-only; this PR changes only `changelog.md`. After merge, `changelog-staleness` should report behind ≪ 12.
+
 ### 2026-08-11 — Copilot preview verifier: tolerate transient AI provider errors from workers.dev URLs
 
 **IPI-972 · COPILOT-GATE-004 — Prevent workers.dev URLs from triggering false Worker runtime classifier failures**
