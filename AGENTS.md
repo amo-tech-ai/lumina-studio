@@ -1,4 +1,4 @@
-# AGENTS.md
+# [AGENTS.md](http://AGENTS.md)
 
 Project memory for AI coding agents working in this repository.
 
@@ -6,11 +6,7 @@ Project memory for AI coding agents working in this repository.
 
 **NEVER mix docs and production files in the same PR or commit. NEVER mix two different tasks/concerns in the same PR or commit. EVER.**
 
-One concern per PR **and** per commit: docs-only, code-only, migration-only, CI/config-only — each in its own PR. If a change set spans docs + code (or two tasks), STOP and split along the seam before staging. This is the most-enforced rule in the repo (it exists because of the PR #99 mega-bundle). Violating it is a blocking error, not a style preference. When asked to fix/merge an already-mixed PR, flag the bundling and split it — do not push more changes into it.
-
-## 🗣️ #0 RULE — ALWAYS EXPLAIN WITH REAL IPix EXAMPLES
-
-**Every response must be easy for a non-technical teammate.** Start with 1–2 sentences of plain English, then a real-world **iPix/fashion** example (talent lookbook, Matching, shoot planning, Brand Hub, asset ingestion, Cloudinary pipeline — never warehouses or generic stores), then the short technical bit. This is **always on** — see `.opencode/instructions/explain-ipix.md` for the full pattern and checks.
+One concern per PR **and** per commit: docs-only, code-only, migration-only, CI/config-only — each in its own PR. If a change set spans docs \+ code (or two tasks), STOP and split along the seam before staging. This is the most-enforced rule in the repo (it exists because of the PR #99 mega-bundle). Violating it is a blocking error, not a style preference. When asked to fix/merge an already-mixed PR, flag the bundling and split it — do not push more changes into it.
 
 ## Project Overview
 
@@ -19,14 +15,14 @@ One concern per PR **and** per commit: docs-only, code-only, migration-only, CI/
 The repo has **two product surfaces** and a marketplace:
 
 | Surface | Location | Stack | Status |
-|---|---|---|---|
-| **Operator app** | `app/` | Next.js 16 + CopilotKit v2 + Mastra + Gemini | **Canonical — build here** |
-| **Legacy Vite app** | `src/` (root) | React 18 + Vite + shadcn/ui | **Retiring** (IPI-89) — do not extend |
-| **B2C storefront** | `b2c-storefront/` | Next.js + Algolia + Medusa | Active |
+| --- | --- | --- | --- |
+| **Operator app** | `app/` | Next.js 16 \+ CopilotKit v2 \+ Mastra \+ Gemini | **Canonical — build here** |
+| **Legacy Vite app** | `src/` (root) | React 18 \+ Vite \+ shadcn/ui | **Retiring** (IPI-89) — do not extend |
+| **B2C storefront** | `b2c-storefront/` | Next.js \+ Algolia \+ Medusa | Active |
 | **Mercur marketplace** | `my-marketplace/` | Medusa v2 (Mercur) | Active (separate Postgres) |
-| **Supabase backend** | `supabase/` | Postgres + Edge Functions (Deno) | Active — remote-only |
+| **Supabase backend** | `supabase/` | Postgres \+ Edge Functions (Deno) | Active — remote-only |
 
-PRD: `prd.md`. Wireframes: `tasks/wireframes-ipix/new/`. Linear: `docs/linear/issues/` (IPI-* / PLT-* / AI-* / COM-* / UI-* / DNA-*).
+PRD: `prd.md`. Wireframes: `tasks/wireframes-ipix/new/`. Linear: `docs/linear/issues/` (IPI-\* / PLT-\* / AI-\* / COM-\* / UI-\* / DNA-\*).
 
 ## Commands
 
@@ -92,10 +88,12 @@ Managed via **Infisical**. For the operator app: `infisical run -- npm run dev` 
 ### Frontend — canonical (`app/` — Next.js 16)
 
 Next.js App Router with two route groups:
+
 - `(marketing)` — public site (`/`, `/services/*`, `/login`)
-- `(operator)` — authed app hub (`/app/*`) with CopilotKit + Mastra agent sidebar
+- `(operator)` — authed app hub (`/app/*`) with CopilotKit \+ Mastra agent sidebar
 
 Key paths:
+
 - `app/src/app/(marketing)/` — public pages
 - `app/src/app/(operator)/` — operator pages
 - `app/src/app/api/copilotkit/[[...slug]]/route.ts` — CopilotKit runtime endpoint
@@ -112,8 +110,9 @@ CopilotKit v2 imports from `/v2` subpath: `@copilotkit/react-core/v2`, `@copilot
 Do **not** add new features. Routes in `src/App.tsx` duplicate `app/`. The dashboard pages (`CommandCenterPage`, `BrandHubPage`, `AssetsPage`, etc.) were the MVP product surface — now being ported to Next.js.
 
 Key directories still live here:
-- `src/pages/` — service pages + dashboard pages
-- `src/components/` — shared components + 50+ shadcn/ui primitives in `src/components/ui/`
+
+- `src/pages/` — service pages \+ dashboard pages
+- `src/components/` — shared components \+ 50\+ shadcn/ui primitives in `src/components/ui/`
 - `src/components/operator/` — dashboard-specific components
 - `src/contexts/AuthContext.tsx` — Supabase session state
 - `src/services/` — `profileService`, `brandIntelligenceService`, `edgeFunctionService`, etc.
@@ -123,7 +122,7 @@ Key directories still live here:
 
 ### B2C Storefront (`b2c-storefront/`)
 
-Next.js storefront with Algolia search + Medusa commerce backend. Business-facing consumer experience.
+Next.js storefront with Algolia search \+ Medusa commerce backend. Business-facing consumer experience.
 
 ### Backend — Supabase
 
@@ -136,6 +135,7 @@ Next.js storefront with Algolia search + Medusa commerce backend. Business-facin
 ### Edge Functions (`supabase/functions/`)
 
 Deno functions with `_shared/` building blocks:
+
 - `_shared/auth.ts` — `resolveAuth` (Bearer JWT → user, optional/required)
 - `_shared/cors.ts` — `handleCors`
 - `_shared/response.ts` — `jsonResponse`/`errorResponse`/`safeErrorMessage`
@@ -159,6 +159,7 @@ See `my-marketplace/AGENTS.md`. Commerce catalog, sellers, checkout, and Stripe 
 ## Design System
 
 ### Typography
+
 - **Serif (headings):** Cormorant Garamond
 - **Sans (body):** Outfit
 - Both loaded via Google Fonts in `src/index.css`
@@ -166,6 +167,7 @@ See `my-marketplace/AGENTS.md`. Commerce catalog, sellers, checkout, and Stripe 
 - **Do NOT use Inter, Roboto, or generic system fonts**
 
 ### Brand Colors
+
 - Primary orange `#E87C4D`
 - Secondary blue `#1E293B`
 - Accent mustard `#F3B93C`
@@ -173,27 +175,24 @@ See `my-marketplace/AGENTS.md`. Commerce catalog, sellers, checkout, and Stripe 
 - DNA compliance: Approved `#059669` · Review `#D97706` · Blocked `#DC2626`
 
 ### Tokens & Style
+
 - CSS custom properties in `src/index.css` `:root`
 - `tailwind.config.ts` maps them to utilities (custom `--surface-*`, `--text-*` tokens)
 - Premium aesthetic — generous whitespace, muted palette, glassmorphism. Avoid generic AI look.
 
 ### Service Page Pattern (Vite legacy)
-Every service page: Header › Hero (image + copy) › Feature grid (cards w/ Lucide icons) › FAQ accordion › Portfolio/case study › CTA › Footer.
+
+Every service page: Header › Hero (image \+ copy) › Feature grid (cards w/ Lucide icons) › FAQ accordion › Portfolio/case study › CTA › Footer.
 
 ## Efficiency Guidelines
 
 **Always use parallel and batched operations for speed:**
 
 1. **Parallelize upfront discovery** - Batch all file reads and grep searches together instead of sequential reads. When investigating code patterns, run multiple grep searches in parallel.
-
 2. **Understand validation flow before coding** - Read the full validation chain first to avoid iterative debugging. The timestamp validation order issue required 4 iterations that could have been prevented by reading the complete flow upfront.
-
 3. **Use simpler test fixtures** - Prefer vi.useFakeTimers() without vi.resetModules() when possible. Complex module reset setups cause unnecessary failures.
-
 4. **Check API permissions early** - Verify integration permissions before attempting operations (e.g., GitHub review thread resolution).
-
 5. **Batch verification steps** - Run typecheck, lint, and focused tests in parallel when safe, rather than sequentially.
-
 6. **Skip obsolete threads faster** - Dismiss trivial nitpicks and outdated comments immediately without deep investigation.
 
 ## Coding Conventions
@@ -214,6 +213,7 @@ Every service page: Header › Hero (image + copy) › Feature grid (cards w/ Lu
 ## Worktrees
 
 Use git worktrees for multi-step implementation tasks. Convention:
+
 - Branch: `ipi/<task-id>-<short-name>`
 - Dir: `../wt-ipi-<task-id>-<short-name>` (sibling directory)
 - Validate before PR: `npm ci && npm run lint && npx tsc --noEmit && npm run test && npm run build`
@@ -221,6 +221,7 @@ Use git worktrees for multi-step implementation tasks. Convention:
 ## Skills & Tools
 
 Project skills live in `.claude/skills/`. Key consolidated hubs:
+
 - `ipix` — general iPix domain routing
 - `ipix-task-lifecycle` — 5-phase task workflow (plan → research → implement → test → ship)
 - `ipix-supabase` — Supabase schema, RLS, migrations, edge functions
@@ -238,7 +239,7 @@ Project skills live in `.claude/skills/`. Key consolidated hubs:
 - `writing-plans` — Plan generation for multi-step tasks
 - `feature-dev` — Multi-file feature development
 - `worktrees` — Git worktree setup and operation
-- `claude-md-improver` — CLAUDE.md audits + project glossary
+- `claude-md-improver` — CLAUDE.md audits \+ project glossary
 
 Full inventory: `index-skills.md`.
 
