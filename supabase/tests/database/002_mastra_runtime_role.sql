@@ -46,7 +46,14 @@ select case
   else 33
 end;
 
-select plan((select 1 + (select count(*) from mastra_tables) * 4 + 2 + 4));
+-- pgTAP plan() is plan(integer) only. count(*) is bigint and will not resolve
+-- (CI: "function plan(bigint) does not exist"). Same CASE-literal pattern as 004.
+select plan(
+  case (select n from mastra_expect)
+    when 34 then 143
+    else 139
+  end
+);
 
 select is(
   (select count(*) from mastra_tables),
