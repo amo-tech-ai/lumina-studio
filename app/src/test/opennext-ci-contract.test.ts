@@ -194,6 +194,10 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(secretsSync).toContain(
       "IPIX_CF_INCLUDE_MASTRA_PG_SCOPE: ${{ inputs.wrangler_env == 'preview' && '1' || '' }}",
     );
+    expect(secretsSync).toMatch(/TRUSTED_OAUTH_FORWARDED_HOSTS/);
+    expect(secretsSync).not.toMatch(
+      /URL="https:\/\/ipix-operator-preview\.sk-498\.workers\.dev\/api\/internal\/hyperdrive-postgresstore-smoke"/,
+    );
   });
 
   it("IPI-1014 CopilotKit wraps Workers+pg including /info (does not skip wrap on pathname)", () => {
