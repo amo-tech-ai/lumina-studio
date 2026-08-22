@@ -184,8 +184,10 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(previewBlock).toMatch(/"MASTRA_STORAGE_MODE": "pg"/);
     expect(previewBlock).toMatch(/"MASTRA_SCHEMA": "mastra"/);
     expect(productionBlock).toMatch(/"MASTRA_STORAGE_MODE": "noop"/);
+    expect(productionBlock).toMatch(/"MASTRA_SCHEMA": "mastra"/);
     expect(productionBlock).not.toMatch(/"MASTRA_STORAGE_MODE": "pg"/);
     expect(productionBlock).toMatch(/"ENABLE_HYPERDRIVE_PG_SMOKE": "false"/);
+    expect(pkg.scripts.preview).toMatch(/opennextjs-cloudflare preview/);
     expect(pkg.scripts.preview).toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1/);
     expect(pkg.scripts.deploy).not.toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1/);
     expect(secretsSync).toContain(
