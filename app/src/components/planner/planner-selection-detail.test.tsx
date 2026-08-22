@@ -353,6 +353,23 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.queryByTestId("planner-task-action-error-reload")).toBeNull();
     await user.click(screen.getByTestId("planner-task-action-error-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("header Close does not refresh the board without a recovery dismiss", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Fitting" })}
+        onClose={onClose}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("treats a post-commit refresh failure as a refresh problem, not a failed save", async () => {
@@ -381,6 +398,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
     expect(screen.getByTestId("planner-task-action-error-review")).toBeDefined();
     expect(updateTaskAction).toHaveBeenCalledTimes(1);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
   });
 
   it("points aria-describedby at the recovery alert for a server title validation failure", async () => {
@@ -439,6 +457,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.getByTestId("planner-task-action-error").textContent).toMatch(/permission/i);
     expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
     expect(screen.queryByTestId("planner-task-action-error-reload")).toBeNull();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("network failure offers Retry with the same idempotency key and keeps the draft", async () => {
@@ -700,7 +719,36 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     expect(typeof idempotencyKey).toBe("string");
     expect(expectedUpdatedAt).toBe("2026-03-01T12:00:00.000Z");
     await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
-    expect(refreshMock).toHaveBeenCalled();
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("committed shift still refreshes the board when selection refetch fails", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: true,
+      data: { replayed: false, changedTasks: [{ taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" }] },
+    });
+    const onRefreshSelection = vi.fn().mockRejectedValue(new Error("transport"));
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-shift-error").getAttribute("data-recovery-kind")).toBe(
+      "refresh",
+    );
+    expect(screen.queryByTestId("planner-task-shift-error-retry")).toBeNull();
+    expect(screen.getByTestId("planner-task-shift-error-review")).toBeDefined();
+    expect(shiftTaskAction).toHaveBeenCalledTimes(1);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
   });
 
   it("Cancel clears the proposal without calling the server", async () => {
@@ -897,6 +945,7 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
       expect(document.activeElement).toBe(screen.getByTestId("planner-task-shift-error")),
     );
     expect(document.activeElement).not.toBe(document.body);
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("failed shift NOT_FOUND offers Close instead of unusable refresh actions", async () => {
@@ -925,6 +974,7 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     expect(screen.queryByTestId("planner-task-shift-error-reload")).toBeNull();
     await user.click(screen.getByTestId("planner-task-shift-error-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(refreshMock).toHaveBeenCalledTimes(1);
   });
 
   it("failed shift network keeps the proposal and retries with the same key", async () => {
