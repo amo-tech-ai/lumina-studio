@@ -242,11 +242,6 @@ function proposeShift(task: PlannerTask, deltaDays: number): {
   };
 }
 
-function captureOpener(): HTMLElement | null {
-  const active = document.activeElement;
-  return active instanceof HTMLElement ? active : null;
-}
-
 /** IPI-906 — shared recovery chrome for save + shift. No second error taxonomy. */
 function PlannerRecoveryAlert({
   recovery,
@@ -311,7 +306,7 @@ function PlannerRecoveryAlert({
               type="button"
               disabled={pending}
               onClick={onReload}
-              data-testid={testId === "planner-task-action-error" ? "planner-task-reload" : `${testId}-reload`}
+              data-testid={`${testId}-reload`}
             >
               Reload latest
             </button>
@@ -396,12 +391,11 @@ function TaskScheduleShift({
     if (proposedDelta === null || proposedDelta === 0 || !canShift || isShifting || disabled) return;
     const expectedUpdatedAt = observedUpdatedAtRef.current ?? task.updatedAt ?? "";
     if (!expectedUpdatedAt) {
-      setShiftRecovery(
-        mapPlannerMutationError({
-          code: "INVALID_INPUT",
-          message: "This task is missing a version token. Reload and try again.",
-        }),
-      );
+      const baseRecovery = mapPlannerMutationError({
+        code: "INVALID_INPUT",
+        message: "This task is missing a version token. Reload and try again.",
+      });
+      setShiftRecovery({ ...baseRecovery, reloadLatest: true });
       return;
     }
     shiftKeyRef.current ??= crypto.randomUUID();
@@ -565,7 +559,6 @@ export function PlannerTaskDetail({
   const [actionRecovery, setActionRecovery] = useState<PlannerRecoveryState | null>(null);
   const [isPending, startTransition] = useTransition();
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
   // Mint once per submit attempt; reuse on retry of the same attempt. Cleared
   // on success or when the draft changes (new logical mutation).
   const idempotencyKeyRef = useRef<string | null>(null);
@@ -631,18 +624,26 @@ export function PlannerTaskDetail({
 
   function handleReloadLatest() {
     startTransition(async () => {
-      const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-      if (refreshed) applyRefreshedTask(refreshed, "accept-server");
-      // Pick up revalidated Timeline/Kanban/Calendar/List RSC props.
-      router.refresh();
+      try {
+        const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+        if (refreshed) applyRefreshedTask(refreshed, "accept-server");
+        // Pick up revalidated Timeline/Kanban/Calendar/List RSC props.
+        router.refresh();
+      } catch {
+        setActionRecovery(mapRefreshAfterCommitFailure());
+      }
     });
   }
 
   function handleReviewLatest() {
     startTransition(async () => {
-      const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-      if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
-      router.refresh();
+      try {
+        const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+        if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
+        router.refresh();
+      } catch {
+        setActionRecovery(mapRefreshAfterCommitFailure());
+      }
     });
   }
 
@@ -657,12 +658,11 @@ export function PlannerTaskDetail({
       return;
     }
     if (!expectedUpdatedAt) {
-      setActionRecovery(
-        mapPlannerMutationError({
-          code: "INVALID_INPUT",
-          message: "This task is missing a version token. Reload and try again.",
-        }),
-      );
+      const baseRecovery = mapPlannerMutationError({
+        code: "INVALID_INPUT",
+        message: "This task is missing a version token. Reload and try again.",
+      });
+      setActionRecovery({ ...baseRecovery, reloadLatest: true });
       return;
     }
 
@@ -687,7 +687,6 @@ export function PlannerTaskDetail({
     const idempotencyKey = idempotencyKeyRef.current;
     setFieldError(null);
     setActionRecovery(null);
-    openerRef.current = captureOpener();
 
     startTransition(async () => {
       try {
@@ -702,9 +701,6 @@ export function PlannerTaskDetail({
         if (!result.ok) {
           const recovery = mapMutationFailure(result);
           setActionRecovery(recovery);
-          if (!recovery.retrySafe && !recovery.reloadLatest && !recovery.dismissSelection) {
-            restorePlannerFocus(openerRef.current);
-          }
           return;
         }
 
@@ -915,14 +911,22 @@ export function PlannerTaskDetail({
           if (onRefreshSelection) await onRefreshSelection();
         }}
         onReviewLatest={async () => {
-          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-          if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
-          router.refresh();
+          try {
+            const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+            if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
+            router.refresh();
+          } catch {
+            setActionRecovery(mapRefreshAfterCommitFailure());
+          }
         }}
         onReloadLatest={async () => {
-          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-          if (refreshed) applyRefreshedTask(refreshed, "accept-server");
-          router.refresh();
+          try {
+            const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+            if (refreshed) applyRefreshedTask(refreshed, "accept-server");
+            router.refresh();
+          } catch {
+            setActionRecovery(mapRefreshAfterCommitFailure());
+          }
         }}
       />
     </div>

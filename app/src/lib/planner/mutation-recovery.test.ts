@@ -109,6 +109,18 @@ describe("mapPlannerMutationError", () => {
     expect(recovery.retrySafe).toBe(false);
     expect(recovery.reviewLatest).toBe(true);
   });
+
+  it("maps INSTANCE_TERMINAL to terminal with no retry, review, reload, or dismiss", () => {
+    const recovery = mapPlannerMutationError({
+      code: "INSTANCE_TERMINAL",
+      message: "This plan instance has been finalized and can no longer be edited.",
+    });
+    expect(recovery.kind).toBe("terminal");
+    expect(recovery.retrySafe).toBe(false);
+    expect(recovery.reviewLatest).toBe(false);
+    expect(recovery.reloadLatest).toBe(false);
+    expect(recovery.dismissSelection).toBe(false);
+  });
 });
 
 describe("restorePlannerFocus", () => {

@@ -319,7 +319,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
       "not_found",
     );
     expect(screen.queryByTestId("planner-task-action-error-review")).toBeNull();
-    expect(screen.queryByTestId("planner-task-reload")).toBeNull();
+    expect(screen.queryByTestId("planner-task-action-error-reload")).toBeNull();
     await user.click(screen.getByTestId("planner-task-action-error-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -390,7 +390,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     );
     expect(screen.getByTestId("planner-task-action-error").textContent).toMatch(/permission/i);
     expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
-    expect(screen.queryByTestId("planner-task-reload")).toBeNull();
+    expect(screen.queryByTestId("planner-task-action-error-reload")).toBeNull();
   });
 
   it("network failure offers Retry with the same idempotency key and keeps the draft", async () => {
@@ -416,7 +416,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
       "network",
     );
-    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toMatch(/Fitting notes/);
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("Fitting notes — hold");
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByTestId("planner-task-action-error-retry")),
     );
@@ -462,9 +462,9 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
 
     await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
     expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("My unsaved edit");
-    expect(screen.getByTestId("planner-task-reload")).toBeDefined();
+    expect(screen.getByTestId("planner-task-action-error-reload")).toBeDefined();
 
-    await user.click(screen.getByTestId("planner-task-reload"));
+    await user.click(screen.getByTestId("planner-task-action-error-reload"));
     await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
     await waitFor(() =>
       expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("Server title"),
