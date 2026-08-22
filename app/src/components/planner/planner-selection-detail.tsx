@@ -560,8 +560,10 @@ export function PlannerTaskDetail({
 }: PlannerTaskDetailProps) {
   const router = useRouter();
   function handleDismissSelection() {
-    router.refresh();
+    // Next 16.2 action queue: ACTION_NAVIGATE (deselect → router.push) discards
+    // a pending ACTION_REFRESH. Close first, then refresh the resulting route.
     onClose();
+    router.refresh();
   }
   const formId = useId();
   const [draft, setDraft] = useState(() => draftFromTask(task));

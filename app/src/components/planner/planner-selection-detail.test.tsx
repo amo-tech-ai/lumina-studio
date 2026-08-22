@@ -354,6 +354,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     await user.click(screen.getByTestId("planner-task-action-error-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(onClose.mock.invocationCallOrder[0]).toBeLessThan(refreshMock.mock.invocationCallOrder[0]);
   });
 
   it("header Close does not refresh the board without a recovery dismiss", async () => {
@@ -975,6 +976,7 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     await user.click(screen.getByTestId("planner-task-shift-error-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(onClose.mock.invocationCallOrder[0]).toBeLessThan(refreshMock.mock.invocationCallOrder[0]);
   });
 
   it("failed shift network keeps the proposal and retries with the same key", async () => {
