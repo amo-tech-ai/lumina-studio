@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition,
@@ -31,6 +32,14 @@ import {
   parsePlanDate,
   planDateToISO,
 } from "@/lib/planner/planner-date-utils";
+import {
+  mapMutationFailure,
+  mapPlannerMutationError,
+  mapRefreshAfterCommitFailure,
+  mapThrownPlannerFailure,
+  restorePlannerFocus,
+  type PlannerRecoveryState,
+} from "@/lib/planner/mutation-recovery";
 import {
   rangeForPhase,
   resolveGateVisualState,
@@ -233,19 +242,105 @@ function proposeShift(task: PlannerTask, deltaDays: number): {
   };
 }
 
+/** IPI-906 — shared recovery chrome for save + shift. No second error taxonomy. */
+function PlannerRecoveryAlert({
+  recovery,
+  pending,
+  onReload,
+  onReview,
+  onRetry,
+  onDismiss,
+  testId,
+  id,
+}: {
+  recovery: PlannerRecoveryState;
+  pending: boolean;
+  onReload?: () => void;
+  onReview?: () => void;
+  onRetry?: () => void;
+  onDismiss?: () => void;
+  testId: string;
+  id?: string;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const showRetry = Boolean(onRetry) && recovery.retrySafe;
+  const showReload = Boolean(onReload) && recovery.reloadLatest;
+  const showReview = Boolean(onReview) && recovery.reviewLatest;
+  const showDismiss = Boolean(onDismiss) && recovery.dismissSelection;
+  const hasActions = showReload || showReview || showRetry || showDismiss;
+
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const first = rootRef.current?.querySelector("button");
+      restorePlannerFocus(first instanceof HTMLElement ? first : rootRef.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [recovery.kind, recovery.code]);
+
+  return (
+    <div
+      ref={rootRef}
+      id={id}
+      role="alert"
+      tabIndex={-1}
+      style={{ ...errorStyle, marginTop: "0.5rem", outline: "none" }}
+      data-testid={testId}
+      data-recovery-kind={recovery.kind}
+    >
+      <p style={{ margin: 0, fontWeight: 600 }}>{recovery.title}</p>
+      <p style={{ margin: "0.25rem 0 0" }}>{recovery.message}</p>
+      {hasActions ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
+          {showRetry ? (
+            <button type="button" disabled={pending} onClick={onRetry} data-testid={`${testId}-retry`}>
+              Retry
+            </button>
+          ) : null}
+          {showReview ? (
+            <button type="button" disabled={pending} onClick={onReview} data-testid={`${testId}-review`}>
+              Review latest
+            </button>
+          ) : null}
+          {showReload ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onReload}
+              data-testid={`${testId}-reload`}
+            >
+              Reload latest
+            </button>
+          ) : null}
+          {showDismiss ? (
+            <button type="button" disabled={pending} onClick={onDismiss} data-testid={`${testId}-close`}>
+              Close
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TaskScheduleShift({
   task,
   disabled,
   onShifted,
+  onReviewLatest,
+  onReloadLatest,
+  onDismissSelection,
 }: {
   task: PlannerTask;
   disabled: boolean;
   onShifted: () => Promise<void>;
+  onReviewLatest: () => Promise<void>;
+  onReloadLatest: () => Promise<void>;
+  onDismissSelection: () => void;
 }) {
   const router = useRouter();
   const [proposedDelta, setProposedDelta] = useState<number | null>(null);
   const [pickerDate, setPickerDate] = useState(task.startDate ?? "");
-  const [shiftError, setShiftError] = useState<{ code: string; message: string } | null>(null);
+  const [shiftRecovery, setShiftRecovery] = useState<PlannerRecoveryState | null>(null);
   const [isShifting, startShift] = useTransition();
   const shiftKeyRef = useRef<string | null>(null);
   // CAS token from the task version shown in the proposal preview.
@@ -267,7 +362,7 @@ function TaskScheduleShift({
   function proposeDelta(delta: number) {
     shiftKeyRef.current = null;
     observedUpdatedAtRef.current = task.updatedAt ?? null;
-    setShiftError(null);
+    setShiftRecovery(null);
     setProposedDelta(delta);
   }
 
@@ -275,7 +370,7 @@ function TaskScheduleShift({
     setPickerDate(iso);
     shiftKeyRef.current = null;
     observedUpdatedAtRef.current = task.updatedAt ?? null;
-    setShiftError(null);
+    setShiftRecovery(null);
     const next = parsePlanDate(iso);
     if (!start || !next) {
       setProposedDelta(null);
@@ -286,7 +381,7 @@ function TaskScheduleShift({
 
   function cancelProposal() {
     setProposedDelta(null);
-    setShiftError(null);
+    setShiftRecovery(null);
     shiftKeyRef.current = null;
     observedUpdatedAtRef.current = null;
     setPickerDate(task.startDate ?? "");
@@ -296,33 +391,50 @@ function TaskScheduleShift({
     if (proposedDelta === null || proposedDelta === 0 || !canShift || isShifting || disabled) return;
     const expectedUpdatedAt = observedUpdatedAtRef.current ?? task.updatedAt ?? "";
     if (!expectedUpdatedAt) {
-      setShiftError({
+      const baseRecovery = mapPlannerMutationError({
         code: "INVALID_INPUT",
         message: "This task is missing a version token. Reload and try again.",
       });
+      setShiftRecovery({ ...baseRecovery, reloadLatest: true });
       return;
     }
     shiftKeyRef.current ??= crypto.randomUUID();
     const idempotencyKey = shiftKeyRef.current;
-    setShiftError(null);
+    setShiftRecovery(null);
 
     startShift(async () => {
-      const result = await shiftTaskAction(
-        task.instanceId,
-        task.id,
-        proposedDelta,
-        idempotencyKey,
-        expectedUpdatedAt,
-      );
-      if (!result.ok) {
-        setShiftError({ code: result.error.code, message: result.error.message });
-        return;
+      try {
+        const result = await shiftTaskAction(
+          task.instanceId,
+          task.id,
+          proposedDelta,
+          idempotencyKey,
+          expectedUpdatedAt,
+        );
+        if (!result.ok) {
+          const recovery = mapMutationFailure(result);
+          // Keep the uncommitted proposal whenever Retry is offered.
+          if (!recovery.retrySafe) {
+            setProposedDelta(null);
+            shiftKeyRef.current = null;
+            observedUpdatedAtRef.current = null;
+            setPickerDate(task.startDate ?? "");
+          }
+          setShiftRecovery(recovery);
+          return;
+        }
+        shiftKeyRef.current = null;
+        observedUpdatedAtRef.current = null;
+        setProposedDelta(null);
+        try {
+          await onShifted();
+          router.refresh();
+        } catch {
+          setShiftRecovery(mapRefreshAfterCommitFailure());
+        }
+      } catch {
+        setShiftRecovery(mapThrownPlannerFailure());
       }
-      shiftKeyRef.current = null;
-      observedUpdatedAtRef.current = null;
-      setProposedDelta(null);
-      await onShifted();
-      router.refresh();
     });
   }
 
@@ -362,6 +474,7 @@ function TaskScheduleShift({
             value={pickerDate}
             disabled={disabled || isShifting}
             onChange={(e) => proposeFromPicker(e.target.value)}
+            aria-invalid={shiftRecovery?.field === "startDate" || shiftRecovery?.field === "endDate"}
             data-testid="planner-task-shift-date"
           />
         </label>
@@ -401,10 +514,36 @@ function TaskScheduleShift({
         </div>
       ) : null}
 
-      {shiftError ? (
-        <div role="alert" style={{ ...errorStyle, marginTop: "0.5rem" }} data-testid="planner-task-shift-error">
-          <p style={{ margin: 0 }}>{shiftError.message}</p>
-        </div>
+      {shiftRecovery ? (
+        <PlannerRecoveryAlert
+          recovery={shiftRecovery}
+          pending={isShifting}
+          testId="planner-task-shift-error"
+          onRetry={shiftRecovery.retrySafe ? confirmShift : undefined}
+          onDismiss={shiftRecovery.dismissSelection ? onDismissSelection : undefined}
+          onReview={
+            shiftRecovery.reviewLatest
+              ? () => {
+                  void Promise.resolve(onReviewLatest())
+                    .then(() => setShiftRecovery(null))
+                    .catch(() => {
+                      // Keep the rejected-move recovery. Do not claim a save completed.
+                    });
+                }
+              : undefined
+          }
+          onReload={
+            shiftRecovery.reloadLatest
+              ? () => {
+                  void Promise.resolve(onReloadLatest())
+                    .then(() => setShiftRecovery(null))
+                    .catch(() => {
+                      // Keep the rejected-move recovery. Do not claim a save completed.
+                    });
+                }
+              : undefined
+          }
+        />
       ) : null}
     </div>
   );
@@ -423,8 +562,9 @@ export function PlannerTaskDetail({
   const [draft, setDraft] = useState(() => draftFromTask(task));
   const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(task.updatedAt ?? "");
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<{ code: string; message: string } | null>(null);
+  const [actionRecovery, setActionRecovery] = useState<PlannerRecoveryState | null>(null);
   const [isPending, startTransition] = useTransition();
+  const titleInputRef = useRef<HTMLInputElement>(null);
   // Mint once per submit attempt; reuse on retry of the same attempt. Cleared
   // on success or when the draft changes (new logical mutation).
   const idempotencyKeyRef = useRef<string | null>(null);
@@ -462,7 +602,7 @@ export function PlannerTaskDetail({
       baselineDraftRef.current = next;
       setDraft(next);
       setFieldError(null);
-      setActionError(null);
+      setActionRecovery(null);
       idempotencyKeyRef.current = null;
     }
     // Dirty + same task: keep unsaved field edits; only CAS token / dates advance.
@@ -472,42 +612,63 @@ export function PlannerTaskDetail({
     idempotencyKeyRef.current = null;
     setDraft((prev) => ({ ...prev, [key]: value }));
     setFieldError(null);
-    if (actionError?.code !== "STALE_VERSION") setActionError(null);
+    if (actionRecovery?.kind !== "stale") setActionRecovery(null);
+  }
+
+  function applyRefreshedTask(refreshed: TaskSelectionRefresh, mode: "keep-draft" | "accept-server") {
+    taskIdRef.current = refreshed.task.id;
+    taskUpdatedAtRef.current = refreshed.task.updatedAt;
+    setExpectedUpdatedAt(refreshed.task.updatedAt ?? "");
+    baselineDraftRef.current = draftFromTask(refreshed.task);
+    if (mode === "accept-server") {
+      setDraft(draftFromTask(refreshed.task));
+    }
+    setActionRecovery(null);
+    setFieldError(null);
+    idempotencyKeyRef.current = null;
   }
 
   function handleReloadLatest() {
     startTransition(async () => {
-      const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-      if (refreshed) {
-        const next = draftFromTask(refreshed.task);
-        taskIdRef.current = refreshed.task.id;
-        taskUpdatedAtRef.current = refreshed.task.updatedAt;
-        baselineDraftRef.current = next;
-        setDraft(next);
-        setExpectedUpdatedAt(refreshed.task.updatedAt ?? "");
-        setActionError(null);
-        setFieldError(null);
-        idempotencyKeyRef.current = null;
+      try {
+        const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+        // Pick up revalidated Timeline/Kanban/Calendar/List RSC props.
+        router.refresh();
+        if (refreshed) applyRefreshedTask(refreshed, "accept-server");
+      } catch {
+        // Review/Reload also run after rejected writes — keep that recovery.
       }
-      // Pick up revalidated Timeline/Kanban/List/Now&Next RSC props.
-      router.refresh();
     });
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function handleReviewLatest() {
+    startTransition(async () => {
+      try {
+        const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+        router.refresh();
+        if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
+      } catch {
+        // Review/Reload also run after rejected writes — keep that recovery.
+      }
+    });
+  }
+
+  function handleSubmit(event?: FormEvent) {
+    event?.preventDefault();
     if (!canUpdateTasks || isPending) return;
 
     const title = draft.title.trim();
     if (!title) {
       setFieldError("Title is required.");
+      restorePlannerFocus(titleInputRef.current);
       return;
     }
     if (!expectedUpdatedAt) {
-      setActionError({
+      const baseRecovery = mapPlannerMutationError({
         code: "INVALID_INPUT",
         message: "This task is missing a version token. Reload and try again.",
       });
+      setActionRecovery({ ...baseRecovery, reloadLatest: true });
       return;
     }
 
@@ -531,7 +692,7 @@ export function PlannerTaskDetail({
     idempotencyKeyRef.current ??= crypto.randomUUID();
     const idempotencyKey = idempotencyKeyRef.current;
     setFieldError(null);
-    setActionError(null);
+    setActionRecovery(null);
 
     startTransition(async () => {
       try {
@@ -544,7 +705,8 @@ export function PlannerTaskDetail({
         );
 
         if (!result.ok) {
-          setActionError({ code: result.error.code, message: result.error.message });
+          const recovery = mapMutationFailure(result);
+          setActionRecovery(recovery);
           return;
         }
 
@@ -557,15 +719,16 @@ export function PlannerTaskDetail({
           description: patch.description ?? "",
         };
         setExpectedUpdatedAt(result.data.updatedAt);
-        if (onRefreshSelection) await onRefreshSelection();
-        // revalidatePath alone does not update mounted client views — refresh RSC props.
-        router.refresh();
+        try {
+          if (onRefreshSelection) await onRefreshSelection();
+          // revalidatePath alone does not update mounted client views — refresh RSC props.
+          router.refresh();
+        } catch {
+          setActionRecovery(mapRefreshAfterCommitFailure());
+        }
       } catch {
         // Transport / server-action rejection — keep idempotency key for retry.
-        setActionError({
-          code: "UNKNOWN_ERROR",
-          message: "The request could not be completed.",
-        });
+        setActionRecovery(mapThrownPlannerFailure());
       }
     });
   }
@@ -587,7 +750,6 @@ export function PlannerTaskDetail({
   const statusId = `${formId}-status`;
   const assigneeId = `${formId}-assignee`;
   const errorId = `${formId}-error`;
-  const isStale = actionError?.code === "STALE_VERSION";
   const roleOnlyAssignment = Boolean(task.assigneeRole && !task.assigneeUserId);
   const assigneeMissingFromOptions =
     Boolean(draft.assigneeUserId) &&
@@ -602,14 +764,17 @@ export function PlannerTaskDetail({
             Title
           </label>
           <input
+            ref={titleInputRef}
             id={titleId}
             name="title"
             value={draft.title}
             onChange={(e) => updateDraft("title", e.target.value)}
             disabled={isPending}
             required
-            aria-invalid={Boolean(fieldError)}
-            aria-describedby={fieldError ? errorId : undefined}
+            aria-invalid={Boolean(fieldError) || actionRecovery?.field === "title"}
+            aria-describedby={
+              fieldError || actionRecovery?.field === "title" ? errorId : undefined
+            }
             style={inputStyle}
             data-testid="planner-task-title"
           />
@@ -715,21 +880,17 @@ export function PlannerTaskDetail({
           </p>
         ) : null}
 
-        {actionError ? (
-          <div role="alert" style={{ ...errorStyle, marginTop: "0.5rem" }} data-testid="planner-task-action-error">
-            <p style={{ margin: 0 }}>{actionError.message}</p>
-            {isStale ? (
-              <button
-                type="button"
-                onClick={handleReloadLatest}
-                disabled={isPending}
-                style={{ marginTop: "0.5rem" }}
-                data-testid="planner-task-reload"
-              >
-                Reload latest
-              </button>
-            ) : null}
-          </div>
+        {actionRecovery ? (
+          <PlannerRecoveryAlert
+            recovery={actionRecovery}
+            pending={isPending}
+            testId="planner-task-action-error"
+            id={fieldError ? undefined : errorId}
+            onRetry={actionRecovery.retrySafe ? () => handleSubmit() : undefined}
+            onDismiss={actionRecovery.dismissSelection ? onClose : undefined}
+            onReview={actionRecovery.reviewLatest ? handleReviewLatest : undefined}
+            onReload={actionRecovery.reloadLatest ? handleReloadLatest : undefined}
+          />
         ) : null}
 
         <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
@@ -749,8 +910,19 @@ export function PlannerTaskDetail({
       <TaskScheduleShift
         task={task}
         disabled={isPending}
+        onDismissSelection={onClose}
         onShifted={async () => {
           if (onRefreshSelection) await onRefreshSelection();
+        }}
+        onReviewLatest={async () => {
+          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+          router.refresh();
+          if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
+        }}
+        onReloadLatest={async () => {
+          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+          router.refresh();
+          if (refreshed) applyRefreshedTask(refreshed, "accept-server");
         }}
       />
     </div>
