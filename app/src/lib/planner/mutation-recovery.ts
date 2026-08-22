@@ -47,6 +47,8 @@ const TITLES: Record<PlannerRecoveryKind, string> = {
   refresh: "The change saved, but this view is out of date.",
 };
 
+const VALIDATION_GENERIC_TITLE = "This value wasn't accepted.";
+
 function kindForCode(code: string, transport: boolean): PlannerRecoveryKind {
   if (transport) return "network";
   switch (code) {
@@ -84,10 +86,11 @@ export function mapPlannerMutationError(
   const kind = kindForCode(error.code, opts?.transport === true);
   const reviewLatest =
     kind === "stale" || kind === "dependency" || kind === "idempotency";
+  const field = kind === "validation" ? inferField(error.message) : undefined;
   return {
     kind,
     code: error.code,
-    title: TITLES[kind],
+    title: kind === "validation" && !field ? VALIDATION_GENERIC_TITLE : TITLES[kind],
     message: error.message,
     // UNKNOWN_ERROR from an uncommitted RPC is the same class as transport:
     // Retry must keep the in-flight proposal / idempotency key.
@@ -95,7 +98,7 @@ export function mapPlannerMutationError(
     reviewLatest,
     reloadLatest: reviewLatest,
     dismissSelection: kind === "not_found",
-    field: kind === "validation" ? inferField(error.message) : undefined,
+    field,
   };
 }
 

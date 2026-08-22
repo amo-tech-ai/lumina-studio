@@ -52,12 +52,21 @@ describe("mapPlannerMutationError", () => {
     expect(recovery.kind).toBe("validation");
     expect(recovery.retrySafe).toBe(false);
     expect(recovery.field).toBeUndefined();
+    expect(recovery.title).toBe("This value wasn't accepted.");
 
     const dated = mapPlannerMutationError({
       code: "INVALID_INPUT",
       message: "Start date is required.",
     });
     expect(dated.field).toBe("startDate");
+    expect(dated.title).toBe("Check the highlighted field.");
+
+    const titled = mapPlannerMutationError({
+      code: "INVALID_INPUT",
+      message: "Title is too long.",
+    });
+    expect(titled.field).toBe("title");
+    expect(titled.title).toBe("Check the highlighted field.");
   });
 
   it("maps transport throws to network retry, without a new error code", () => {

@@ -524,16 +524,22 @@ function TaskScheduleShift({
           onReview={
             shiftRecovery.reviewLatest
               ? () => {
-                  setShiftRecovery(null);
-                  void onReviewLatest();
+                  void Promise.resolve(onReviewLatest())
+                    .then(() => setShiftRecovery(null))
+                    .catch(() => {
+                      // Keep the rejected-move recovery. Do not claim a save completed.
+                    });
                 }
               : undefined
           }
           onReload={
             shiftRecovery.reloadLatest
               ? () => {
-                  setShiftRecovery(null);
-                  void onReloadLatest();
+                  void Promise.resolve(onReloadLatest())
+                    .then(() => setShiftRecovery(null))
+                    .catch(() => {
+                      // Keep the rejected-move recovery. Do not claim a save completed.
+                    });
                 }
               : undefined
           }
@@ -626,11 +632,11 @@ export function PlannerTaskDetail({
     startTransition(async () => {
       try {
         const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-        if (refreshed) applyRefreshedTask(refreshed, "accept-server");
         // Pick up revalidated Timeline/Kanban/Calendar/List RSC props.
         router.refresh();
+        if (refreshed) applyRefreshedTask(refreshed, "accept-server");
       } catch {
-        setActionRecovery(mapRefreshAfterCommitFailure());
+        // Review/Reload also run after rejected writes — keep that recovery.
       }
     });
   }
@@ -639,10 +645,10 @@ export function PlannerTaskDetail({
     startTransition(async () => {
       try {
         const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-        if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
         router.refresh();
+        if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
       } catch {
-        setActionRecovery(mapRefreshAfterCommitFailure());
+        // Review/Reload also run after rejected writes — keep that recovery.
       }
     });
   }
@@ -767,9 +773,7 @@ export function PlannerTaskDetail({
             required
             aria-invalid={Boolean(fieldError) || actionRecovery?.field === "title"}
             aria-describedby={
-              fieldError || actionRecovery?.field === "title" || actionRecovery
-                ? errorId
-                : undefined
+              fieldError || actionRecovery?.field === "title" ? errorId : undefined
             }
             style={inputStyle}
             data-testid="planner-task-title"
@@ -911,22 +915,14 @@ export function PlannerTaskDetail({
           if (onRefreshSelection) await onRefreshSelection();
         }}
         onReviewLatest={async () => {
-          try {
-            const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-            if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
-            router.refresh();
-          } catch {
-            setActionRecovery(mapRefreshAfterCommitFailure());
-          }
+          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+          router.refresh();
+          if (refreshed) applyRefreshedTask(refreshed, "keep-draft");
         }}
         onReloadLatest={async () => {
-          try {
-            const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
-            if (refreshed) applyRefreshedTask(refreshed, "accept-server");
-            router.refresh();
-          } catch {
-            setActionRecovery(mapRefreshAfterCommitFailure());
-          }
+          const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
+          router.refresh();
+          if (refreshed) applyRefreshedTask(refreshed, "accept-server");
         }}
       />
     </div>

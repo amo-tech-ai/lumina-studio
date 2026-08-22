@@ -297,6 +297,37 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("My unsaved edit");
   });
 
+  it("keeps STALE_VERSION recovery when Review latest refresh fails after a rejected save", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockResolvedValue({
+      ok: false,
+      error: {
+        code: "STALE_VERSION",
+        message: "This task changed since you last viewed it. Refresh and try again.",
+      },
+    });
+    const onRefreshSelection = vi.fn().mockRejectedValue(new Error("transport"));
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", title: "Fitting notes" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error-review")).toBeDefined());
+    await user.click(screen.getByTestId("planner-task-action-error-review"));
+    await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "stale",
+    );
+    expect(screen.getByTestId("planner-task-action-error").textContent).not.toMatch(/already completed/i);
+    expect(screen.queryByTestId("planner-task-action-error-retry")).toBeNull();
+  });
+
   it("NOT_FOUND closes the stale Fitting panel instead of advertising refresh", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -370,6 +401,23 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(describedBy).toBeTruthy();
     expect(screen.getByTestId("planner-task-action-error").id).toBe(describedBy);
     expect(screen.queryByTestId("planner-task-field-error")).toBeNull();
+  });
+
+  it("does not describe the title input with a non-title recovery alert", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockRejectedValue(new Error("network down"));
+
+    render(
+      <PlannerTaskDetail task={task({ status: "todo" })} onClose={() => {}} canUpdateTasks />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").getAttribute("data-recovery-kind")).toBe(
+      "network",
+    );
+    expect(screen.getByTestId("planner-task-title").getAttribute("aria-describedby")).toBeNull();
+    expect(screen.getByTestId("planner-task-title").getAttribute("aria-invalid")).toBe("false");
   });
 
   it("FORBIDDEN explains permission and does not offer Retry", async () => {
@@ -747,6 +795,43 @@ describe("PlannerTaskDetail — IPI-582 shiftTask keyboard schedule", () => {
     expect((screen.getByTestId("planner-task-description") as HTMLTextAreaElement).value).toBe(
       "Need extra rack time",
     );
+  });
+
+  it("keeps shift STALE_VERSION recovery when Review latest refresh fails", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: false,
+      error: {
+        code: "STALE_VERSION",
+        message: "This task changed since you last viewed it. Refresh and try again.",
+      },
+    });
+    const onRefreshSelection = vi.fn().mockRejectedValue(new Error("transport"));
+
+    render(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          title: "Fitting",
+          startDate: "2026-03-04",
+          endDate: "2026-03-06",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-move-later"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-shift-error-review")).toBeDefined());
+    await user.click(screen.getByTestId("planner-task-shift-error-review"));
+    await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
+    expect(screen.getByTestId("planner-task-shift-error").getAttribute("data-recovery-kind")).toBe(
+      "stale",
+    );
+    expect(screen.queryByTestId("planner-task-action-error")).toBeNull();
+    expect(screen.getByTestId("planner-task-shift-error").textContent).not.toMatch(/already completed/i);
   });
 
   it("failed shift UNKNOWN_ERROR keeps the proposal so Retry can confirm again", async () => {
