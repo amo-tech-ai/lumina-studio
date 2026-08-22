@@ -14,7 +14,7 @@
 -- pg.Client against HYPERDRIVE_DATABASE_URL. Keep both.
 --
 -- Plan math (keep in sync when table count changes):
---   1 count + 34×4 (RLS/policy trio) + 2 schema USAGE + 4 CRUD = 143
+--   1 count + 34×4 (per-table RLS/policy checks) + 2 schema USAGE + 4 CRUD = 143
 
 set search_path to public, extensions;
 
@@ -47,8 +47,8 @@ select ok(
 from mastra_tables t
 order by t.tablename;
 
--- Exactly one policy per table (34), named hyperdrive_mastra_runtime_all (34),
--- scoped only to that role (34) — 102 assertions total for this trio.
+-- One policy per table, named hyperdrive_mastra_runtime_all, scoped only to
+-- that role. plan(143) above is the assertion count — do not keep a second tally.
 select is(
     (select count(*) from pg_policies where schemaname = 'mastra' and tablename = t.tablename),
     1::bigint,
