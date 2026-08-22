@@ -17,7 +17,7 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
-### 2026-08-22 — Catch-up: Planner recovery, Mastra Postgres cutover, Copilot persistence, Cloudflare AI routing
+### 2026-08-22 — Catch-up: Planner recovery, Mastra Postgres cutover, Copilot preview persistence, Cloudflare AI routing
 
 **50 commits across `1db29d855..697467b7d`.** Written 2026-08-22 to clear `changelog-staleness`
 (main was 50 commits past its last `changelog.md` touch, budget 12). Docs-only. Grouped by
@@ -34,12 +34,12 @@ PRs at write time.
 - **Stop Mastra writing to `public.*` when `MASTRA_SCHEMA` is missing** (`f3e226a3e`, [#949](https://github.com/amo-tech-ai/lumina-studio/pull/949)) — **IPI-1011 · MASTRA-PG-015**. Follow-ups: rollback runbook (`fe1db65ab`, [#951](https://github.com/amo-tech-ai/lumina-studio/pull/951)); fail local chat before start if the schema is missing (`63e737c1e`, [#952](https://github.com/amo-tech-ai/lumina-studio/pull/952)).
 - **Drop the 33 old `public.mastra_*` shadow tables** (`b6213626a`, [#954](https://github.com/amo-tech-ai/lumina-studio/pull/954)) — **IPI-801 · MASTRA-PG-011**, after soak + backup gates. Types and pgTAP then realigned (`5257ecc42`, [#970](https://github.com/amo-tech-ai/lumina-studio/pull/970), **IPI-1021 · SB-MIG-001**).
 - **Keep Shoot Wizard and Brand Intelligence workflows on Cloudflare Postgres** (`2d9530623`, [#955](https://github.com/amo-tech-ai/lumina-studio/pull/955)) — **IPI-1015 · CF-DB-015**. Preview canaries include real Mastra PG scope and wrap CopilotKit `/info` (`782f440da`, [#956](https://github.com/amo-tech-ai/lumina-studio/pull/956), **IPI-1014 · CF-DB-014**).
-- **Pin Mastra 1.59 family** (`c8df5af9b`, [#948](https://github.com/amo-tech-ai/lumina-studio/pull/948)) — **IPI-1006 · MASTRA-UPG-001**. Local `mastra dev` then unblocked: package versions (`6ee002fee`, [#959](https://github.com/amo-tech-ai/lumina-studio/pull/959), **IPI-1017**); bundler uncoupled from `next/server` (`474f42750`, [#960](https://github.com/amo-tech-ai/lumina-studio/pull/960), **IPI-1018**).
+- **Pin Mastra 1.59 family and keep the Cloudflare Worker under the bundle gate** (`c8df5af9b`, [#948](https://github.com/amo-tech-ai/lumina-studio/pull/948)) — **IPI-1006 · MASTRA-UPG-001** (one compatible package family); **IPI-1007 · MASTRA-UPG-002** (runtime API types plus OpenNext/esbuild exclusion of native `@ast-grep` so linux `.node` addons are not packed); **IPI-1016 · CF-BUNDLE-224** (stub unused Mastra desktop workspace/execa that Agent 1.59 statically imports, preserving the 9 MiB gzip gate). Local `mastra dev` then unblocked: package versions (`6ee002fee`, [#959](https://github.com/amo-tech-ai/lumina-studio/pull/959), **IPI-1017**); bundler uncoupled from `next/server` (`474f42750`, [#960](https://github.com/amo-tech-ai/lumina-studio/pull/960), **IPI-1018**).
 - **Add `mastra.mastra_workflow_definitions`** (`8e11ad4eb`, [#975](https://github.com/amo-tech-ai/lumina-studio/pull/975)) — **IPI-1008 · MASTRA-UPG-003**. Remote already had `20260822070000`; this PR is the canonical file so unrelated PRs stop failing `supabase-linked-gates`. pgTAP `002` is dual-mode (33 tables on QA until the table exists, 34 on production) and `plan()` is integer (CLI 2.109.1 / pgTAP does not accept `bigint`). **IPI-1023 · SB-TEST-004** (`c83194247`, [#971](https://github.com/amo-tech-ai/lumina-studio/pull/971)) documents that `supabase test db` does not forward `PGOPTIONS`.
 
-**💬 CopilotKit — conversations persist; streams do not die idle; 1.61.2**
+**💬 CopilotKit — preview conversation storage; streams do not die idle; 1.61.2**
 
-- **Preserve iPix AI conversations across refresh / restart / isolate** (`a19cec2e2`, [#969](https://github.com/amo-tech-ai/lumina-studio/pull/969)) — **IPI-1020 · COPILOT-PERSIST-001**.
+- **Enable Mastra Postgres storage on Cloudflare preview only** (`a19cec2e2`, [#969](https://github.com/amo-tech-ai/lumina-studio/pull/969)) — **IPI-1020 · COPILOT-PERSIST-001**. Preview `wrangler` vars set `MASTRA_STORAGE_MODE=pg`; production (and default Worker vars) stay `noop` / in-memory. Full preview refresh / restart / isolate restore proof is still being completed under follow-up **IPI-1020 · COPILOT-PERSIST-002** ([#973](https://github.com/amo-tech-ai/lumina-studio/pull/973), open — not shipped).
 - **Fix stale stream timeout and preview verifier accuracy** (`2b0519b77`, [#968](https://github.com/amo-tech-ai/lumina-studio/pull/968)) — **IPI-1022 · COPILOT-STREAM-001**.
 - **Upgrade CopilotKit 1.61.0 → 1.61.2** (`49d67b2f0`, [#939](https://github.com/amo-tech-ai/lumina-studio/pull/939)).
 - **Centralize generative UI registration** (`cf6673603`, [#930](https://github.com/amo-tech-ai/lumina-studio/pull/930)) — **IPI-128 · AIOR-012**.
@@ -52,8 +52,8 @@ PRs at write time.
 
 **👤 Talent, matching, Cloudinary**
 
-- **SCR-24 talent onboarding wizard** (`d73f3a86b`, [#957](https://github.com/amo-tech-ai/lumina-studio/pull/957)) — **IPI-585**. Step styles / completion state (`36e085251`, [#947](https://github.com/amo-tech-ai/lumina-studio/pull/947), **IPI-1012 · UI-TYPE-001**).
-- **Talent profile (portfolio, rates, availability)** (`0587d3182`, [#927](https://github.com/amo-tech-ai/lumina-studio/pull/927)) — **IPI-409 · SCR-20**.
+- **SCR-24 talent onboarding wizard** (`d73f3a86b`, [#957](https://github.com/amo-tech-ai/lumina-studio/pull/957)) — **IPI-585**. Wizard UI shipped; `/api/talent/analyze` currently returns the same mocked niche / followers / location / rate / bio (confidence `0`). Live Gemini/Mastra analysis is not wired. Step styles / completion state (`36e085251`, [#947](https://github.com/amo-tech-ai/lumina-studio/pull/947), **IPI-1012 · UI-TYPE-001**).
+- **Talent profile shell / point lookup** (`0587d3182`, [#927](https://github.com/amo-tech-ai/lumina-studio/pull/927)) — **IPI-409 · SCR-20**. Matching can open a profile by id; portfolio is currently unavailable; detailed rates are not populated (`rates: {}`); availability is the aggregate `is_available` flag, not detailed slots.
 - **Verified Cloudinary talent avatars on Matching** (`029b8e803`, [#911](https://github.com/amo-tech-ai/lumina-studio/pull/911)).
 - **Cloudinary moderation updates atomic and auditable** (`816c9c518` / `91cb6c6c8`, [#916](https://github.com/amo-tech-ai/lumina-studio/pull/916)) — **IPI-639 · CLD-APPROVAL-001**.
 
