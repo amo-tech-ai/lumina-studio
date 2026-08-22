@@ -50,6 +50,17 @@ describe("copilotkit-dev-env", () => {
     expect(vendorFailures[0].requirement.key).toBe("GROQ_API_KEY");
   });
 
+  it("requires NVIDIA_API_KEY when AI_PROVIDER=nvidia", () => {
+    const reqs = requirementsForProvider("nvidia");
+    expect(reqs[0].key).toBe("NVIDIA_API_KEY");
+    const { vendorFailures, provider } = collectDevEnvWarnings(
+      { AI_PROVIDER: "nvidia" },
+      "",
+    );
+    expect(provider).toBe("nvidia");
+    expect(vendorFailures[0].requirement.key).toBe("NVIDIA_API_KEY");
+  });
+
   it("does not require Intelligence vars without license token", () => {
     expect(shouldRequireIntelligence({}, "")).toBe(false);
     const { intelligenceFailures } = collectDevEnvWarnings({}, "");

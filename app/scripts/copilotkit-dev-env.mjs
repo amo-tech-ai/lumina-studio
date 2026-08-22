@@ -24,6 +24,12 @@ export const PROVIDER_VENDOR_KEYS = {
     url: "https://console.groq.com/keys",
     example: "gsk_...",
   },
+  nvidia: {
+    key: "NVIDIA_API_KEY",
+    note: "Required when AI_PROVIDER=nvidia (hosted NIM; server-only).",
+    url: "https://build.nvidia.com/settings/api-keys",
+    example: "nvapi-...",
+  },
 };
 
 export const INTELLIGENCE_KEYS = [
@@ -127,6 +133,7 @@ export function resolveAiProvider(processEnv, envFileContent) {
   const normalized = raw.toLowerCase();
   if (normalized === "openai") return "openai";
   if (normalized === "groq") return "groq";
+  if (normalized === "nvidia") return "nvidia";
   return "gemini";
 }
 

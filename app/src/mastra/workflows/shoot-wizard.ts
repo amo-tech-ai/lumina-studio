@@ -277,6 +277,8 @@ export const shootWizardWorkflow = createWorkflow({
     shoot_name: z.string(),
     brief: z.string(),
     channels: z.array(z.string()),
+    // New Mastra step chaining uses the parsed step input (defaulted field is required).
+    product_category: ProductCategoryEnum.default("clothing"),
   }),
   outputSchema: z.object({
     brand_id: z.string(),

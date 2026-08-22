@@ -19,8 +19,17 @@ import {
   classifyConsoleError,
   classifyNetworkResponse,
   countInfo503Responses,
+  extractAgUiRunId,
+  extractTerminalAgUiRunId,
   info503ExceedsThreshold,
 } from "../../../copilotkit/classifiers/info-503-threshold.mjs";
+import {
+  copilotChatSubmitMode,
+  copilotKitCfDiagnostics,
+  copilotKitPostChatVerdict,
+  formatCopilotKitPostFailure,
+  isCopilotKitAgentPost,
+} from "./copilot-agent-post.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
@@ -512,14 +521,14 @@ async function main() {
     let streamComplete = false;
     let streamInterrupted = false;
     let assistantText = "";
+    let completedRunId = null;
 
     const chatStart = Date.now();
     // Listen for SSE / streaming responses
+    // Match any CopilotKit POST, including 503 / Cloudflare 1102 — hiding 5xx
+    // as "no POST" made Worker resource kills look like a missing Send click.
     const streamWaiter = page.waitForResponse(
-      (r) =>
-        r.url().includes("/api/copilotkit") &&
-        r.request().method() === "POST" &&
-        r.status() < 500,
+      (r) => isCopilotKitAgentPost(r.url(), r.request().method()),
       { timeout: 90000 },
     );
 
@@ -529,13 +538,15 @@ async function main() {
     } else {
       await composer.click();
       await composer.fill(prompt);
-      // Prefer Enter; also try send button
-      await page.keyboard.press("Enter");
+      // One submit only — Enter then Send started a second run that could idle-timeout.
       const sendBtn = page
         .getByTestId("operator-chat-dock")
         .getByRole("button", { name: /send|submit/i });
-      if (await sendBtn.isVisible().catch(() => false)) {
-        await sendBtn.click().catch(() => {});
+      const sendVisible = await sendBtn.isVisible().catch(() => false);
+      if (copilotChatSubmitMode(sendVisible) === "click") {
+        await sendBtn.click();
+      } else {
+        await page.keyboard.press("Enter");
       }
 
       let postRes;
@@ -551,12 +562,28 @@ async function main() {
 
       if (postRes) {
         const ct = postRes.headers()["content-type"] || "";
-        const streaming =
-          ct.includes("text/event-stream") ||
-          ct.includes("text/plain") ||
-          ct.includes("application/octet-stream") ||
-          postRes.status() === 200;
+        const cfDiag = copilotKitCfDiagnostics(postRes.headers());
+        const cfRay = cfDiag.cfRay;
+        const verdict = copilotKitPostChatVerdict(postRes.status(), ct);
+        const streaming = verdict.streaming;
 
+        if (!verdict.ok) {
+          mark(
+            "07_chat_send",
+            false,
+            formatCopilotKitPostFailure(postRes.status(), ct, cfDiag),
+            { status: postRes.status(), ...cfDiag, contentType: ct },
+          );
+          mark(
+            "08_stream",
+            false,
+            `skipped — CopilotKit POST ${postRes.status()} (do not hide 5xx as missing POST)`,
+            { status: postRes.status(), ...cfDiag },
+          );
+        } else {
+        // Copy of SSE (Playwright buffers independently of the page). Race so an
+        // unclosed body cannot hang the journey after the dock already updated.
+        const sseBodyPromise = postRes.text().catch(() => "");
         // Wait for assistant content to grow
         const before = await page.getByTestId("operator-chat-dock").innerText();
         try {
@@ -586,6 +613,12 @@ async function main() {
           800,
         );
 
+        const sseText = await Promise.race([
+          sseBodyPromise,
+          new Promise((resolve) => setTimeout(() => resolve(""), 3000)),
+        ]);
+        completedRunId = extractTerminalAgUiRunId(sseText);
+
         mark(
           "07_chat_send",
           streaming && postRes.status() < 400,
@@ -605,6 +638,7 @@ async function main() {
           `${streamStartMs}ms (budget 5000ms soft)`,
           { ms: streamStartMs, budgetMs: 5000, soft: true },
         );
+        }
       }
     }
 
@@ -612,7 +646,13 @@ async function main() {
 
     // 9. Console / network critical failures
     // IPI-967: Use classifier for console error classification
-    const blockingConsole = consoleLog.errors.filter((e) => classifyConsoleError(e));
+    const blockingConsole = consoleLog.errors.filter((e) =>
+      classifyConsoleError(e, {
+        streamComplete,
+        completedRunId,
+        errorRunId: extractAgUiRunId(e.text),
+      }),
+    );
     
     // IPI-967: Use classifier for network response classification
     const info503Count = countInfo503Responses(networkLog);
