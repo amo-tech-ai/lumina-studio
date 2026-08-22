@@ -118,6 +118,7 @@
       },
       "vars": {
         "MASTRA_STORAGE_MODE": "pg",
+        "MASTRA_SCHEMA": "mastra",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "true",
@@ -172,6 +173,9 @@
       },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
+        // Unused on noop (getMastraStorage returns InMemory before schema). Keep
+        // MASTRA_SCHEMA=mastra so a later pg flip cannot silently write public.*.
+        "MASTRA_SCHEMA": "mastra",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",

@@ -166,6 +166,40 @@ describe("OpenNext CI contract (IPI-472)", () => {
     );
   });
 
+  it("IPI-1020 preview pg bundles real PG scope; production stays noop", () => {
+    const wrangler = readFileSync(resolve(__dirname, "../../wrangler.jsonc"), "utf8");
+    const pkg = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+    const secretsSync = readFileSync(
+      resolve(__dirname, "../../../.github/workflows/cloudflare-secrets-sync.yml"),
+      "utf8",
+    );
+    const previewBlock = wrangler.slice(
+      wrangler.indexOf('"preview"'),
+      wrangler.indexOf('"production"'),
+    );
+    const productionBlock = wrangler.slice(wrangler.indexOf('"production"'));
+
+    expect(previewBlock).toMatch(/"MASTRA_STORAGE_MODE": "pg"/);
+    expect(previewBlock).toMatch(/"MASTRA_SCHEMA": "mastra"/);
+    expect(previewBlock).toMatch(/"ENABLE_HYPERDRIVE_PG_SMOKE": "true"/);
+    expect(productionBlock).toMatch(/"MASTRA_STORAGE_MODE": "noop"/);
+    expect(productionBlock).toMatch(/"MASTRA_SCHEMA": "mastra"/);
+    expect(productionBlock).not.toMatch(/"MASTRA_STORAGE_MODE": "pg"/);
+    expect(productionBlock).toMatch(/"ENABLE_HYPERDRIVE_PG_SMOKE": "false"/);
+    expect(pkg.scripts.preview).toMatch(/opennextjs-cloudflare preview/);
+    expect(pkg.scripts.preview).toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1/);
+    expect(pkg.scripts.deploy).not.toMatch(/IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1/);
+    expect(secretsSync).toContain(
+      "IPIX_CF_INCLUDE_MASTRA_PG_SCOPE: ${{ inputs.wrangler_env == 'preview' && '1' || '' }}",
+    );
+    expect(secretsSync).toMatch(/TRUSTED_OAUTH_FORWARDED_HOSTS/);
+    expect(secretsSync).not.toMatch(
+      /URL="https:\/\/ipix-operator-preview\.sk-498\.workers\.dev\/api\/internal\/hyperdrive-postgresstore-smoke"/,
+    );
+  });
+
   it("IPI-1014 CopilotKit wraps Workers+pg including /info (does not skip wrap on pathname)", () => {
     const route = readFileSync(
       resolve(__dirname, "../app/api/copilotkit/[[...slug]]/route.ts"),
