@@ -1,6 +1,6 @@
--- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796 · MASTRA-PG-010 —
--- Create the 9 Missing mastra.* Tables via Migration): RLS + grant/policy
--- proof for the 33 mastra_* tables and the hyperdrive_mastra_runtime role.
+-- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796 + IPI-1008):
+-- RLS + grant/policy proof for the 34 mastra_* tables and the
+-- hyperdrive_mastra_runtime role.
 --
 -- hyperdrive_mastra_runtime carries no JWT identity (unlike anon/authenticated), so
 -- testing it is simpler than the CRM cases: SET LOCAL ROLE, then a bare query — no
@@ -14,12 +14,12 @@
 -- pg.Client against HYPERDRIVE_DATABASE_URL. Keep both.
 --
 -- Plan math (keep in sync when table count changes):
---   1 count + 33×4 (RLS/policy trio) + 2 schema USAGE + 4 CRUD = 139
+--   1 count + 34×4 (RLS/policy trio) + 2 schema USAGE + 4 CRUD = 143
 
 set search_path to public, extensions;
 
 begin;
-select plan(139);
+select plan(143);
 
 create temporary table mastra_tables (tablename text) on commit drop;
 insert into mastra_tables (tablename)
@@ -29,11 +29,11 @@ where schemaname = 'mastra'
 order by tablename;
 
 select is(
-  (select count(*) from mastra_tables), 33::bigint,
-  'mastra schema has the expected 33 tables (IPI-616 + IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration) — update this file if that count changes on purpose'
+  (select count(*) from mastra_tables), 34::bigint,
+  'mastra schema has the expected 34 tables (IPI-616 + IPI-796 + IPI-1008 mastra_workflow_definitions) — update this file if that count changes on purpose'
 );
 
--- RLS enabled per mastra table (33).
+-- RLS enabled per mastra table (34).
 select ok(
     exists(
       select 1 from pg_class c
@@ -47,8 +47,8 @@ select ok(
 from mastra_tables t
 order by t.tablename;
 
--- Exactly one policy per table (33), named hyperdrive_mastra_runtime_all (33),
--- scoped only to that role (33) — 99 assertions total for this trio.
+-- Exactly one policy per table (34), named hyperdrive_mastra_runtime_all (34),
+-- scoped only to that role (34) — 102 assertions total for this trio.
 select is(
     (select count(*) from pg_policies where schemaname = 'mastra' and tablename = t.tablename),
     1::bigint,
