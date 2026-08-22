@@ -12,7 +12,7 @@
     "test:e2e:mobile": "playwright test e2e/05-mobile-operator-matrix.spec.ts",
     "verify:copilot": "node tasks/copilotkit/verify/verify-copilot.mjs",
     "verify:copilot:test": "node --test tasks/copilotkit/verify/verify-copilot.test.mjs",
-    "verify:copilot:selfcheck": "node tasks/copilotkit/classifiers/info-503-threshold.selfcheck.mjs",
+    "verify:copilot:selfcheck": "node tasks/copilotkit/classifiers/info-503-threshold.selfcheck.mjs && node tasks/cloudflare/tests/ipi-724-e2e-preview-journey/copilot-agent-post.selfcheck.mjs",
     "test:web015": "bash supabase/tests/web015/run.sh",
     "supabase:types": "supabase gen types typescript --linked --schema public,planner,graphql_public > app/src/types/supabase.ts",
     "supabase:migrations": "supabase migration list --linked",

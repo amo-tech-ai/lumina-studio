@@ -29,6 +29,8 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "AI_GATEWAY_URL",
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
+  // IPI-1019 — optional; GitHub env var / Infisical override. wrangler.jsonc default is gemini.
+  "AI_PROVIDER",
   // IPI-586 — optional; set GitHub env var to "true" for preview smoke only.
   "ENABLE_CF_AI_SMOKE",
   // IPI-822 · CF-DB-009b — optional; set preview GitHub env var to "true" for thread canary only.
@@ -59,6 +61,7 @@ export const RUNTIME_SECRET_NAMES = Object.freeze([
   "INTELLIGENCE_API_KEY",
   "FIRECRAWL_API_KEY",
   "AI_GATEWAY_API_KEY",
+  "NVIDIA_API_KEY",
   "INTERNAL_WEBHOOK_SECRET",
   "CAPTURE_LEAD_PROXY_SECRET",
 ]);

@@ -246,16 +246,48 @@ describe("IPI-1015 workflow HTTP Workers+pg scope", () => {
     expect(mockResume).toHaveBeenCalledTimes(1);
   });
 
+  it("shoot-wizard: start succeeds when product_category is omitted", async () => {
+    await installHyperdrive();
+    const { POST } = await import("../workflows/shoot-wizard/route");
+    const res = await POST(
+      new Request("http://localhost/api/workflows/shoot-wizard", {
+        method: "POST",
+        body: JSON.stringify({
+          brand_id: BRAND_ID,
+          shoot_name: "SS26 lookbook",
+          brief: "Studio daylight",
+          channels: ["instagram_feed"],
+        }),
+      }) as never,
+    );
+    expect(res.status).toBe(202);
+    expect(mockStart).toHaveBeenCalledTimes(1);
+    expect(mockStart.mock.calls[0]?.[0]).toEqual({
+      inputData: {
+        brand_id: BRAND_ID,
+        shoot_name: "SS26 lookbook",
+        brief: "Studio daylight",
+        channels: ["instagram_feed"],
+      },
+    });
+  });
+
   it("shoot-wizard: start validation error is 400 without schema internals", async () => {
     await installHyperdrive();
-    const zodErr = new Error("Validation error: required at \"product_category\"");
+    const zodErr = new Error("Validation error: invalid_enum_value at \"product_category\"");
     zodErr.name = "ZodError";
     mockStart.mockRejectedValue(zodErr);
     const { POST } = await import("../workflows/shoot-wizard/route");
     const res = await POST(
       new Request("http://localhost/api/workflows/shoot-wizard", {
         method: "POST",
-        body: JSON.stringify({ brand_id: BRAND_ID }),
+        body: JSON.stringify({
+          brand_id: BRAND_ID,
+          shoot_name: "SS26 lookbook",
+          brief: "Studio daylight",
+          channels: ["instagram_feed"],
+          product_category: "not-a-category",
+        }),
       }) as never,
     );
     expect(res.status).toBe(400);
