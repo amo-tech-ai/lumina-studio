@@ -70,7 +70,6 @@
           "copilotkit/generative-ui",
           "copilotkit/hitl",
           "copilotkit/integration",
-          "copilotkit/master-prd-roadmap",
           "copilotkit/audit-review",
           "untitled-page",
           "untitled-page-2"
@@ -159,7 +158,8 @@
           "reference/configuration",
           "reference/troubleshooting",
           "reference/changelog",
-          "reference/archive"
+          "reference/archive",
+          "copilotkit/master-prd-roadmap"
         ]
       },
       {
