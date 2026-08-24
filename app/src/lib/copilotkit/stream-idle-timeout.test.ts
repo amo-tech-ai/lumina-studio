@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { withStreamIdleTimeout } from "./stream-idle-timeout";
+import { sseChunkKind, toSseUtf8Bytes, withStreamIdleTimeout } from "./stream-idle-timeout";
 
-function sseResponse(stream: ReadableStream<Uint8Array>): Response {
+function sseResponse(stream: ReadableStream): Response {
   return new Response(stream, {
     status: 200,
     headers: { "Content-Type": "text/event-stream" },
@@ -155,5 +155,92 @@ describe("withStreamIdleTimeout", () => {
     const response = new Response(null, { status: 204 });
     const wrapped = withStreamIdleTimeout(response, 5000);
     expect(wrapped.status).toBe(204);
+  });
+
+  it("normalizes ArrayBuffer chunks (OpenNext/Workers transfer) and still sees RUN_FINISHED", async () => {
+    const encoder = new TextEncoder();
+    const started = encoder.encode('data: {"type":"RUN_STARTED"}\n\n');
+    const finished = encoder.encode('data: {"type":"RUN_FINISHED"}\n\n');
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(started.buffer.slice(started.byteOffset, started.byteOffset + started.byteLength));
+        controller.enqueue(finished.buffer.slice(finished.byteOffset, finished.byteOffset + finished.byteLength));
+      },
+    });
+    const text = await readAllText(withStreamIdleTimeout(sseResponse(stream), 50));
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
+  it("normalizes string SSE chunks and still sees RUN_FINISHED", async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue('data: {"type":"RUN_STARTED"}\n\n');
+        controller.enqueue('data: {"type":"RUN_FINISHED"}\n\n');
+      },
+    });
+    const text = await readAllText(withStreamIdleTimeout(sseResponse(stream), 50));
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+
+  it("normalizes number[] chunks (workerd 'Array' BufferSource shape) and times out if stalled", async () => {
+    const started = [...new TextEncoder().encode('data: {"type":"RUN_STARTED"}\n\n')];
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(started);
+      },
+    });
+    const text = await readAllText(withStreamIdleTimeout(sseResponse(stream), 20));
+    expect(text).toContain("RUN_STARTED");
+    expect(text).toContain("STREAM_IDLE_TIMEOUT");
+  });
+
+  it("copies SharedArrayBuffer-backed views before decode (workerd#5388)", async () => {
+    if (typeof SharedArrayBuffer === "undefined") return;
+    const src = new TextEncoder().encode(
+      'data: {"type":"RUN_STARTED"}\n\ndata: {"type":"RUN_FINISHED"}\n\n',
+    );
+    const sab = new SharedArrayBuffer(src.byteLength);
+    new Uint8Array(sab).set(src);
+    const view = new Uint8Array(sab);
+    expect(view.buffer instanceof SharedArrayBuffer).toBe(true);
+    expect(toSseUtf8Bytes(view).buffer instanceof SharedArrayBuffer).toBe(false);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(view);
+      },
+    });
+    const text = await readAllText(withStreamIdleTimeout(sseResponse(stream), 50));
+    expect(text).toContain("RUN_FINISHED");
+    expect(text).not.toContain("STREAM_IDLE_TIMEOUT");
+  });
+});
+
+describe("toSseUtf8Bytes / sseChunkKind", () => {
+  it("describes Uint8Array vs ArrayBuffer without reading payload bytes", () => {
+    const u8 = new TextEncoder().encode("x");
+    expect(sseChunkKind(u8)).toMatchObject({
+      typeofValue: "object",
+      constructorName: "Uint8Array",
+      isView: true,
+      isUint8Array: true,
+      isArrayBuffer: false,
+    });
+    expect(sseChunkKind(u8.buffer)).toMatchObject({
+      constructorName: "ArrayBuffer",
+      isView: false,
+      isUint8Array: false,
+      isArrayBuffer: true,
+    });
+  });
+
+  it("round-trips Uint8Array, ArrayBuffer, string, and number[] to the same bytes", () => {
+    const text = 'data: {"type":"RUN_FINISHED"}\n\n';
+    const u8 = new TextEncoder().encode(text);
+    expect(toSseUtf8Bytes(u8)).toEqual(u8);
+    expect(toSseUtf8Bytes(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength))).toEqual(u8);
+    expect(toSseUtf8Bytes(text)).toEqual(u8);
+    expect(toSseUtf8Bytes([...u8])).toEqual(u8);
   });
 });
