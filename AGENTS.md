@@ -263,6 +263,22 @@ graphify affected "<node>"
 graphify update .
 ```
 
+## Mintlify documentation
+
+Public docs are Mintlify at the **repo root** (`docs.json` + MDX). The content directory is the whole git repo, so keep `.mintignore` complete. Search canonical Mintlify pages before creating a file. Update in place.
+
+```text
+real feature → canonical documentation → navigation entry
+```
+
+Do not add stub/"coming soon" pages to `docs.json`. If there is nothing true to write, do not add the nav entry. Do not bulk-move folders or rename URLs to invent IA. Do not import `docs/` planning markdown wholesale.
+
+Audits and untitled review dumps are **dated evidence**, not product docs. Keep the files; keep them out of product sidebars.
+
+Verify claims against `app/` and `supabase/`. No secrets. No `NEXT_PUBLIC_*` AI keys. Use Mermaid for canonical flows (one diagram per topic).
+
+When a PR changes architecture, schema, AI contracts, or operator journeys, update the matching Mintlify page in the **same** docs-only PR (or a follow-up docs PR if the code PR cannot include docs).
+
 ## Common Gotchas
 
 1. **CopilotKit agent IDs:** Mastra registry key = agent `id` = frontend `useAgent({ agentId })`. If they mismatch, you get a runtime "agent not found" error. Three keys must be kept in sync: `default` (alias), `production-planner`, `creative-director`.

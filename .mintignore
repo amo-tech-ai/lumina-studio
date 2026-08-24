@@ -1,0 +1,53 @@
+# Official Mintlify ignore file is `.mintignore` (this copy satisfies the Wave 2 task name).
+# Keep both files in sync.
+
+node_modules/
+**/node_modules/
+**/.next/
+**/dist/
+**/.turbo/
+**/coverage/
+
+# Operator app and other packages
+app/
+src/
+b2c-storefront/
+my-marketplace/
+supabase/
+e2e/
+scripts/
+services/
+config/
+
+# Internal planning (not Mintlify)
+docs/
+tasks/
+planning/
+graphify-out/
+github/
+
+# Tooling / agent config
+.cursor/
+.claude/
+.agents/
+.opencode/
+
+# Repo markdown and scripts that are not docs pages
+*.md
+*.sh
+*.js
+*.cjs
+*.mjs
+*.ts
+*.json
+!docs.json
+
+# Misc
+Universal-design-prompt-4/
+playwright.config.ts
+playwright.onboarding-launch.config.ts
+playwright.prod.config.ts
+eslint.config.js
+postcss.config.js
+package-lock.json
+skills-lock.json

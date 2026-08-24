@@ -3,6 +3,7 @@ description: Mintlify docs for iPix — canonical pages only, no stub-spam
 globs:
   - "**/*.mdx"
   - "docs.json"
+  - ".mintignore"
 alwaysApply: false
 ---
 
@@ -10,13 +11,17 @@ alwaysApply: false
 
 Search existing canonical pages before creating a file. Update in place. Do not duplicate PRDs, roadmaps, or architecture.
 
+Content root is the **git repo root**. Keep `.mintignore` excluding `app/`, `src/`, `docs/`, `supabase/`, and other non-Mintlify trees. Do not ignore shipping MDX, `docs.json`, or `favicon.svg`.
+
 ## Do not create empty docs
 
 ```text
 real feature → canonical documentation → navigation entry
 ```
 
-Never add a page whose body is "Content coming soon" (or equivalent). If there is nothing true to write, do not add the nav entry.
+Never add a page whose body is "Content coming soon" (or equivalent). If there is nothing true to write, do not add the nav entry. Do not list paths in `docs.json` that have no MDX file (`ai/agents`, `ai/workflows`, `ai/model-providers` were this bug).
+
+Empty tabs stay out of `docs.json` (hide by omission). Files on disk can remain; nav is the product surface.
 
 ## Information architecture
 
@@ -25,6 +30,8 @@ Start Here → Core → MVP → Advanced → Planning → Reference → Archive.
 Do not bulk-move folders or prefix URLs with `00-`, `01-`, etc. Keep existing paths unless a later wave explicitly migrates them.
 
 Do not fill a technology tab just because it exists. Do not write Advanced docs for features that are not in the product yet. Do not import `docs/` planning markdown wholesale into Mintlify.
+
+`/` redirects to `/overview/ipix`. Do not add a second `index.mdx` Start Here.
 
 ## Document types (one owner)
 
@@ -46,7 +53,9 @@ Keep audits out of product sidebars (CopilotKit, Brand Hub, etc.). Put them unde
 - Use Mintlify components (`Note`, `Tip`, `Steps`, `Card`, `Warning`).
 - Mermaid fenced blocks for flows; one canonical diagram per topic.
 - Verify claims against `app/` and `supabase/`. No secrets. No `NEXT_PUBLIC_*` AI keys.
+- After nav or MDX changes: `mint validate` and `mint broken-links` at repo root.
 
 ## PRs
 
 Mintlify content is docs-only. Do not mix with production app code in the same PR (AGENTS.md #1).
+When architecture, schema, AI contracts, or operator journeys change, update the canonical Mintlify page in the docs PR.

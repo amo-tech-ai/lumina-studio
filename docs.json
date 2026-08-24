@@ -1,4 +1,5 @@
 {
+  "$schema": "https://mintlify.com/docs.json",
   "theme": "willow",
   "name": "iPix",
   "colors": {
@@ -6,7 +7,6 @@
     "light": "#FAFAFA",
     "dark": "#0A0A0A"
   },
-  "favicon": "/favicon.svg",
   "navbar": {
     "links": [
       {
@@ -15,6 +15,13 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/overview/ipix",
+      "permanent": false
+    }
+  ],
   "navigation": {
     "tabs": [
       {
@@ -25,134 +32,8 @@
         ]
       },
       {
-        "tab": "AI",
-        "pages": [
-          "ai/agents",
-          "ai/workflows",
-          "ai/hitl",
-          "ai/memory",
-          "ai/rag",
-          "ai/tools",
-          "ai/skills",
-          "ai/model-providers"
-        ]
-      },
-      {
-        "tab": "Cloudflare",
-        "pages": [
-          "cloudflare/overview",
-          "cloudflare/workers",
-          "cloudflare/workers-ai",
-          "cloudflare/ai-gateway",
-          "cloudflare/hyperdrive",
-          "cloudflare/deployment",
-          "cloudflare/configuration"
-        ]
-      },
-      {
-        "tab": "Mastra",
-        "pages": [
-          "mastra/overview",
-          "mastra/agents",
-          "mastra/workflows",
-          "mastra/tools",
-          "mastra/memory",
-          "mastra/storage"
-        ]
-      },
-      {
-        "tab": "CopilotKit",
-        "pages": [
-          "copilotkit/overview",
-          "copilotkit/generative-ui",
-          "copilotkit/hitl",
-          "copilotkit/integration"
-        ]
-      },
-      {
-        "tab": "Supabase",
-        "pages": [
-          "supabase/overview",
-          "supabase/database",
-          "supabase/auth",
-          "supabase/rls",
-          "supabase/storage",
-          "supabase/realtime",
-          "supabase/functions",
-          "supabase/migrations"
-        ]
-      },
-      {
-        "tab": "Cloudinary",
-        "pages": [
-          "cloudinary/overview",
-          "cloudinary/assets",
-          "cloudinary/uploads",
-          "cloudinary/transformations",
-          "cloudinary/metadata",
-          "cloudinary/moderation"
-        ]
-      },
-      {
-        "tab": "Stripe",
-        "pages": [
-          "stripe/overview",
-          "stripe/connect",
-          "stripe/payments",
-          "stripe/checkout",
-          "stripe/webhooks",
-          "stripe/marketplace"
-        ]
-      },
-      {
-        "tab": "Data",
-        "pages": [
-          "data/schemas",
-          "data/data-models",
-          "data/vectors",
-          "data/migrations"
-        ]
-      },
-      {
-        "tab": "Design",
-        "pages": [
-          "design/design-system",
-          "design/screens",
-          "design/user-journeys",
-          "design/wireframes",
-          "design/diagrams"
-        ]
-      },
-      {
-        "tab": "Operations",
-        "pages": [
-          "operations/infrastructure",
-          "operations/observability",
-          "operations/security",
-          "operations/performance",
-          "operations/runbooks",
-          "operations/incidents"
-        ]
-      },
-      {
-        "tab": "Planning",
-        "pages": [
-          "planning/prds",
-          "planning/linear",
-          "planning/epics",
-          "planning/audits",
-          "planning/decisions"
-        ]
-      },
-      {
         "tab": "Reference",
         "pages": [
-          "reference/repositories",
-          "reference/commands",
-          "reference/configuration",
-          "reference/troubleshooting",
-          "reference/changelog",
-          "reference/archive",
           "copilotkit/master-prd-roadmap"
         ]
       }
