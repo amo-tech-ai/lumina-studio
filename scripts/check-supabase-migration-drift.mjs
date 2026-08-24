@@ -85,7 +85,9 @@ function runCapture(cmd, cmdArgs, { mergeStderr = false } = {}) {
     env: process.env,
   });
   const stdout = r.stdout ?? "";
-  const stderr = r.stderr ?? "";
+  const stderr = r.error
+    ? `${r.stderr ?? ""}${r.error.message}\n`
+    : (r.stderr ?? "");
   const status = r.status ?? 1;
   return {
     ok: status === 0,
@@ -118,11 +120,17 @@ function redactSecrets(text, urls = []) {
 }
 
 function printRedactedCliFailure(label, captured, secretUrls = []) {
-  console.error(`${label} (exit ${captured.status}). Set IPIX_DRIFT_DEBUG=1 for redacted CLI output.`);
-  if (process.env.IPIX_DRIFT_DEBUG === "1") {
-    const blob = redactSecrets(`${captured.out ?? ""}${captured.err ?? ""}`, secretUrls).trim();
+  const secrets = secretUrls.filter(Boolean);
+  const blob = redactSecrets(`${captured.out ?? ""}${captured.err ?? ""}`, secrets).trim();
+  if (!secrets.length) {
+    console.error(`${label} (exit ${captured.status})`);
     if (blob) console.error(blob);
+    return;
   }
+  console.error(
+    `${label} (exit ${captured.status}). Set IPIX_DRIFT_DEBUG=1 for redacted CLI output.`,
+  );
+  if (process.env.IPIX_DRIFT_DEBUG === "1" && blob) console.error(blob);
 }
 
 /** IPI-1032 · SB-CI-IPV4 — db.<ref>.supabase.co is AAAA-only on some workstations. */
@@ -153,13 +161,24 @@ function normalizeProjectRef(ref) {
   return PROJECT_REF_RE.test(s) ? s : null;
 }
 
-/** Session pooler only: postgres(ql) + *.pooler.supabase.com + explicit :5432. */
+/** Shape-only: postgres(ql) + *.pooler.supabase.com + explicit :5432. Never the URL. */
+function poolerShapeReason(value) {
+  if (value == null || value === "") return "empty";
+  const parsed = parsePgUrl(value);
+  if (!parsed) return "not a postgres(ql) URL";
+  if (isDirectDbHost(parsed.hostname)) {
+    return "direct db.* host (IPv6-only on some workstations); need *.pooler.supabase.com:5432";
+  }
+  if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) {
+    return "host is not *.pooler.supabase.com";
+  }
+  if (parsed.port === "6543") return "transaction pooler :6543; need session :5432";
+  if (parsed.port !== "5432") return "session pooler port must be explicit :5432";
+  return null;
+}
+
 function isPoolerDbUrl(url) {
-  const parsed = parsePgUrl(url);
-  if (!parsed?.hostname) return false;
-  if (isDirectDbHost(parsed.hostname)) return false;
-  if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) return false;
-  return parsed.port === "5432";
+  return poolerShapeReason(url) === null;
 }
 
 function poolerUsernameProjectRef(url) {
@@ -184,27 +203,28 @@ function readLinkedProjectRef() {
   }
 }
 
-/** Env and linked file must agree when both are set; otherwise either source. */
-function expectedProjectRef(env = process.env, linkedRef = readLinkedProjectRef()) {
+function projectRefConflict(env = process.env, linkedRef = readLinkedProjectRef()) {
   const fromEnv = normalizeProjectRef(env.SUPABASE_PROJECT_ID);
   const fromLink = normalizeProjectRef(linkedRef);
-  if (fromEnv && fromLink && fromEnv !== fromLink) return null;
+  return Boolean(fromEnv && fromLink && fromEnv !== fromLink);
+}
+
+/** Env and linked file must agree when both are set; otherwise either source. */
+function expectedProjectRef(env = process.env, linkedRef = readLinkedProjectRef()) {
+  if (projectRefConflict(env, linkedRef)) return null;
+  const fromEnv = normalizeProjectRef(env.SUPABASE_PROJECT_ID);
+  const fromLink = normalizeProjectRef(linkedRef);
   return fromEnv || fromLink || null;
 }
 
 /** Why a pooler env value cannot be used. Never includes the URL. */
-function poolerRejectReason(value, expected) {
+function poolerRejectReason(value, expected, { conflict = false } = {}) {
   if (value == null || value === "") return null;
-  const parsed = parsePgUrl(value);
-  if (!parsed) return "not a postgres(ql) URL";
-  if (isDirectDbHost(parsed.hostname)) {
-    return "direct db.* host (IPv6-only on some workstations); need *.pooler.supabase.com:5432";
+  const shape = poolerShapeReason(value);
+  if (shape) return shape;
+  if (conflict) {
+    return "SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref";
   }
-  if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) {
-    return "host is not *.pooler.supabase.com";
-  }
-  if (parsed.port === "6543") return "transaction pooler :6543; need session :5432";
-  if (parsed.port !== "5432") return "session pooler port must be explicit :5432";
   if (!expected) {
     return "no linked project ref (set SUPABASE_PROJECT_ID or run supabase link)";
   }
@@ -219,19 +239,24 @@ function pickPoolerDbUrl(
   linkedRef = readLinkedProjectRef(),
   { logRejects = false } = {},
 ) {
+  const conflict = projectRefConflict(env, linkedRef);
   const expected = expectedProjectRef(env, linkedRef);
   let anySet = false;
   for (const key of POOLER_ENV_KEYS) {
     const value = env[key];
     if (value == null || value === "") continue;
     anySet = true;
-    const reason = poolerRejectReason(value, expected);
+    const reason = poolerRejectReason(value, expected, { conflict });
     if (!reason) return { key, url: value };
     if (logRejects) {
       console.error(`check-supabase-migration-drift: ignoring ${key}: ${reason}`);
     }
   }
-  if (logRejects && anySet && !expected) {
+  if (logRejects && anySet && conflict) {
+    console.error(
+      "check-supabase-migration-drift: SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref; using --linked",
+    );
+  } else if (logRejects && anySet && !expected) {
     console.error(
       "check-supabase-migration-drift: no expected project ref (set SUPABASE_PROJECT_ID or run supabase link); using --linked",
     );
@@ -768,6 +793,10 @@ if (args.includes("--self-check")) {
     "transaction pooler :6543; need session :5432",
   );
   assert.equal(
+    poolerRejectReason(sessionPooler, null, { conflict: true }),
+    "SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref",
+  );
+  assert.equal(
     redactSecrets(`bad ${sessionPooler} parse`, [sessionPooler]).includes(sessionPooler),
     false,
   );
@@ -800,10 +829,11 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 
 // Prefer the PATH `supabase` binary (CI: supabase/setup-cli pin). Do not use
 // `npx supabase` — that can download an unpinned npm package and bypass the pin.
+const poolerSecretUrls = [pickPoolerDbUrl()?.url].filter(Boolean);
 const listCmd = ["migration", "list", "--linked", "--output-format", "json"];
 const listAttempt = supabaseViaPoolerOrLinked(listCmd, { mergeStderr: false });
 if (!listAttempt.ok) {
-  printRedactedCliFailure("migration list failed", listAttempt, [pickPoolerDbUrl()?.url]);
+  printRedactedCliFailure("migration list failed", listAttempt, poolerSecretUrls);
   process.exit(listAttempt.status || 1);
 }
 const listRaw = listAttempt.out;
@@ -836,11 +866,10 @@ const dry = supabaseViaPoolerOrLinked(["db", "push", "--linked", "--dry-run", "-
   mergeStderr: true,
 });
 if (!dryRunIsUsable(dry)) {
-  printRedactedCliFailure("db push --dry-run failed", dry, [pickPoolerDbUrl()?.url]);
+  printRedactedCliFailure("db push --dry-run failed", dry, poolerSecretUrls);
   process.exit(dry.status || 1);
 }
 const dryRaw = dry.out;
-const poolerSecretUrls = [pickPoolerDbUrl()?.url].filter(Boolean);
 const pendingFiles = parseDryRunPending(dryRaw);
 const pendingVersions = pendingFiles.map((f) => versionFromFilename(f)).filter(Boolean);
 
