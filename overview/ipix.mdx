@@ -1,0 +1,49 @@
+---
+title: "Start here"
+description: "Sign in, open the operator app, add a brand website, and wait for Brand DNA after the crawl."
+sidebarTitle: "Start here"
+---
+
+iPix is the operator studio for fashion brands. You do not start by reading architecture. You start by bringing in a real website — the same way a studio would pull a client's lookbook before planning a shoot.
+
+This page is the first journey: **login → `/app` → brand URL → Brand Hub crawl → Brand DNA**.
+
+<Tip>
+  If you only remember one path: sign in, open Brand Hub, add the brand website, wait until the DNA scores appear on the brand card.
+</Tip>
+
+## What you will have when this works
+
+Maya at Lumina Studio can paste `https://maisonnoir.com`, watch the crawl, and see Brand DNA on that brand in Brand Hub. Then she can plan a shoot against that profile instead of guessing the look.
+
+## First journey
+
+<Steps>
+  <Step title="Sign in">
+    Open `/login` and sign in. iPix uses Supabase auth (PKCE). After a successful login you should land in the operator app, not the public marketing site.
+  </Step>
+  <Step title="Open the operator app">
+    Go to `/app`. This is Command Center — the home for the signed-in operator. From here you move into Brand Hub, shoots, planner, and CRM. If you are not signed in, `/app` will send you back toward login.
+  </Step>
+  <Step title="Open Brand Hub">
+    Go to `/app/brand`. This is the brand list. Empty state copy: add a brand and iPix will crawl it and build Brand DNA.
+  </Step>
+  <Step title="Give iPix the brand URL">
+    Choose **Add brand**. That opens onboarding (`/onboarding`, also reachable as `/app/onboarding`). The website field is required — Brand DNA is crawl-backed. Paste a real site such as `https://maisonnoir.com`.
+  </Step>
+  <Step title="Wait for the crawl, then read Brand DNA">
+    Status text includes **Crawling website…** while `start-brand-crawl` runs. When analysis finishes, Brand Hub shows the DNA score and pillars on the brand card. Open the brand (`/app/brand/[id]`) to work from that profile. Onboarding also has a Brand DNA payoff screen with **Return to Brand Hub**.
+  </Step>
+</Steps>
+
+## If something fails
+
+- **No brands, or you cannot see another org's brands** — expected. Row Level Security scopes brands to your organization.
+- **Crawl does not start** — the brand needs a valid `https://…` URL. Restart from Brand Hub if analysis failed.
+- **Chat `/info` 403 after login** — that is CopilotKit org membership, not this Brand Hub path. Fix membership; do not weaken auth.
+
+## What to read next
+
+<Card title="Architecture" icon="sitemap" href="/overview/architecture">
+  How the operator app, Brand Hub crawl, database, media, and AI chat fit together — still one page, no extra stubs.
+</Card>
