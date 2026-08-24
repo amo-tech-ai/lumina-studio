@@ -1,6 +1,6 @@
 # Post-merge audit — CopilotKit 1.61.0 → 1.61.2
 
-**Task:** IPI-XXX · COPILOT-UPGRADE-001 — Upgrade CopilotKit 1.61.0 to 1.61.2 Safely  
+**Task:** No Linear issue assigned  
 **PR:** [#939](https://github.com/amo-tech-ai/lumina-studio/pull/939)  
 **Merge SHA / `origin/main` HEAD:** `49d67b2f0135173f7ff0b44653b42d0ddc135efc`  
 **Audit date:** 2026-08-16  
@@ -154,7 +154,7 @@ None on the CopilotKit upgrade path (install, tests, typecheck, lint, app build,
 |------|----------|----------------|
 | Cloudflare preview deploy failed on this SHA | Medium for CF hosting; **out of scope** for this upgrade | Confirmed Hyperdrive local-connection `UserError` after a successful OpenNext build. Prior `main` docs SHA failed the same check. |
 | `verify-copilot-preview` green ≠ 1.61.2 on the Worker | Medium (false comfort) | Job pins the **currently live** Worker version, then smokes that version. Because deploy failed, it proved the old Worker still works. |
-| No Linear issue named COPILOT-UPGRADE-001 | Low | Title used `IPI-XXX`. Closest live tickets: **IPI-760** (Done; HITL pin still required) and **IPI-900 · CF-BUNDLE-224 — Protect CopilotKit Upgrades** (Backlog) |
+| No Linear issue named COPILOT-UPGRADE-001 | Low | This audit has **No Linear issue assigned**. Closest live tickets: **IPI-760 · DEP-COPILOT-001 — Align CopilotKit, AG-UI, and UUID Dependencies** (Done; HITL pin still required) and **IPI-900 · CF-BUNDLE-224 — Protect CopilotKit Upgrades** (Backlog) |
 | Nested `mastra` CLI peer wants `@mastra/core>=1.50` | Low / pre-existing | Unchanged by this merge. Do not “fix” in a CopilotKit PR. |
 | `npm ci` ERESOLVE / deprecated-package warnings | Low / pre-existing | Same warnings locally and on Workers Builds. Install still completed. |
 
@@ -174,7 +174,7 @@ Not blockers (named so they are not silently “fixed” here):
 
 - HITL interrupt/resume proof (separate IPI-760 follow-up)
 - Cloudflare preview Hyperdrive deploy (separate hosting ticket)
-- Creating a real Linear ID to replace `IPI-XXX`
+- Filing a new Linear issue for this already-merged upgrade (this record has **No Linear issue assigned**)
 
 ### Missing tests / evidence
 
@@ -183,7 +183,7 @@ Not blockers (named so they are not silently “fixed” here):
 | No interrupt/resume e2e | Maya approving a talent pick can still strand the thread if the pin is removed | Dedicated IPI-760 HITL run: interrupt → resume → `RUN_FINISHED`, no “pending interrupt(s)” |
 | No tool-call duplicate assertion on a tool-using prompt | Hello-only run has zero tool events | One Production Planner prompt that calls a real tool; assert each `TOOL_CALL_START` has one matching end |
 | CF preview not on `49d67b2f0` | Worker chat is still the previous bundle | Re-run Workers Builds after Hyperdrive local-string fix; then `capture-copilot-preview-sse.sh` on `ipix-operator-preview` |
-| No Linear issue for this upgrade | Agents will keep calling it `IPI-XXX` | Create **IPI-NNN · COPILOT-UPGRADE-001** and mark Done with this SHA |
+| No Linear issue for this upgrade | Agents will keep calling it a fake IPI id | This audit has **No Linear issue assigned**. Closest tickets: **IPI-760 · DEP-COPILOT-001 — Align CopilotKit, AG-UI, and UUID Dependencies** and **IPI-900 · CF-BUNDLE-224 — Protect CopilotKit Upgrades** |
 
 ### Fixes already in the merge (do not redo)
 

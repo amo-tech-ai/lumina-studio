@@ -36,8 +36,7 @@
           "audits/cloudflare-migration-audit",
           "audits/opennext-worker-bundle-audit",
           "audits/planner-security-audit-session-2026-07-14",
-          "audits/secrets-classification-verification",
-          "copilotkit/2026-08-16-copilotkit-1.61.2-post-merge-audit"
+          "audits/secrets-classification-verification"
         ]
       },
       {
