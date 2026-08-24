@@ -110,12 +110,12 @@ function isDirectDbHost(hostname) {
 
 const PROJECT_REF_RE = /^[a-z0-9]{10,32}$/i;
 
-/** Session pooler only: postgres(ql) + *.pooler.supabase.com + :5432 (or default). */
+/** Session pooler only: postgres(ql) + *.pooler.supabase.com + explicit :5432. */
 function isPoolerDbUrl(url) {
   const parsed = parsePgUrl(url);
   if (!parsed?.hostname) return false;
   if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) return false;
-  return parsed.port === "" || parsed.port === "5432";
+  return parsed.port === "5432";
 }
 
 function poolerUsernameProjectRef(url) {
@@ -589,7 +589,7 @@ if (args.includes("--self-check")) {
   const qaSession = `postgresql://postgres.${qaRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
 
   assert.equal(isPoolerDbUrl(sessionPooler), true);
-  assert.equal(isPoolerDbUrl(sessionNoPort), true);
+  assert.equal(isPoolerDbUrl(sessionNoPort), false);
   assert.equal(
     isPoolerDbUrl(`postgres://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`),
     true,
