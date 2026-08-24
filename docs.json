@@ -21,10 +21,7 @@
         "tab": "Overview",
         "pages": [
           "overview/ipix",
-          "overview/architecture",
-          "overview/tech-stack",
-          "overview/roadmap",
-          "overview/feature-status"
+          "overview/architecture"
         ]
       },
       {
@@ -69,10 +66,7 @@
           "copilotkit/overview",
           "copilotkit/generative-ui",
           "copilotkit/hitl",
-          "copilotkit/integration",
-          "copilotkit/audit-review",
-          "untitled-page",
-          "untitled-page-2"
+          "copilotkit/integration"
         ]
       },
       {
@@ -161,13 +155,6 @@
           "reference/archive",
           "copilotkit/master-prd-roadmap"
         ]
-      },
-      {
-        "tab": "linear",
-        "pages": [
-          "untitled-page"
-        ],
-        "hidden": true
       }
     ]
   }

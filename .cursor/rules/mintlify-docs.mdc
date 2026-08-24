@@ -1,0 +1,52 @@
+---
+description: Mintlify docs for iPix — canonical pages only, no stub-spam
+globs:
+  - "**/*.mdx"
+  - "docs.json"
+alwaysApply: false
+---
+
+# iPix Mintlify
+
+Search existing canonical pages before creating a file. Update in place. Do not duplicate PRDs, roadmaps, or architecture.
+
+## Do not create empty docs
+
+```text
+real feature → canonical documentation → navigation entry
+```
+
+Never add a page whose body is "Content coming soon" (or equivalent). If there is nothing true to write, do not add the nav entry.
+
+## Information architecture
+
+Start Here → Core → MVP → Advanced → Planning → Reference → Archive.
+
+Do not bulk-move folders or prefix URLs with `00-`, `01-`, etc. Keep existing paths unless a later wave explicitly migrates them.
+
+Do not fill a technology tab just because it exists. Do not write Advanced docs for features that are not in the product yet. Do not import `docs/` planning markdown wholesale into Mintlify.
+
+## Document types (one owner)
+
+| Type | Owns |
+|---|---|
+| Start Here / architecture | How an operator starts; how the system fits |
+| PRD | What and why |
+| Roadmap | When |
+| Audit | Dated evidence — never a product overview |
+| Linear issue | One executable unit |
+| Reference | Stable lookup |
+
+Keep audits out of product sidebars (CopilotKit, Brand Hub, etc.). Put them under Planning or Archive with a date in the title.
+
+## Mintlify mechanics
+
+- Every shipped page: `title` and `description` frontmatter. Use `sidebarTitle` when the nav label should be shorter.
+- Internal links: root-relative, no `.mdx` suffix (`/overview/architecture`).
+- Use Mintlify components (`Note`, `Tip`, `Steps`, `Card`, `Warning`).
+- Mermaid fenced blocks for flows; one canonical diagram per topic.
+- Verify claims against `app/` and `supabase/`. No secrets. No `NEXT_PUBLIC_*` AI keys.
+
+## PRs
+
+Mintlify content is docs-only. Do not mix with production app code in the same PR (AGENTS.md #1).
