@@ -334,8 +334,6 @@ async function main() {
           ? Math.round(timing.responseEnd)
           : null,
       cfRay: res.headers()["cf-ray"] || null,
-      cfErrorType: res.headers()["cf-error-type"] || null,
-      cfErrorOrigin: res.headers()["cf-error-origin"] || null,
       retries: 0,
     });
   });

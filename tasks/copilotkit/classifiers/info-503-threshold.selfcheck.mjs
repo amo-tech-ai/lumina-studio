@@ -117,21 +117,16 @@ const tests = [
 
   // IPI-972: Additional Cloudflare Worker runtime wording stays blocking
   {
-    name: "Console: STREAM_IDLE_TIMEOUT after streamComplete without runIds - tolerated",
-    input: {
-      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
-      type: "error",
-    },
-    context: { streamComplete: true },
-    expected: false,
-  },
-  {
-    name: "Console: STREAM_IDLE_TIMEOUT same runId as completed - tolerated",
+    name: "Console: STREAM_IDLE_TIMEOUT matching proven completed runIds - tolerated",
     input: {
       text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-a"}',
       type: "error",
     },
-    context: { streamComplete: true, completedRunId: "run-a" },
+    context: {
+      completedRunId: extractTerminalAgUiRunId(
+        'data: {"type":"RUN_FINISHED","runId":"run-a"}\n\n',
+      ),
+    },
     expected: false,
   },
   {
@@ -140,17 +135,48 @@ const tests = [
       text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-b"}',
       type: "error",
     },
-    context: { streamComplete: true, completedRunId: "run-a" },
+    context: { completedRunId: "run-a" },
     expected: true,
   },
   {
-    name: "Console: STREAM_IDLE_TIMEOUT without streamComplete - blocking",
+    name: "Console: STREAM_IDLE_TIMEOUT missing error runId - blocking",
     input: {
       text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
       type: "error",
     },
-    context: { streamComplete: false },
+    context: { completedRunId: "run-a" },
     expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT missing completed runId - blocking",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-a"}',
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT after partial text stall is not terminal - blocking",
+    input: {
+      text: "[CopilotKit] Error (agent_run_error_event): Error: Agent run timed out — no stream activity for 20000ms",
+      type: "error",
+    },
+    context: { streamComplete: true },
+    expected: true,
+  },
+  {
+    name: "Console: STREAM_IDLE_TIMEOUT after proven RUN_FINISHED same runId - tolerated",
+    input: {
+      text: '[CopilotKit] Error (agent_run_error_event): STREAM_IDLE_TIMEOUT {"runId":"run-terminal"}',
+      type: "error",
+    },
+    context: {
+      completedRunId: extractTerminalAgUiRunId(
+        'data: {"type":"TEXT_MESSAGE_CONTENT","delta":"Hello"}\n\ndata: {"type":"RUN_FINISHED","runId":"run-terminal"}\n\n',
+      ),
+    },
+    expected: false,
   },
   {
     name: "Console: agent_run_error_event 401 still blocking when streamComplete",
