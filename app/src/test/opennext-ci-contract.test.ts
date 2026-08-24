@@ -106,6 +106,45 @@ describe("OpenNext CI contract (IPI-472)", () => {
     );
   });
 
+  it("IPI-1006 CF stubs alias @ast-grep/napi under IPIX_CF_BUNDLE_STUBS (no native .node copy)", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    const wrangler = readFileSync(resolve(__dirname, "../../wrangler.jsonc"), "utf8");
+    expect(nextConfig).toMatch(/"@ast-grep\/napi"\s*:\s*astGrepStub/);
+    expect(nextConfig).toMatch(/"@ast-grep\/napi-linux-x64-gnu"\s*:\s*astGrepStub/);
+    expect(nextConfig).toMatch(/"@ast-grep\/napi-linux-x64-musl"\s*:\s*astGrepStub/);
+    expect(nextConfig).toMatch(/cf-ast-grep-stub\.mjs/);
+    expect(nextConfig).not.toMatch(/^\s*"@ast-grep\/napi",?\s*$/m);
+    expect(nextConfig).toMatch(/outputFileTracingExcludes/);
+    expect(nextConfig).toMatch(/node_modules\/@ast-grep\/\*\*/);
+    expect(wrangler).toMatch(/"@ast-grep\/napi"\s*:\s*"\.\/scripts\/cf-ast-grep-stub\.mjs"/);
+    // OpenNext esbuild (bundle-server.js) is the stage that actually follows
+    // Mastra's `import("@ast-grep/napi")`. Next aliases do not apply there.
+    const openNextEsbuildPatch = readFileSync(
+      resolve(__dirname, "../../patches/@opennextjs+cloudflare+1.20.2.patch"),
+      "utf8",
+    );
+    expect(openNextEsbuildPatch).toMatch(/"@ast-grep\/napi"/);
+    expect(openNextEsbuildPatch).toMatch(/scripts\/cf-ast-grep-stub\.mjs/);
+  });
+
+  it("IPI-1016 · CF-BUNDLE-224 — CF stubs Mastra desktop workspace in OpenNext esbuild (size, not pg)", () => {
+    const openNextEsbuildPatch = readFileSync(
+      resolve(__dirname, "../../patches/@opennextjs+cloudflare+1.20.2.patch"),
+      "utf8",
+    );
+    expect(openNextEsbuildPatch).toMatch(/ipi-stub-mastra-workspace/);
+    expect(openNextEsbuildPatch).toMatch(/scripts\/cf-mastra-workspace-stub\.mjs/);
+    expect(openNextEsbuildPatch).not.toMatch(/cf-mastra-workspace-stub[\s\S]{0,200}@mastra\/pg/);
+
+    const stub = readFileSync(
+      resolve(__dirname, "../../scripts/cf-mastra-workspace-stub.mjs"),
+      "utf8",
+    );
+    expect(stub).toMatch(/unavailable as x/);
+    expect(stub).toMatch(/unavailable as Workspace/);
+    expect(stub).toMatch(/Cloudflare Workers runtime/);
+  });
+
   it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {
     const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
     const openNext = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");

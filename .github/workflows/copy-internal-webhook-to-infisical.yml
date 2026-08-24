@@ -1,0 +1,30 @@
+# One-shot: encrypt repo INTERNAL_WEBHOOK_SECRET for local Infisical import.
+# Do not log plaintext. Artifact is GPG-encrypted to the operator pubkey.
+name: copy-internal-webhook-gpg
+on:
+  workflow_dispatch:
+jobs:
+  encrypt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Encrypt INTERNAL_WEBHOOK_SECRET
+        env:
+          INTERNAL_WEBHOOK_SECRET: ${{ secrets.INTERNAL_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${INTERNAL_WEBHOOK_SECRET}" ]; then
+            echo "::error::INTERNAL_WEBHOOK_SECRET missing on this repository"
+            exit 1
+          fi
+          gpg --batch --import .github/ci-encrypt-pubkey.asc
+          printf '%s' "$INTERNAL_WEBHOOK_SECRET" | gpg --batch --yes --trust-model always \
+            -e -r ai@socialmediaville.ca \
+            -o "$RUNNER_TEMP/internal-webhook.gpg"
+          echo "encrypted=yes"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: internal-webhook-gpg
+          path: ${{ runner.temp }}/internal-webhook.gpg
+          retention-days: 1
+          if-no-files-found: error

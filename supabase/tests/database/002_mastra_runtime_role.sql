@@ -1,6 +1,11 @@
--- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796 · MASTRA-PG-010 —
--- Create the 9 Missing mastra.* Tables via Migration): RLS + grant/policy
--- proof for the 33 mastra_* tables and the hyperdrive_mastra_runtime role.
+-- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796 + IPI-1008):
+-- RLS + grant/policy proof for each mastra_* table and the
+-- hyperdrive_mastra_runtime role.
+--
+-- Catalog count is dual-mode (same class of QA lag as 004):
+--   34 once mastra.mastra_workflow_definitions exists (production after IPI-1008)
+--   33 before that migration is applied (QA still 33 as of 2026-08-22)
+-- Detect the table, not a generic "n=33", so a stray extra table still fails.
 --
 -- hyperdrive_mastra_runtime carries no JWT identity (unlike anon/authenticated), so
 -- testing it is simpler than the CRM cases: SET LOCAL ROLE, then a bare query — no
@@ -13,13 +18,14 @@
 -- scripts/verify-rls.mjs's assertMastraRuntimeRoleProbe(), which opens a real
 -- pg.Client against HYPERDRIVE_DATABASE_URL. Keep both.
 --
--- Plan math (keep in sync when table count changes):
---   1 count + 33×4 (RLS/policy trio) + 2 schema USAGE + 4 CRUD = 139
+-- Plan math from the live catalog, not a hardcoded 34:
+--   1 count + n×4 (per-table RLS/policy checks) + 2 schema USAGE + 4 CRUD
+-- QA (n=33) → plan(139). Production after IPI-1008 (n=34) → plan(143).
+-- plan() is the assertion count — do not keep a second tally in comments.
 
 set search_path to public, extensions;
 
 begin;
-select plan(139);
 
 create temporary table mastra_tables (tablename text) on commit drop;
 insert into mastra_tables (tablename)
@@ -28,12 +34,37 @@ from pg_tables
 where schemaname = 'mastra'
 order by tablename;
 
-select is(
-  (select count(*) from mastra_tables), 33::bigint,
-  'mastra schema has the expected 33 tables (IPI-616 + IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration) — update this file if that count changes on purpose'
+create temporary table mastra_expect (n bigint) on commit drop;
+insert into mastra_expect (n)
+select case
+  when exists (
+    select 1
+    from pg_tables
+    where schemaname = 'mastra'
+      and tablename = 'mastra_workflow_definitions'
+  ) then 34
+  else 33
+end;
+
+-- pgTAP plan() is plan(integer) only. count(*) is bigint and will not resolve
+-- (CI: "function plan(bigint) does not exist"). Same CASE-literal pattern as 004.
+select plan(
+  case (select n from mastra_expect)
+    when 34 then 143
+    else 139
+  end
 );
 
--- RLS enabled per mastra table (33).
+select is(
+  (select count(*) from mastra_tables),
+  (select n from mastra_expect),
+  format(
+    'mastra schema has the expected %s tables (33 until mastra_workflow_definitions exists, 34 after IPI-1008) — update this file if that count changes on purpose',
+    (select n from mastra_expect)
+  )
+);
+
+-- RLS enabled per mastra table.
 select ok(
     exists(
       select 1 from pg_class c
@@ -47,8 +78,8 @@ select ok(
 from mastra_tables t
 order by t.tablename;
 
--- Exactly one policy per table (33), named hyperdrive_mastra_runtime_all (33),
--- scoped only to that role (33) — 99 assertions total for this trio.
+-- One policy per table, named hyperdrive_mastra_runtime_all, scoped only to
+-- that role. plan() above is the assertion count — do not keep a second tally.
 select is(
     (select count(*) from pg_policies where schemaname = 'mastra' and tablename = t.tablename),
     1::bigint,

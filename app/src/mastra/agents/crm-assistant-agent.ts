@@ -59,6 +59,5 @@ Use injected context FIRST before asking "which company?" or "which deal?".
 - Never invent company/contact/deal facts — search or ask using context ids.
 - Tool failures return { ok: false, error } — relay the error plainly; do not retry silently.
 - Be concise: one short paragraph unless the operator asks for detail.`,
-  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory
   memory: getMastraMemory(),
 });

@@ -38,11 +38,11 @@
     "@copilotkit/react-core": "1.61.2",
     "@copilotkit/runtime": "1.61.2",
     "@libsql/client": "^0.15.15",
-    "@mastra/client-js": "1.23.2",
-    "@mastra/core": "1.41.0",
-    "@mastra/memory": "1.0.1-alpha.1",
-    "@mastra/observability": "1.16.2",
-    "@mastra/pg": "1.12.0",
+    "@mastra/client-js": "1.40.0",
+    "@mastra/core": "1.59.0",
+    "@mastra/memory": "1.26.2",
+    "@mastra/observability": "1.17.0",
+    "@mastra/pg": "1.20.0",
     "@opennextjs/cloudflare": "1.20.2",
     "@radix-ui/react-dialog": "^1.1.17",
     "@radix-ui/react-progress": "^1.1.10",
@@ -59,7 +59,6 @@
     "hono": "^4",
     "libsql": "^0.5.22",
     "lucide-react": "^0.525.0",
-    "mastra": "1.1.0-alpha.3",
     "next": "16.2.11",
     "next-cloudinary": "^6.17.5",
     "next-themes": "^0.4.6",
@@ -85,6 +84,7 @@
     "concurrently": "^9.1.2",
     "eslint": "^10.5.0",
     "jsdom": "^29.1.1",
+    "mastra": "1.25.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8.61.1",
@@ -109,9 +109,6 @@
       "@ai-sdk/ui-utils": {
         "@ai-sdk/provider-utils": "2.2.8"
       }
-    },
-    "mastra": {
-      "@mastra/deployer": "1.46.0"
     }
   },
   "packageManager": "npm@11.5.0"

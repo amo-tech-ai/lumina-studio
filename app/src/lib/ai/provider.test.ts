@@ -231,6 +231,26 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       expect(() => resolveModel("default")).toThrow(/NVIDIA_API_KEY is required/);
     });
 
+    it("resolveNvidiaLanguageModel fails closed without NVIDIA_API_KEY", () => {
+      delete process.env.NVIDIA_API_KEY;
+      expect(() => resolveNvidiaLanguageModel("default")).toThrow(/NVIDIA_API_KEY is required/);
+    });
+
+    it("resolveNvidiaEmbeddingModel fails closed without NVIDIA_API_KEY", () => {
+      delete process.env.NVIDIA_API_KEY;
+      expect(() => resolveNvidiaEmbeddingModel()).toThrow(/NVIDIA_API_KEY is required/);
+    });
+
+    it("resolveProviderOptions returns {} when AI_PROVIDER=nvidia", () => {
+      process.env.AI_PROVIDER = "nvidia";
+      process.env.NVIDIA_API_KEY = "test-nvidia-key";
+      delete process.env.AI_ROUTING_MODE;
+      expect(resolveProviderOptions("default")).toEqual({});
+      expect(resolveProviderOptions("fast")).toEqual({});
+      expect(resolveProviderOptions("structured")).toEqual({});
+      expect(resolveProviderOptions("vision")).toEqual({});
+    });
+
     it("does not send nvidia default/fast/structured through the Worker gateway", () => {
       process.env.AI_PROVIDER = "nvidia";
       process.env.NVIDIA_API_KEY = "test-nvidia-key";

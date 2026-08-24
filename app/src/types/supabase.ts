@@ -1710,6 +1710,60 @@ export type Database = {
         }
         Relationships: []
       }
+      mastra_workflow_definitions: {
+        Row: {
+          authorId: string | null
+          createdAt: string
+          createdAtZ: string | null
+          description: string | null
+          graph: Json
+          id: string
+          inputSchema: Json
+          metadata: Json | null
+          outputSchema: Json
+          requestContextSchema: Json | null
+          source: string
+          stateSchema: Json | null
+          status: string
+          updatedAt: string
+          updatedAtZ: string | null
+        }
+        Insert: {
+          authorId?: string | null
+          createdAt: string
+          createdAtZ?: string | null
+          description?: string | null
+          graph: Json
+          id: string
+          inputSchema: Json
+          metadata?: Json | null
+          outputSchema: Json
+          requestContextSchema?: Json | null
+          source: string
+          stateSchema?: Json | null
+          status: string
+          updatedAt: string
+          updatedAtZ?: string | null
+        }
+        Update: {
+          authorId?: string | null
+          createdAt?: string
+          createdAtZ?: string | null
+          description?: string | null
+          graph?: Json
+          id?: string
+          inputSchema?: Json
+          metadata?: Json | null
+          outputSchema?: Json
+          requestContextSchema?: Json | null
+          source?: string
+          stateSchema?: Json | null
+          status?: string
+          updatedAt?: string
+          updatedAtZ?: string | null
+        }
+        Relationships: []
+      }
       mastra_workflow_snapshot: {
         Row: {
           createdAt: string
