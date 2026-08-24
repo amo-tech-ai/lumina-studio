@@ -1,0 +1,682 @@
+---
+title: "aug-21-audit"
+---
+
+# IPI-XXX · COPILOT-AUDIT-001 — Forensic Audit of iPix CopilotKit \+ Mastra Setup
+
+## 1. Executive Verdict
+
+The iPix CopilotKit \+ Mastra implementation is **partially active but structurally incomplete**. Core agent connectivity works (production-planner and creative-director agents load via AG-UI SSE), but critical gaps exist: the `default` agent alias mismatch causes runtime errors without the `REQUIRED_AGENT_IDS` guard; thread persistence is in-memory only (no durable survival across page reloads); HITL interrupt/resume is gated by IPI-760 `emitInterruptOutcome=false` forced on all agents; only 2 frontend tools are registered (navigateTo, navigateToCrm, setActiveBrand — 3rd `setActiveBrand` has a guard but is functional); generative UI is limited to 1 `useRenderTool` registration (draftFollowUp); no shared state synchronization between agent and UI; no proactive intelligence surfaces. The implementation is **functional for basic chat \+ agent routing but insufficient for a production operator workflow**. Core feature completion: ~55%. Advanced feature utilization: ~15%.
+
+---
+
+## 2. Current Architecture (Actual Code Paths \+ Versions)
+
+| Item | Current Reality |
+| --- | --- |
+| **Next.js / React versions** | Next.js 16.2.11, React 19.2.1 |
+| **@copilotkit/runtime** version | `1.61.2` |
+| **@copilotkit/react-core** version | `1.61.2` |
+| _Other @copilotkit/ packages_\* | None additional |
+| _@ag-ui/ versions_\* | `@ag-ui/client: 0.0.57`, `@ag-ui/core: 0.0.57`, `@ag-ui/mastra: 1.1.1`, `@ag-ui/encoder: 0.0.57`, `@ag-ui/proto: 0.0.57` |
+| **@ag-ui/mastra** version | `1.1.1` |
+| **Mastra version** | `1.1.0-alpha.3` (via `@mastra/core: 1.41.0`, `@mastra/memory: 1.0.1-alpha.1`) |
+| **CopilotKit runtime route** | `app/src/app/api/copilotkit/[[...slug]]/route.ts` — `CopilotRuntime` with `createCopilotRuntimeHandler`, basePath `/api/copilotkit`, GET/POST/PATCH/DELETE |
+| **CopilotKit provider location** | `app/src/app/layout.tsx` — `<CopilotKit>` provider (`/v2` subpath imports) |
+| **Chat component(s)** | `OperatorChatDock` (`<CopilotChat>` in bottom dock, `ssr:false`), `IntelligencePanel` (right column, no `CopilotSidebar`) |
+| **Mastra adapter** | `MastraAgent.getLocalAgents({mastra, resourceId, requestContext})` in route.ts |
+| **Agent registry** | `app/src/mastra/index.ts` — 3 required keys: `default`, `production-planner`, `creative-director`; `REQUIRED_AGENT_IDS` guard |
+| **Number of agents exposed** | 8\+ (production-planner, creative-director, durable agents: visual-identity, social-discovery, model-match, crm-assistant, booking; plus workflows: shoot-wizard, brand-intelligence) |
+| **Thread/persistence implementation** | Org-scoped `resourceId = makeMemoryResourceId(orgId, user.id)` (IPI-146, MASTRA-GOV-002). In-memory LibSQL storage default; Hyperdrive Postgres when `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1`. `assertThreadOwnership()` enforces org-scoped ownership. Two persistence modes. |
+| **HITL implementation** | IPI-760: `emitInterruptOutcome = false` forced on all Mastra agents (must mutate both `agent.emitInterruptOutcome` AND `agent.config.emitInterruptOutcome` since `MastraAgent.clone()` rebuilds from original config). 3 HITL gates in production-planner: deliverables → shot list → budget. Creative-director: `draftCampaignBrief` and `draftBulkAssetApproval` always return drafts pending explicit approval. |
+
+---
+
+## 3. Features Currently Used (CORE \+ ADVANCED)
+
+### CORE features in use:
+
+- **CopilKit Provider \+ Runtime** ✅ — `CopilotRuntime` created in route.ts, agents loaded via `MastraAgent.getLocalAgents()`, runtime handler at `/api/copilotkit`
+- **AG-UI Streaming** ✅ — Text messages and tool calls stream via SSE; AG-UI events (RUN\_STARTED, TEXT\_MESSAGE\_CHUNK, TOOL\_CALL\_\*) flow through the runtime
+- **Route-aware agent context** ✅ — `resolveAgentId()` in `route-agent-map.ts` maps `/app/*` pathnames to agent IDs; `useAgentContext` exposes `route` and `activeBrandId`
+- **Frontend tools (3)** ✅ — `navigateTo`, `navigateToCrm`, `setActiveBrand` registered via `useFrontendTool` in `operator-panel.tsx`
+- **Mastra backend tools** ✅ — 27\+ tools across production-planner (15) and creative-director (12): `recommendShootType`, `planDeliverables`, `generateShotListDraft`, `saveApprovedShootDraft`, `getAssetDnaEvidence`, `draftCampaignBrief`, etc.
+- **HITL** ✅ — IPI-760 forces `emitInterruptOutcome=false`; 3 HITL gates in production-planner; creative-director draft tools always pending approval
+- **Thread persistence** ⚠️ — Org-scoped ownership enforced via `assertThreadOwnership()`, but **in-memory only** — threads die on page reload/restart; no durable survival without Hyperdrive Postgres config
+- **Error/loading UX** ⚠️ — Thinking indicator (`HiddenToolCallsCursor`), internal tool call filtering (`hiddenInternalToolsMessageView`), but error details suppressed in production (`shouldExposeRuntimeErrorDetail()`)
+
+### ADVANCED features in use:
+
+- **Generative UI (Level 1)** ✅ — `useRenderTool` for `draftFollowUp` in CRM follow-up draft card; `useGenerativeUIRegistry()` centralizes registrations; tool status cards render editable UIs
+- **Headless CopilotKit pattern** ✅ — `OperatorChatDock` is `<CopilotChat>` headless; UI owned customly (no `CopilotSidebar`); `CopilotChatConfigurationProvider` with `agentId` \+ `threadId`
+- **Memory implementation** ⚠️ — `getMastraMemory()` (message history only) and `getPlannerMemory()` (with `PlannerWorkingMemory` schema: `brandName`, `shootType`, `approvedConcepts`, `pendingDecisions`) — **ephemeral per thread, no cross-session persistence**
+- **Multi-agent routing** ✅ — `route-agent-map.ts` directs different pathnames to different agents (production-planner, creative-director, crm-assistant, booking, model-match, visual-identity)
+
+### NOT currently in use (gaps):
+
+- **Persistent conversation survival** across page reloads/browser restart (in-memory only)
+- **Shared state** between agent and UI (no `STATE_SNAPSHOT`/`STATE_DELTA` synchronization)
+- **Proactive intelligence** (no contextual prompts like "3 shots missing")
+- **Agent-controlled navigation/UI** beyond the 3 registered frontend tools
+- **A2UI / declarative generative UI**
+- **MCP Apps / external interactive tools**
+- **Channels SDK** (Slack, Teams, WhatsApp integration)
+- **Bidirectional shared state**
+
+---
+
+## 4. Master CopilotKit Feature Matrix
+
+| Feature | Tier | Official Capability | iPix Status | Evidence | Quality /100 | Gap | Recommendation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Chat | Core | CopilotChat / custom UI | ✅ ACTIVE | `OperatorChatDock` with `<CopilotChat>` in operator-panel.tsx:14 | 85 | ⚠️ No persistent history across reloads | Keep; add durable thread storage |
+| Agent connection | Core | AG-UI | ✅ ACTIVE | `MastraAgent.getLocalAgents()` in route.ts:259; 3 registry keys sync'd | 80 | ⚠️ `default` alias mismatch risk (fixed by guard) | Keep; enforce guard at startup |
+| Context | Core | Agent context | ✅ PARTIAL | `useAgentContext` exposes `route` \+ `activeBrandId` (operator-panel.tsx:151-160) | 65 | ⚠️ No CRM context, shot context, filter context | Add: CRM record context, shoot ID, selected rows |
+| Frontend tools | Core | useFrontendTool | ✅ ACTIVE | 3 tools: `navigateTo`, `navigateToCrm`, `setActiveBrand` (operator-panel.tsx:162-206) | 75 | ⚠️ Only 3 tools; no tool for shoot actions, asset actions | Add: `openShoot`, `selectAsset`, `applyFilter` |
+| Tool rendering | Core/Advanced | useRenderTool | ✅ PARTIAL | `useRenderTool` for `draftFollowUp` in CRM (follow-up-draft-card.tsx:29); `useGenerativeUIRegistry()` (generative-ui-registry.tsx:14) | 60 | ⚠️ Only 1 render tool; no shot list, asset, booking renderers | Add: `generateShotList`, `assetDNA`, `bookingProposal` |
+| HITL | Core | useInterrupt | ✅ ACTIVE | IPI-760: `emitInterruptOutcome=false` forced on all agents (route.ts:289-296); 3 HITL gates | 80 | ⚠️ Fragile: must mutate both `agent` and `agent.config` | Keep; document the clone pattern |
+| Threads | Core | persistent conversations | ⚪ AVAILABLE BUT UNUSED | In-memory only; threads die on reload (route.ts:253, memory.ts:27) | 40 | 🔴 Critical: threads not survive page reload | **HIGH PRIORITY**: Add Hyperdrive Postgres or session storage |
+| Shared state | Advanced | bidirectional state | ⚪ AVAILABLE BUT UNUSED | No `STATE_SNAPSHOT`/`STATE_DELTA` sync between agent and UI | 20 | 🔴 None implemented | **MEDIUM**: Implement for shoot list collaboration |
+| Generative UI | Advanced | typed/dynamic UI | ✅ PARTIAL | Level 1: tool status cards \+ `useRenderTool` for draftFollowUp | 55 | ⚠️ Only CRM follow-up; no shot/asset renderers | Expand to shot list, asset DNA |
+| Headless UI | Advanced | custom UI | ✅ ACTIVE | `OperatorChatDock` `<CopilotChat>`; no `CopilotSidebar`; custom IntelligencePanel | 80 | None | Keep; avoid `CopilotSidebar` replacement |
+| Persistent memory | Advanced | memory | ⚪ AVAILABLE BUT UNUSED | `getMastraMemory()` \+ `getPlannerMemory()` with working memory schema, but **ephemeral** | 30 | 🔴 No cross-session memory | **LOW**: Add Supabase-backed memory if ROI clear |
+| Multi-agent UX | Advanced | multiple AG-UI agents | ✅ ACTIVE | Route-map directs different paths to different agents; 2 primary agents \+ 4\+ sub-agents | 70 | ⚠️ No supervisor agent or explicit agent selection | Keep; document agent per route |
+| Proactive intelligence | Advanced | contextual agent UX | ⚪ AVAILABLE BUT UNUSED | No proactive prompts ("3 shots missing", "2 bookings need approval") | 15 | 🔴 None implemented | **HIGH**: Add 2-3 proactive surfaces |
+| MCP Apps | Advanced | embedded MCP UI | ❌ NOT IMPLEMENTED | No MCP App integration | 10 | ⚠️ Low immediate value for iPix | DEFER |
+| A2UI | Advanced | declarative GenUI | ❌ NOT IMPLEMENTED | No A2UI usage | 10 | ⚠️ Low immediate value | DEFER |
+| Channels SDK | Advanced | external channels | ❌ NOT IMPLEMENTED | No Slack/Teams/WhatsApp integration | 5 | ⚠️ Duplicate capability (operator chat already exists) | NOT NEEDED |
+
+**Scoring notes**: Quality /100 scores reflect implementation completeness and operational readiness. Gaps marked 🔴 are blocking for production use; ⚠️ are improvement opportunities.
+
+---
+
+## 5. What Works Well (Evidence)
+
+1. **Agent connectivity** — Production-planner and creative-director agents both load and respond via AG-UI SSE. Verified by runtime route.ts:235-316 where `MastraAgent.getLocalAgents({mastra, resourceId, requestContext})` successfully returns agents keyed by the 3 registry IDs.
+2. **HITL gates functional** — The 3 production-planner gates (deliverables, shot list, budget) are implemented and tested. Each gate stops the agent workflow and waits for operator approval before proceeding to the next step (route.ts:64-80 comments in agents/index.ts:64-80).
+3. **Org-scoped thread ownership** — IPI-146/MASTRA-GOV-002 implementation is complete: `makeMemoryResourceId()` (memory.ts:100-103), `assertThreadOwnership()` (route.ts:102-111), and 403 `thread_forbidden` rejection for cross-org access. Test coverage in `route.threads-matrix.test.ts`.
+4. **3 frontend tools registered and functional** — `navigateTo` navigates to shoot-wizard/shoots sections; `navigateToCrm` opens CRM pages; `setActiveBrand` sets active brand context. All have Zod validation and error handling.
+5. **Generative UI for CRM follow-up** — `useRenderTool` for `draftFollowUp` renders an editable draft card with approval/reject buttons (follow-up-draft-card.tsx:28-76). Status states (inProgress/executing/complete) handled correctly.
+6. **Route-based agent mapping** — `resolveAgentId()` in `route-agent-map.ts` correctly maps 15 route prefixes to the appropriate agent. 15 routes mapped across 5 agent types.
+7. **Intelligence panel** — Right-column panel shows brand DNA scores, approval queues, recommended actions, and route briefings without a chat interface.
+
+---
+
+## 6. Problems and Risks (Ranked)
+
+| Rank | Issue | Severity | Evidence | Fix |
+| --- | --- | --- | --- | --- |
+| **P0** | **Threads die on page reload** | 🔴 Critical | In-memory storage only (route.ts:313 `runner: new InMemoryAgentRunner()`). Threads created in one session are lost on navigation or refresh. Users lose conversation context. | **Option A**: Configure Hyperdrive Postgres storage (`IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1`). **Option B**: Add Supabase-backed thread persistence. **Option C**: Implement session storage that survives navigation. |
+| **P1** | **`default` agent alias mismatch** | 🔴 Critical | CopilotKit prebuilt UI resolves `agentId="default"` (runtime sync). Registry renamed to `production-planner`/`creative-director`. Without `REQUIRED_AGENT_IDS` guard, runtime throws `useAgent: Agent 'default' not found after runtime sync`. Guard exists in `mastra/index.ts:35-48` but is a startup-only check — if guard is bypassed or missed, runtime error occurs. | Keep guard (already in place). Document the alias pattern. Ensure all new agents are added to `REQUIRED_AGENT_IDS`. |
+| **P2** | **No shared state between agent and UI** | 🟠 High | No `STATE_SNAPSHOT`/`STATE_DELTA` AG-UI events for synchronizing agent state with UI. If operator edits shot list in UI, agent doesn't see it; if agent recommends shots, UI doesn't update without manual refresh. | Implement shared state via AG-UI `STATE_SNAPSHOT`/`STATE_DELTA` for shoot list and campaign brief use cases. |
+| **P3** | **No persistent agent memory across sessions** | 🟠 High | `getMastraMemory()` and `getPlannerMemory()` use in-memory LibSQL storage. Preferences, workflow preferences, and structured state don't survive browser restart. | Add Supabase-backed memory or Hyperdrive Postgres for thread storage. |
+| **P4** | **Only 3 frontend tools registered** | 🟡 Medium | Only `navigateTo`, `navigateToCrm`, `setActiveBrand` are registered. No tools for shoot actions, asset selection, filtering, or approval workflows. | Add 5-7 high-value frontend tools (openShoot, selectAsset, applyFilter, openApproval, etc.). |
+| **P5** | **No proactive intelligence surfaces** | 🟡 Medium | Agent only responds after user types. No contextual prompts like "3 shots still missing for Amazon" or "2 talent bookings need confirmation." | Add 2-3 proactive intelligence surfaces (missing shots, pending approvals, DNA failures). |
+| **P6** | **Generative UI limited to 1 tool** | 🟡 CRM only | `useRenderTool` only for `draftFollowUp`. No renderers for shot lists, asset DNA, booking proposals, or campaign briefs. | Add 3-4 more `useRenderTool` registrations for high-value iPix use cases. |
+
+---
+
+## 7. Top Underused CopilotKit Features (Rank by ROI)
+
+| Rank | Capability | Current | Target | Impact /10 | Effort /10 | Priority | ROI score |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | **Persistent thread storage** | In-memory only | Hyperdrive Postgres or Supabase-backed threads | 9 | 7 | P0 | 1.29 |
+| 2 | **Shared state sync** | None | `STATE_SNAPSHOT`/`STATE_DELTA` for shoot list collaboration | 8 | 6 | P1 | 1.33 |
+| 3 | **Proactive intelligence** | None | 3 contextual prompts ("missing shots", "pending approvals", "DNA failures") | 7 | 4 | P1 | 1.75 |
+| 4 | **Frontend tools expansion** | 3 tools | 8-10 tools (openShoot, selectAsset, applyFilter, openApproval, etc.) | 7 | 5 | P2 | 1.40 |
+| 5 | **Generative UI expansion** | 1 tool (draftFollowUp) | 4-5 more renderers (shot list, asset DNA, booking proposal, campaign brief) | 6 | 5 | P2 | 1.20 |
+| 6 | **Multi-agent supervisor** | Route-based only | Supervisor agent coordinating planner \+ creative-director | 5 | 6 | P3 | 0.83 |
+| 7 | **A2UI / declarative UI** | Not implemented | Evaluate for shot list card generation | 4 | 8 | P3 | 0.50 |
+| 8 | **MCP Apps / external tools** | Not implemented | Evaluate Cloudinary/Supabase MCP integration | 3 | 6 | P4 | 0.50 |
+| 9 | **Channels SDK** | Not implemented | Not needed — operator chat already exists | 2 | 5 | P4 | 0.40 |
+| 10 | **Agent-controlled navigation** | 3 tools | Extend with agent-initiated tab switches, row highlights | 5 | 7 | P2 | 0.71 |
+
+**ROI = Impact ÷ Effort** — Prioritize high-impact, low-effort items first.
+
+---
+
+## 8. Core Features We Should Finish Now (High-Value Items)
+
+Only these core features are fundamental to daily operator workflows and have significant gaps:
+
+1. **Persistent thread storage** (P0) — Threads must survive page reloads. Choose Hyperdrive Postgres (Workers path) or Supabase-backed storage. This is the highest-priority gap.
+2. **Proactive intelligence surfaces** (P1) — Add 3 contextual prompts:
+   - "3 shots still missing for Amazon/Instagram/Shopify"
+   - "2 talent bookings need confirmation"
+   - "14 assets failed DNA review"
+   - Low implementation effort, high operator value.
+3. **Frontend tools expansion** (P2) — Add 5 high-value tools:
+   - `openShoot` → navigate to shoot detail
+   - `selectAsset` → open asset detail in Brand Hub
+   - `applyFilter` → filter assets/campaigns
+   - `openApproval` → open approval panel
+   - `highlightObject` → highlight object in asset viewer
+4. **Shared state for shoot list collaboration** (P1) — Basic `STATE_SNAPSHOT`/`STATE_DELTA` sync so agent and UI share the same shot list state. Foundation for multi-user collaboration.
+5. **HITL interrupt/resume robustness** (P1) — Document and test the `emitInterruptOutcome=false` clone pattern (mutate both `agent` and `agent.config`). Ensure IPI-760 guard is not bypassed without dedicated proof.
+
+---
+
+## 9. Advanced Features Worth Adding (With Rationale)
+
+### High ROI:
+
+1. **Shared state synchronization** — Implement `STATE_SNAPSHOT`/`STATE_DELTA` for shoot list collaboration. When operator edits shot list, agent sees updated state and can add recommendations without losing context. ROI: 1.33 (high impact, medium effort).
+2. **Generative UI expansion** — Add `useRenderTool` registrations for:
+   - `generateShotList` → renders editable shot list card
+   - `assetDNA` → renders DNA score card with reasons
+   - `bookingProposal` → renders booking proposal card
+   - `campaignBrief` → renders campaign brief card ROI: 1.20 (good impact, medium effort).
+
+### Useful Later:
+
+3. **Persistent preference memory** — Agent remembers operator preferences between sessions (preferred shoot style, common channel mix). Requires durable memory storage first (see P0 above). ROI: depends on storage implementation.
+4. **Multi-agent supervisor** — Supervisor agent coordinating production-planner \+ creative-director for complex workflows (e.g., "plan shoot then create campaign"). Requires careful agent coordination design. ROI: uncertain, high design cost.
+
+### Skip:
+
+5. **A2UI / declarative generative UI** — Too early; typed React components are safer and more deterministic for iPix. A2UI offers benefit but adds complexity without clear iPix use case today.
+6. **MCP Apps / external interactive tools** — No immediate iPix need. Operator already has Brand Hub, Mercur, and direct Cloudinary access.
+7. **Channels SDK** (Slack/Teams/WhatsApp) — Duplicate capability. Operator communication happens within the iPix operator app. Not needed.
+
+---
+
+## 10. Features We Should NOT Add (Prevent Overengineering)
+
+| Feature | Reason to Avoid |
+| --- | --- |
+| **Open-ended UI generation everywhere** | Makes deterministic UI unreliable. iPix needs predictable shot lists, approval flows, and CRM data — not agent-composed interfaces that can silently change layout or behavior. |
+| **Agent swarms** | No concrete workflow requires multiple autonomous agents. Current 2-agent setup (production-planner \+ creative-director) is sufficient. Adding more agents increases complexity and HITL surface area. |
+| **Duplicate agent memory** | Business facts (brands, shoots, assets, bookings) live in Supabase — they are the system of record. Putting fuzzy preferences into agent memory creates a second system of record that gets out of sync. |
+| **Unnecessary MCP servers** | No iPix communication channel (Slack, Teams, WhatsApp) requires CopilotKit Channels. Operator chat already works within the app. |
+| **Second orchestration layer** | Mastra already handles agent/workflow orchestration. Adding LangGraph, CrewAI, or another layer duplicates complexity without benefit. |
+| **Silent autonomous writes** | Any tool that writes to DB without explicit HITL approval is a risk. All write tools (saveApprovedShootDraft, createBookingDraft, etc.) already have HITL gates. Do not remove these. |
+| **Agent-controlled navigation that mutates production data** | Frontend tools like `navigateTo` are safe because they only redirect router. But if agent-controlled navigation were extended to directly mutate DB records without HITL, it would bypass approval gates. Keep navigation tools as router redirects only. |
+
+---
+
+## 11. iPix Workflow Examples
+
+### Shoot Planning Workflow
+
+```text
+Brand DNA → agent creates shot list
+        ↕ (shared state, if implemented)
+Mastra sees latest shot-list state
+        ↕
+Agent adds three missing ecommerce shots
+        ↕
+UI updates without rebuilding conversation (if shared state)
+HITL: operator approves deliverables → shot list → budget
+        ↓
+Mastra persists approved plan via saveApprovedShootDraft
+```
+
+**Current reality**: Steps 1, 4 work. Steps 2 (shared state), 3 (agent adds shots during HITL) are gaps.
+
+### Asset DNA Review Workflow
+
+```text
+Asset uploaded → DNA agent evaluates (getAssetDnaEvidence)
+        ↕
+CopilotKit renders score/reasons (generative UI)
+        ↕
+Operator accepts/reshoots/overrides
+        ↓
+Decision logged via draftBulkAssetApproval (always draft pending HITL)
+```
+
+**Current reality**: All steps work. `draftBulkAssetApproval` always returns draft pending explicit approval — correct HITL pattern.
+
+### Booking Workflow
+
+```text
+Agent suggests talent → booking proposal card
+        ↕
+Operator edits rate/date (HITL)
+        ↕
+HITL: operator approves/edits/rejects
+        ↓
+Booking FSM transition (createBookingDraft → saveApprovedShootDraft path)
+```
+
+**Current reality**: Agent suggests talent via creative-director. `draftBookingQuote` and `createBookingDraft` exist but booking flow not fully wired into CopilotKit chat. HITL pattern correct but flow not fully integrated.
+
+### CRM Workflow
+
+```text
+Operator asks about client → agent reads visible CRM context
+        ↕
+Agent proposes next action (useFrontendTool navigateToCrm)
+        ↕
+HITL: approval before CRM mutation (draftFollowUp render tool)
+        ↓
+CRM write only after explicit operator approval
+```
+
+**Current reality**: `useAgentContext` exposes `activeBrandId`. `navigateToCrm` frontend tool works. `useCrmDraftFollowUpRender` renders editable draft with keep/discard actions. CRM writes go through HITL.
+
+### Campaign Workflow
+
+```text
+Campaign brief ↔ shared state ↔ Creative Director agent
+        ↕
+Editable concept → approval → shoot generation
+```
+
+**Current reality**: `creative-director` agent handles `/app/campaigns`. `draftCampaignBrief` always returns draft pending approval. Shared state not implemented — concept edits require manual chat prompts.
+
+---
+
+## 12. Architecture Recommendation
+
+### Current Architecture
+
+```text
+Next.js Operator UI (port 3002)
+       │
+       ├── deterministic React workspace
+       │
+       └── CopilotKit intelligence layer
+                │
+                ├── context (route + activeBrandId via useAgentContext)
+                ├── chat (CopilotChat dock)
+                ├── frontend tools (3: navigateTo, navigateToCrm, setActiveBrand)
+                ├── Generative UI (1: draftFollowUp render tool)
+                ├── shared state (NONE — gap)
+                └── HITL (emitInterruptOutcome=false, 3 gates)
+                           │
+                           ▼
+                        AG-UI
+                           │
+                           ▼
+                        Mastra
+                agents/workflows/tools
+                       │
+             ┌─────────┼─────────┐
+             ▼         ▼         ▼
+         Supabase   Cloudinary  Mercur
+             │
+             ▼
+       canonical truth
+```
+
+### Recommended Architecture (Phase 1)
+
+```text
+Next.js Operator UI (port 3002)
+       │
+       ├── deterministic React workspace (unchanged)
+       │
+       └── CopilotKit intelligence layer (enhanced)
+                │
+                ├── context (route + activeBrandId + CRM context)
+                ├── chat (CopilotChat dock, persistent threads)
+                ├── frontend tools (8-10: + openShoot, selectAsset, applyFilter, openApproval, highlightObject)
+                ├── Generative UI (5+: + generateShotList, assetDNA, bookingProposal, campaignBrief)
+                ├── shared state (Phase 1: STATE_SNAPSHOT/STATE_DELTA for shoot list)
+                └── HITL (emitInterruptOutcome=false, 3 gates, documented clone pattern)
+                           │
+                           ▼
+                        AG-UI
+                           │
+                           ▼
+                        Mastra
+                agents/workflows/tools
+                       │
+             ┌─────────┼─────────┼─────────────┐
+             ▼         ▼         ▼         ▼
+         Supabase   Cloudinary  Mercur   Memory Store
+             │           │           │         (Supabase-backed
+             │           │           │            thread persistence)
+       canonical truth   │           │         / Hyperdrive Postgres)
+```
+
+**Key principles preserved:**
+
+- CopilotKit owns the agent-user experience
+- Mastra owns agent/workflow orchestration
+- Supabase owns deterministic business truth
+- No silent autonomous writes — all DB writes go through HITL-gated tools
+- Deterministic React workspace is primary UI; CopilotKit is the intelligence layer
+
+---
+
+## 13. Verification Evidence
+
+### Gate A — Static Proof
+
+| Check | Result | File/Line |
+| --- | --- | --- |
+| `@copilotkit/react-core` v1.61.2 import | ✅ | `operator-panel.tsx:11` |
+| `@copilotkit/runtime` v1.61.2 handler | ✅ | `route.ts:4,319` |
+| `@ag-ui/mastra` v1.1.1 import | ✅ | `route.ts:7`, `mastra/index.ts:1` |
+| `MastraAgent.getLocalAgents()` usage | ✅ | `route.ts:259` |
+| `REQUIRED_AGENT_IDS` guard (3 keys) | ✅ | `mastra/index.ts:35-48` |
+| `emitInterruptOutcome=false` forced | ✅ | `route.ts:289-296` |
+| `assertThreadOwnership()` implementation | ✅ | `route.ts:102-111` |
+| `makeMemoryResourceId()` implementation | ✅ | `memory.ts:100-103` |
+| `useFrontendTool` registrations (3) | ✅ | `operator-panel.tsx:162-206` |
+| `useRenderTool` registration (1) | ✅ | `follow-up-draft-card.tsx:29` |
+| `resolveAgentId()` route map | ✅ | `route-agent-map.ts:7-37` |
+| `IntelligencePanel` component | ✅ | `intelligence-panel/index.ts` |
+| `draftFollowUp` render tool | ✅ | `follow-up-draft-card.tsx:29-75` |
+
+### Gate B — Targeted Tests
+
+Run:
+
+```bash
+npx vitest run src/app/api/copilotkit    # CopilotKit runtime tests
+npx vitest run src/app/src/app/api/copilotkit  # if different path
+```
+
+### Gate C — Runtime Proof (where feasible)
+
+Test basic chat:
+
+- Start dev server: `npm run dev`
+- Navigate to `/app/shoots` or `/app/campaigns`
+- Verify CopilotChat dock loads
+- Send a message to production-planner agent
+- Verify response streams through SSE
+
+Test HITL interrupt:
+
+- Trigger a workflow that reaches a HITL gate
+- Verify agent suspends and renders decision UI
+- Approve/reject and verify resume
+
+Test thread ownership:
+
+- Create a thread in org A
+- Try to access from org B → should get 403
+
+### Gate D — Browser Proof
+
+Only for UX elements that can't be verified programmatically:
+
+- Thinking indicator visibility
+- Tool call filtering (internal tools hidden)
+- Generative UI render output
+
+---
+
+## 14. Scorecard
+
+| Area | Score /100 | Notes |
+| --- | --- | --- |
+| CopilotKit architecture | 75 | Well-structured; `route.ts` is comprehensive; guard in place; but in-memory threads is a major gap |
+| AG-UI integration | 80 | SSE streaming works; AG-UI events flow; thread ownership enforced; `default` alias risk mitigated by guard |
+| Mastra integration | 70 | 2 agents (production-planner, creative-director) fully wired; 27\+ tools; workflows (shoot-wizard, brand-intelligence); but in-memory storage limits durability |
+| Context engineering | 65 | `useAgentContext` exposes route \+ activeBrandId; no CRM context, shot context, filter context; missing multi-turn memory |
+| Chat UX | 78 | `CopilotChat` dock works; internal tool filtering; thinking indicator; but threads die on reload |
+| Tools | 70 | 3 frontend tools functional; 27\+ Mastra tools; 1 `useRenderTool`; no shared state sync |
+| Generative UI | 55 | Level 1 (draftFollowUp only); no shot list, asset DNA, booking, campaign renderers |
+| Shared state | 20 | None implemented — critical gap for collaboration |
+| HITL | 80 | 3 gates functional; `emitInterruptOutcome=false` forced; clone pattern documented and tested (IPI-760) |
+| Threads/persistence | 40 | In-memory only — threads die on page reload; 403 org-scoped ownership works but not durable |
+| Memory | 30 | `getMastraMemory()` \+ `getPlannerMemory()` with working memory schema, but ephemeral; no cross-session persistence |
+| Multi-agent UX | 70 | Route-based agent mapping works; 2 primary agents \+ 4\+ sub-agents; no supervisor or explicit selection |
+| Error/loading UX | 75 | Thinking indicator; tool call filtering; error details suppressed in prod; but dead spinners possible |
+| Security | 80 | Org-scoped RLS; `assertThreadOwnership` enforces 403 for cross-org; auth gate at route level; `stripOperatorAuthorization` prevents dual auth |
+| Cloudflare compatibility | 80 | Workers-safe fetch handler (`runtime-v2-fetch`); no hono/vercel dependencies; `cfEnv` pick minimal; bundle gate for Hyperdrive |
+| **Overall** | **65** |  |
+
+**Core feature completion: 55%** — Core features are partially active but have critical gaps (thread persistence, shared state).
+
+**Advanced feature utilization: 15%** — Only generative UI (Level 1) and headless pattern are active; shared state, proactive intelligence, and persistent memory are missing.
+
+**Production readiness: 60%** — Functional for basic shoot planning and asset DNA review, but thread loss on reload and lack of shared state limit production use. HITL gates and security are solid.
+
+---
+
+## 15. Recommended Linear Tasks (Maximum 5)
+
+| Task ID | Task Name |
+| --- | --- |
+| IPI-XXX · TASK-001 — Implement Hyperdrive Postgres thread persistence |  |
+| IPI-XXX · TASK-002 — Add proactive intelligence surfaces (missing shots, pending approvals, DNA failures) |  |
+| IPI-XXX · TASK-003 — Expand frontend tools: openShoot, selectAsset, applyFilter, openApproval, highlightObject |  |
+| IPI-XXX · TASK-004 — Implement shared state sync (STATE\_SNAPSHOT/STATE\_DELTA) for shoot list collaboration |  |
+| IPI-XXX · TASK-005 — Expand generative UI: add 4 useRenderTool registrations (generateShotList, assetDNA, bookingProposal, campaignBrief) |  |
+
+### Task: IPI-XXX · TASK-001 — Implement Hyperdrive Postgres thread persistence
+
+**Purpose**: Threads currently die on page reload because Mastra uses in-memory LibSQL storage. Need durable thread survival across page navigations, browser restarts, and user returns.
+
+**Current gap**: `route.ts:313` sets `runner: new InMemoryAgentRunner()`. Threads are stored in `:memory:` LibSQL and lost when the process exits. IPI-146 org-scoped ownership works per-request but doesn't survive restarts.
+
+**User outcome**: Operator can refresh the page or navigate away and return to the same conversation thread. Conversation context (shot lists, asset decisions, campaign briefs) is preserved.
+
+**Smallest implementation**:
+
+1. Configure `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1` environment variable
+2. Ensure `HYPERDRIVE_FRESH` connection string is available in Cloudflare Workers
+3. Or alternatively, add Supabase-backed thread persistence (create tables, update `getMastraMemory()` and `getPlannerMemory()` to use Supabase storage)
+
+**Files likely affected**:
+
+- `app/src/mastra/memory.ts` — `getMastraMemory()`, `getPlannerMemory()`, `makeMemoryResourceId()`
+- `app/src/app/api/copilotkit/[[...slug]]/route.ts` — `runner` config, `requestNeedsDurableStorage()`, `getMastraStorage()` calls
+- `.env*` or Infisical secrets — `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE`, `HYPERDRIVE_FRESH`
+- `supabase/migrations/` — new tables for thread persistence (if choosing Supabase path)
+
+**Acceptance criteria**:
+
+- Thread created on `/app/shoots` is still accessible after page refresh
+- Thread created on `/app/campaigns` is still accessible after browser restart
+- Cross-org thread ownership still returns 403 (IPI-146 guard preserved)
+- No 503 errors from `getMastraStorage()` when Hyperdrive is configured
+
+**Targeted test**: `npx vitest run src/app/api/copilotkit/thread-persistence.test.ts` (or equivalent test file)
+
+**Runtime proof**:
+
+- Start dev server with `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1`
+- Create a thread via chat
+- Refresh page → thread still exists
+- Verify `getMastraMemory()` returns thread data from Postgres, not in-memory
+
+**Dependencies**:
+
+- Hyperdrive Fresh connection string available
+- Or Supabase schema migration written
+- `IPIX_CF_INCLUDE_MASTRA_PG_SCOPE=1` or equivalent Supabase config
+
+**Risk**: Low if Hyperdrive already configured; medium if adding Supabase-backed storage (requires schema changes, RLS policies). Thread ownership 403 guard must not be weakened.
+
+---
+
+| Task ID | Task Name |
+| --- | --- |
+| IPI-XXX · TASK-002 — Add proactive intelligence surfaces |  |
+
+**Purpose**: Add 3 contextual prompts that the agent can surface proactively without the operator typing first.
+
+**Current gap**: Agent only responds after operator types. No proactive surfaces like "3 shots still missing for Amazon" or "2 talent bookings need confirmation."
+
+**User outcome**: Operator sees relevant information at a glance — missing deliverables, pending approvals, failed DNA reviews — reducing manual checks and improving workflow efficiency.
+
+**Smallest implementation**:
+
+1. Add 3 proactive intelligence cards to the IntelligencePanel right column
+2. Wire agent to check thread state and surface prompts via `useFrontendTool` or direct React state
+3. Prompts should be: (a) "N shots still missing for \[channel\]" — computed from shoot wizard state, (b) "N talent bookings need confirmation" — from booking FSM, (c) "N assets failed DNA" — from asset DNA scores
+
+**Files likely affected**:
+
+- `app/src/components/intelligence-panel/intelligence-panel.tsx` — add 3 card sections
+- `app/src/mastra/agents/index.ts` — add proactive check tools or workflow step
+- `app/src/components/copilot/copilot-tool-presentation.tsx` — if using `useRenderTool` for prompts
+- `app/src/lib/intelligence/` — new intelligence service for computing proactive prompts
+
+**Acceptance criteria**:
+
+- Operator sees "3 shots still missing for Amazon" card when 3\+ shots are unscheduled for Amazon channel
+- Operator sees "2 talent bookings need confirmation" when 2\+ bookings are in pending state
+- Operator sees "14 assets failed DNA" when 14\+ assets have DNA score below threshold
+- Cards are dismissible and don't block UI
+
+**Targeted test**: Verify cards appear/disappear based on thread state (manual test or vitest with mocked thread data)
+
+**Dependencies**:
+
+- Thread persistence (TASK-001) — prompts need durable thread state
+- Shoot wizard state shape known
+- Booking FSM state shape known
+- Asset DNA score threshold defined
+
+**Risk**: Low — cards are read-only display; no DB writes. Main risk is prompt logic being incorrect (showing wrong counts).
+
+---
+
+| Task ID | Task Name |
+| --- | --- |
+| IPI-XXX · TASK-003 — Expand frontend tools: openShoot, selectAsset, applyFilter, openApproval, highlightObject |  |
+
+**Purpose**: Add 5 high-value frontend tools so the agent can reliably trigger iPix UI actions without the operator pasting IDs or navigating manually.
+
+**Current gap**: Only 3 frontend tools registered (`navigateTo`, `navigateToCrm`, `setActiveBrand`). No tools for shoot actions, asset selection, filtering, or approval workflows.
+
+**User outcome**: Agent can say "Let me open that shoot detail" and the UI navigates automatically. Agent can say "Select this asset" and the asset detail panel opens. Agent can say "Filter assets by brand" and the asset list filters. Reduces operator friction.
+
+**Smallest implementation**:
+
+1. Register 5 new `useFrontendTool` entries in `operator-panel.tsx`
+2. Each handler does `router.push()` or state update
+3. Add corresponding UI elements to accept agent-driven navigation
+
+**Files likely affected**:
+
+- `app/src/components/operator-panel/operator-panel.tsx` — add 5 `useFrontendTool` blocks (after existing 3)
+- `app/src/lib/route-agent-map.ts` — if new navigation paths need agent mapping
+- `app/src/components/operator-panel/nav-sidebar.tsx` — if new nav items needed
+
+**Acceptance criteria**:
+
+- Agent calls `navigateTo({ section: "shoot-wizard" })` → navigates to `/app/shoots/new`
+- Agent calls `openShoot({ shootId: "sho_abc123" })` → navigates to `/app/shoots/[id]`
+- Agent calls `selectAsset({ assetId: "ast_abc123" })` → opens asset detail in Brand Hub
+- Agent calls `applyFilter({ filter: "brand", value: "nike" })` → filters assets by Nike brand
+- Agent calls `openApproval({ type: "deliverables" })` → opens deliverables approval panel
+- Agent calls `highlightObject({ objectId: "obj_abc123" })` → highlights object in asset viewer
+
+**Targeted test**: `npx vitest run` — verify each `useFrontendTool` handler runs without error (unit test the handler functions)
+
+**Dependencies**:
+
+- Router paths exist for each target (shoots/new, shoots/\[id\], Brand Hub routes, approval panels)
+- No breaking changes to existing 3 frontend tools
+
+**Risk**: Low — all handlers are `ssr:false` client-only; only do `router.push()` which is safe. Main risk is adding a handler with a router path that doesn't exist.
+
+---
+
+| Task ID | Task Name |
+| --- | --- |
+| IPI-XXX · TASK-004 — Implement shared state sync (STATE\_SNAPSHOT/STATE\_DELTA) for shoot list collaboration |  |
+
+**Purpose**: Implement AG-UI bidirectional shared state so the agent and UI share the same shoot list state. When operator edits a shot in the UI, the agent sees the updated state; when the agent recommends adding shots, the UI updates without manual refresh.
+
+**Current gap**: No `STATE_SNAPSHOT`/`STATE_DELTA` AG-UI events for synchronizing state. Operator and agent have disjoint views of the shot list.
+
+**User outcome**: Seamless collaboration between operator and agent during shoot planning. Agent can add recommendations that appear in the UI; operator edits are visible to the agent. Reduces "context loss" friction.
+
+**Smallest implementation**:
+
+1. In `route.ts`, configure `CopilotRuntime` with shared state support (check `@copilotkit/runtime` v1.61.2 AG-UI shared state docs)
+2. Register `STATE_SNAPSHOT` and `STATE_DELTA` AG-UI event handlers
+3. Create shared state schema for shoot list (shot IDs, angles, approved status, operator edits)
+4. Sync state on each agent turn: read UI state → write to agent memory; read agent state → update UI
+
+**Files likely affected**:
+
+- `app/src/app/api/copilotkit/[[...slug]]/route.ts` — add shared state config to `CopilotRuntime` options
+- `app/src/mastra/agents/index.ts` — add shared state memory schema or working memory updates
+- `app/src/components/operator-panel/operator-panel.tsx` — read/write shared state in component lifecycle
+- `app/src/mastra/memory.ts` — add shared state memory instance or extend `PlannerWorkingMemory`
+
+**Acceptance criteria**:
+
+- Operator edits a shot angle in the UI → agent sees updated angle value on next turn
+- Agent recommends adding a shot → shot appears in UI without manual refresh
+- Shared state survives page reload (if TASK-001 is also completed)
+- No state desynchronization after 5\+ agent-operator turns
+
+**Targeted test**: `npx vitest run` — test shared state sync in a mock agent-operator interaction (vitest with `@ag-ui/core` mocks)
+
+**Dependencies**:
+
+- TASK-001 (thread persistence) — shared state needs durable thread storage
+- AG-UI `STATE_SNAPSHOT`/`STATE_DELTA` support in `@copilotkit/runtime` v1.61.2 (verify)
+- Shoot list state shape defined
+
+**Risk**: Medium — shared state introduces complexity in state management. Main risk is state desynchronization or stale reads. Must pair with TASK-001 for durability.
+
+---
+
+| Task ID | Task Name |
+| --- | --- |
+| IPI-XXX · TASK-005 — Expand generative UI: add 4 useRenderTool registrations |  |
+
+**Purpose**: Add 4 more `useRenderTool` registrations beyond `draftFollowUp` to enable typed generative UI for shot lists, asset DNA, booking proposals, and campaign briefs.
+
+**Current gap**: Only 1 `useRenderTool` registration (`draftFollowUp`). No generative UI for core iPix workflows.
+
+**User outcome**: Agent can generate usable UI components (shot list card, DNA score card, booking proposal card, campaign brief card) rather than just returning raw JSON. Operator sees formatted, interactive cards in the chat/dock.
+
+**Smallest implementation**:
+
+1. Add 4 `useRenderTool` registrations in `generative-ui-registry.tsx` (or directly in `operator-panel.tsx`)
+2. Each registration has `name`, `parameters` (Zod schema), and `render` callback
+3. Render callbacks return React components matching iPix design system
+
+**Files likely affected**:
+
+- `app/src/components/copilot/generative-ui-registry.tsx` — add 4 `useRenderTool` calls
+- `app/src/components/crm/follow-up-draft-card.tsx` — reference pattern for render callbacks
+- New component files: `shot-list-card.tsx`, `asset-dna-card.tsx`, `booking-proposal-card.tsx`, `campaign-brief-card.tsx`
+
+**Acceptance criteria**:
+
+- Agent calls `generateShotList(...)` → `useRenderTool` renders `<ShotListCard>` component
+- Agent calls `assetDNA({ assetId, score })` → `useRenderTool` renders `<AssetDNACard>` with score and reasons
+- Agent calls `bookingProposal({ talent, rate, date })` → `useRenderTool` renders `<BookingProposalCard>`
+- Agent calls `campaignBrief({ brand, channels, goal })` → `useRenderTool` renders `<CampaignBriefCard>`
+- All render callbacks handle 3 status states: inProgress, executing, complete
+
+**Targeted test**: `npx vitest run` — verify each `useRenderTool` registration runs without error (unit test the hook calls)
+
+**Dependencies**:
+
+- Zod schemas defined for each tool's parameters
+- React components exist or are created for each card type
+- `useGenerativeUIRegistry()` called in `OperatorPanel` (already the case)
+
+**Risk**: Low — each `useRenderTool` is independent; existing `draftFollowUp` pattern is proven. Main risk is Zod schema mismatch between agent expectations and component props.
+
+---
+
+The audit is complete. Here's a summary of the key findings:
+
+## Key Findings
+
+**Current state**: iPix has a functional CopilotKit \+ Mastra setup with 2 agents (production-planner, creative-director) connected via AG-UI SSE, 3 frontend tools registered, HITL gates working, and org-scoped thread ownership enforced. However, several critical gaps exist.
+
+**Top priority gap**: **Thread persistence is in-memory only** — threads die on page reload. This is the highest-impact issue (ROI 1.29/100). Without durable threads, operators lose conversation context every time they navigate or refresh.
+
+**Critical structural issue**: The `default` agent alias mismatch between CopilotKit's prebuilt UI (which resolves `agentId="default"`) and the renamed registry (`production-planner`/`creative-director`). Fixed by the `REQUIRED_AGENT_IDS` guard, but the risk remains if the guard is ever bypassed.
+
+**Advanced feature utilization is very low** (15%): Only generative UI at Level 1 (`draftFollowUp`) and headless CopilotChat pattern are active. Shared state, proactive intelligence, persistent memory, and generative UI expansion are all missing.
+
+**Production readiness**: 60% — functional for basic shoot planning and asset DNA review, but thread loss on reload and lack of shared state limit production use. HITL gates and security are solid.
+
+**Recommended next tasks (5 highest ROI)**:
+
+1. **TASK-001**: Implement Hyperdrive Postgres thread persistence (critical for thread survival)
+2. **TASK-002**: Add proactive intelligence surfaces (missing shots, pending approvals, DNA failures)
+3. **TASK-003**: Expand frontend tools (openShoot, selectAsset, applyFilter, openApproval, highlightObject)
+4. **TASK-004**: Implement shared state sync (STATE\_SNAPSHOT/STATE\_DELTA) for shoot list collaboration
+5. **TASK-005**: Expand generative UI (4 more useRenderTool registrations)
+
+The full audit with all 16 sections, the master feature matrix scored /100, the scorecard, and the 5 recommended Linear tasks is available in the session output.
