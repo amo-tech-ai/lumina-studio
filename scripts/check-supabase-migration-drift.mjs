@@ -177,10 +177,6 @@ function poolerShapeReason(value) {
   return null;
 }
 
-function isPoolerDbUrl(url) {
-  return poolerShapeReason(url) === null;
-}
-
 function poolerUsernameProjectRef(url) {
   const parsed = parsePgUrl(url);
   if (!parsed) return null;
@@ -299,11 +295,8 @@ function replaceLinkedWithDbUrl(cmdArgs, dbUrl) {
  * Never prints connection URLs or passwords (IPIX_DRIFT_DEBUG=1 prints redacted CLI text).
  * Read-only: `migration list` or `db push --dry-run` only.
  */
-function supabaseViaPoolerOrLinked(cmdArgs, captureOpts = {}) {
+function supabaseViaPoolerOrLinked(cmdArgs, captureOpts = {}, pooler = null) {
   assertReadOnlySupabaseArgs(cmdArgs);
-  const pooler = pickPoolerDbUrl(process.env, readLinkedProjectRef(), {
-    logRejects: true,
-  });
   if (pooler) {
     const viaPooler = runCapture(
       "supabase",
@@ -721,35 +714,22 @@ if (args.includes("--self-check")) {
   const txPooler = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:6543/postgres`;
   const qaSession = `postgresql://postgres.${qaRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
 
-  assert.equal(isPoolerDbUrl(sessionPooler), true);
-  assert.equal(isPoolerDbUrl(sessionNoPort), false);
+  assert.equal(poolerShapeReason(sessionPooler), null);
+  assert.ok(poolerShapeReason(sessionNoPort));
   assert.equal(
-    isPoolerDbUrl(`postgres://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`),
-    true,
+    poolerShapeReason(`postgres://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`),
+    null,
   );
-  assert.equal(isPoolerDbUrl(txPooler), false);
-  assert.equal(
-    isPoolerDbUrl("https://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"),
-    false,
-  );
-  assert.equal(
-    isPoolerDbUrl(`postgresql://postgres.${prodRef}:x@pooler.supabase.com:5432/postgres`),
-    false,
-  );
-  assert.equal(
-    isPoolerDbUrl(`postgresql://postgres.${prodRef}:x@evilpooler.supabase.com:5432/postgres`),
-    false,
-  );
-  assert.equal(
-    isPoolerDbUrl(
+  assert.ok(poolerShapeReason(txPooler));
+  assert.ok(poolerShapeReason("https://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"));
+  assert.ok(poolerShapeReason(`postgresql://postgres.${prodRef}:x@pooler.supabase.com:5432/postgres`));
+  assert.ok(poolerShapeReason(`postgresql://postgres.${prodRef}:x@evilpooler.supabase.com:5432/postgres`));
+  assert.ok(
+    poolerShapeReason(
       `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com.evil.test:5432/postgres`,
     ),
-    false,
   );
-  assert.equal(
-    isPoolerDbUrl("postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres"),
-    false,
-  );
+  assert.ok(poolerShapeReason("postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres"));
   assert.equal(isDirectDbHost("db.abcdefghijklmnop.supabase.co"), true);
   assert.equal(isDirectDbHost("aws-1-us-east-2.pooler.supabase.com"), false);
 
@@ -829,9 +809,12 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 
 // Prefer the PATH `supabase` binary (CI: supabase/setup-cli pin). Do not use
 // `npx supabase` — that can download an unpinned npm package and bypass the pin.
-const poolerSecretUrls = [pickPoolerDbUrl()?.url].filter(Boolean);
+const pooler = pickPoolerDbUrl(process.env, readLinkedProjectRef(), {
+  logRejects: true,
+});
+const poolerSecretUrls = [pooler?.url].filter(Boolean);
 const listCmd = ["migration", "list", "--linked", "--output-format", "json"];
-const listAttempt = supabaseViaPoolerOrLinked(listCmd, { mergeStderr: false });
+const listAttempt = supabaseViaPoolerOrLinked(listCmd, { mergeStderr: false }, pooler);
 if (!listAttempt.ok) {
   printRedactedCliFailure("migration list failed", listAttempt, poolerSecretUrls);
   process.exit(listAttempt.status || 1);
@@ -862,9 +845,11 @@ if (filteredRemoteOnly.length) {
   process.exit(1);
 }
 
-const dry = supabaseViaPoolerOrLinked(["db", "push", "--linked", "--dry-run", "--yes"], {
-  mergeStderr: true,
-});
+const dry = supabaseViaPoolerOrLinked(
+  ["db", "push", "--linked", "--dry-run", "--yes"],
+  { mergeStderr: true },
+  pooler,
+);
 if (!dryRunIsUsable(dry)) {
   printRedactedCliFailure("db push --dry-run failed", dry, poolerSecretUrls);
   process.exit(dry.status || 1);
