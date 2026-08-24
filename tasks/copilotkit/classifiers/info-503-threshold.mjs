@@ -74,19 +74,23 @@ export function extractTerminalAgUiRunId(sseText) {
  * @param {string} error.text - Error text
  * @param {string} error.type - Error type
  * @param {{ streamComplete?: boolean, completedRunId?: string|null, errorRunId?: string|null }} [context]
- *   Tolerate STREAM_IDLE_TIMEOUT only when both runIds are known and equal
- *   (same completed AG-UI run). Missing IDs or a different run stay blocking.
- *   Other `agent_run_error_event` lines are never ignored via this flag.
+ *   Tolerate STREAM_IDLE_TIMEOUT only when the error runId matches a
+ *   RUN_FINISHED/RUN_ERROR runId proven from SSE (`completedRunId`).
+ *   `streamComplete` / partial assistant text is not terminal proof.
+ *   Missing either runId, or a mismatch, stays blocking.
+ *   Other `agent_run_error_event` lines are never ignored via this path.
  */
 export function classifyConsoleError(error, context = {}) {
   const t = error.text || "";
 
-  // Stale idle timeout for the same completed run — not a blanket ignore
-  // of agent_run_error_event (401 / invalid-model still block below).
-  if (context.streamComplete && isStreamIdleTimeoutError(t)) {
+  // Idle timeout after a later CopilotKit watchdog tick. Only suppress when
+  // this error's runId is the same run that already emitted RUN_FINISHED /
+  // RUN_ERROR in the SSE body. Text growth is not that proof.
+  if (isStreamIdleTimeoutError(t)) {
     const errorRunId = context.errorRunId || extractAgUiRunId(t);
     const completedRunId = context.completedRunId || null;
-    return !(errorRunId && completedRunId && errorRunId === completedRunId);
+    if (!errorRunId || !completedRunId) return true;
+    return errorRunId !== completedRunId;
   }
   
   // --- Tolerated: documented retryable transients ---
