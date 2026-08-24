@@ -4,6 +4,10 @@
  *
  * Compares local vs remote migration *timestamps* via
  * `supabase migration list --linked --output-format json`.
+ * IPI-1032: prefer IPv4 session pooler `--db-url` (SUPABASE_DB_URL / DATABASE_URL
+ * on *.pooler.supabase.com:5432) so local machines without IPv6 to db.* still work.
+ * Pooler URLs are used only when username `postgres.<ref>` matches the linked
+ * project (`SUPABASE_PROJECT_ID` or `supabase/.temp/project-ref`).
  * Does NOT prove SQL byte-equality with the live schema.
  *
  * Modes:
@@ -23,7 +27,7 @@
  *   node scripts/check-supabase-migration-drift.mjs --self-check
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -69,19 +73,264 @@ function run(cmd, cmdArgs, { allowFail = false } = {}) {
   }
 }
 
-/** Capture stdout+stderr and exit status without exiting the process. */
-function runCapture(cmd, cmdArgs) {
-  // supabase CLI prints dry-run pending migrations on stderr; stdout is often
-  // only "Finished supabase db push." Merge both or PR linked-gates false-fail
-  // when a new migration is correctly pending (IPI-784 / #614).
+/**
+ * Capture CLI streams without exiting.
+ * `out` is stdout. Pass mergeStderr: true for `db push --dry-run` (pending
+ * filenames land on stderr — IPI-784 / #614). `migration list` JSON stays on stdout.
+ */
+function runCapture(cmd, cmdArgs, { mergeStderr = false } = {}) {
   const r = spawnSync(cmd, cmdArgs, {
     cwd: root,
     encoding: "utf8",
     env: process.env,
   });
-  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  const stdout = r.stdout ?? "";
+  const stderr = r.error
+    ? `${r.stderr ?? ""}${r.error.message}\n`
+    : (r.stderr ?? "");
   const status = r.status ?? 1;
-  return { ok: status === 0, out, status };
+  return {
+    ok: status === 0,
+    out: mergeStderr ? `${stdout}${stderr}` : stdout,
+    err: stderr,
+    status,
+  };
+}
+
+function redactSecrets(text, urls = []) {
+  let s = String(text ?? "");
+  for (const url of urls.filter(Boolean)) {
+    s = s.split(url).join("***");
+    try {
+      const parsed = new URL(url);
+      if (parsed.password) {
+        s = s.split(parsed.password).join("***");
+        try {
+          const decoded = decodeURIComponent(parsed.password);
+          if (decoded && decoded !== parsed.password) s = s.split(decoded).join("***");
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return s;
+}
+
+function printRedactedCliFailure(label, captured, secretUrls = []) {
+  const secrets = secretUrls.filter(Boolean);
+  const blob = redactSecrets(`${captured.out ?? ""}${captured.err ?? ""}`, secrets).trim();
+  if (!secrets.length) {
+    console.error(`${label} (exit ${captured.status})`);
+    if (blob) console.error(blob);
+    return;
+  }
+  console.error(
+    `${label} (exit ${captured.status}). Set IPIX_DRIFT_DEBUG=1 for redacted CLI output.`,
+  );
+  if (process.env.IPIX_DRIFT_DEBUG === "1" && blob) console.error(blob);
+}
+
+/** IPI-1032 · SB-CI-IPV4 — db.<ref>.supabase.co is AAAA-only on some workstations. */
+const IPV6_CLI_FAIL =
+  /LegacyDbConfigIpv6Error|ENETUNREACH|network is unreachable|dial tcp \[|no route to host|IPv6/i;
+
+function parsePgUrl(url) {
+  try {
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function isDirectDbHost(hostname) {
+  return /^db\.[a-z0-9]+\.supabase\.co$/i.test(hostname || "");
+}
+
+const PROJECT_REF_RE = /^[a-z0-9]{10,32}$/i;
+const POOLER_ENV_KEYS = ["SUPABASE_DB_URL", "DATABASE_URL", "POSTGRES_URL"];
+
+function normalizeProjectRef(ref) {
+  const s = String(ref ?? "").trim().toLowerCase();
+  return PROJECT_REF_RE.test(s) ? s : null;
+}
+
+/** Shape-only: postgres(ql) + *.pooler.supabase.com + explicit :5432. Never the URL. */
+function poolerShapeReason(value) {
+  if (value == null || value === "") return "empty";
+  const parsed = parsePgUrl(value);
+  if (!parsed) return "not a postgres(ql) URL";
+  if (isDirectDbHost(parsed.hostname)) {
+    return "direct db.* host (IPv6-only on some workstations); need *.pooler.supabase.com:5432";
+  }
+  if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) {
+    return "host is not *.pooler.supabase.com";
+  }
+  if (parsed.port === "6543") return "transaction pooler :6543; need session :5432";
+  if (parsed.port !== "5432") return "session pooler port must be explicit :5432";
+  return null;
+}
+
+function poolerUsernameProjectRef(url) {
+  const parsed = parsePgUrl(url);
+  if (!parsed) return null;
+  let user = parsed.username || "";
+  try {
+    user = decodeURIComponent(user);
+  } catch {
+    return null;
+  }
+  const m = /^postgres\.([a-z0-9]+)$/i.exec(user);
+  return m ? normalizeProjectRef(m[1]) : null;
+}
+
+function readLinkedProjectRef() {
+  try {
+    const raw = readFileSync(join(root, "supabase", ".temp", "project-ref"), "utf8").trim();
+    return normalizeProjectRef(raw);
+  } catch {
+    return null;
+  }
+}
+
+function projectRefConflict(env = process.env, linkedRef = readLinkedProjectRef()) {
+  const fromEnv = normalizeProjectRef(env.SUPABASE_PROJECT_ID);
+  const fromLink = normalizeProjectRef(linkedRef);
+  return Boolean(fromEnv && fromLink && fromEnv !== fromLink);
+}
+
+/** Env and linked file must agree when both are set; otherwise either source. */
+function expectedProjectRef(env = process.env, linkedRef = readLinkedProjectRef()) {
+  if (projectRefConflict(env, linkedRef)) return null;
+  const fromEnv = normalizeProjectRef(env.SUPABASE_PROJECT_ID);
+  const fromLink = normalizeProjectRef(linkedRef);
+  return fromEnv || fromLink || null;
+}
+
+/** Why a pooler env value cannot be used. Never includes the URL. */
+function poolerRejectReason(value, expected, { conflict = false } = {}) {
+  if (value == null || value === "") return null;
+  const shape = poolerShapeReason(value);
+  if (shape) return shape;
+  if (conflict) {
+    return "SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref";
+  }
+  if (!expected) {
+    return "no linked project ref (set SUPABASE_PROJECT_ID or run supabase link)";
+  }
+  const urlRef = poolerUsernameProjectRef(value);
+  if (!urlRef) return "username must be postgres.<project-ref>";
+  if (urlRef !== expected) return "postgres.<ref> does not match the linked project";
+  return null;
+}
+
+function pickPoolerDbUrl(
+  env = process.env,
+  linkedRef = readLinkedProjectRef(),
+  { logRejects = false } = {},
+) {
+  const conflict = projectRefConflict(env, linkedRef);
+  const expected = expectedProjectRef(env, linkedRef);
+  let anySet = false;
+  for (const key of POOLER_ENV_KEYS) {
+    const value = env[key];
+    if (value == null || value === "") continue;
+    anySet = true;
+    const reason = poolerRejectReason(value, expected, { conflict });
+    if (!reason) return { key, url: value };
+    if (logRejects) {
+      console.error(`check-supabase-migration-drift: ignoring ${key}: ${reason}`);
+    }
+  }
+  if (logRejects && anySet && conflict) {
+    console.error(
+      "check-supabase-migration-drift: SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref; using --linked",
+    );
+  } else if (logRejects && anySet && !expected) {
+    console.error(
+      "check-supabase-migration-drift: no expected project ref (set SUPABASE_PROJECT_ID or run supabase link); using --linked",
+    );
+  }
+  return null;
+}
+
+function assertReadOnlySupabaseArgs(cmdArgs) {
+  const isList = cmdArgs[0] === "migration" && cmdArgs[1] === "list";
+  const isDryPush =
+    cmdArgs[0] === "db" &&
+    cmdArgs[1] === "push" &&
+    cmdArgs.includes("--dry-run");
+  if (!isList && !isDryPush) {
+    throw new Error(
+      "supabaseViaPoolerOrLinked only allows `migration list` or `db push --dry-run`",
+    );
+  }
+}
+
+function replaceLinkedWithDbUrl(cmdArgs, dbUrl) {
+  if (!cmdArgs.includes("--linked")) {
+    throw new Error("replaceLinkedWithDbUrl requires --linked in argv");
+  }
+  const out = [];
+  for (const arg of cmdArgs) {
+    if (arg === "--linked") {
+      out.push("--db-url", dbUrl);
+    } else {
+      out.push(arg);
+    }
+  }
+  return out;
+}
+
+/**
+ * Try a pinned session-pooler `--db-url` first when one is available, then
+ * fall back once to `--linked`. Emit an IPv6 hint when the linked failure
+ * looks like a direct-host/IPv6 error. Returns the (possibly failed) result.
+ * Never prints connection URLs or passwords (IPIX_DRIFT_DEBUG=1 prints redacted CLI text).
+ * Read-only: `migration list` or `db push --dry-run` only.
+ */
+function supabaseViaPoolerOrLinked(cmdArgs, captureOpts = {}, pooler = null) {
+  assertReadOnlySupabaseArgs(cmdArgs);
+  if (pooler) {
+    const viaPooler = runCapture(
+      "supabase",
+      replaceLinkedWithDbUrl(cmdArgs, pooler.url),
+      captureOpts,
+    );
+    if (viaPooler.ok) {
+      console.log(
+        `check-supabase-migration-drift: using IPv4 pooler --db-url (${pooler.key})`,
+      );
+      return viaPooler;
+    }
+    console.error(
+      `session pooler --db-url failed (exit ${viaPooler.status}); trying --linked`,
+    );
+    if (process.env.IPIX_DRIFT_DEBUG === "1") {
+      const redacted = redactSecrets(
+        `${viaPooler.out ?? ""}${viaPooler.err ?? ""}`,
+        [pooler.url],
+      ).trim();
+      if (redacted) console.error(redacted);
+    }
+  }
+
+  const linked = runCapture("supabase", cmdArgs, captureOpts);
+  if (linked.ok) return linked;
+
+  const linkedText = `${linked.out ?? ""}${linked.err ?? ""}`;
+  if (IPV6_CLI_FAIL.test(linkedText)) {
+    console.error(
+      "Direct db.* host is IPv6-only here. Set SUPABASE_DB_URL to the session pooler (*.pooler.supabase.com:5432), not db.<ref>.supabase.co.",
+    );
+  }
+  return linked;
 }
 
 function versionFromFilename(name) {
@@ -458,6 +707,100 @@ if (args.includes("--self-check")) {
     true,
   );
 
+  const prodRef = "abcdefghijklmnopqr12";
+  const qaRef = "abcdefghijklmnopqr99";
+  const sessionPooler = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
+  const sessionNoPort = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com/postgres`;
+  const txPooler = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:6543/postgres`;
+  const qaSession = `postgresql://postgres.${qaRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
+
+  assert.equal(poolerShapeReason(sessionPooler), null);
+  assert.ok(poolerShapeReason(sessionNoPort));
+  assert.equal(
+    poolerShapeReason(`postgres://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`),
+    null,
+  );
+  assert.ok(poolerShapeReason(txPooler));
+  assert.ok(poolerShapeReason("https://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"));
+  assert.ok(poolerShapeReason(`postgresql://postgres.${prodRef}:x@pooler.supabase.com:5432/postgres`));
+  assert.ok(poolerShapeReason(`postgresql://postgres.${prodRef}:x@evilpooler.supabase.com:5432/postgres`));
+  assert.ok(
+    poolerShapeReason(
+      `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com.evil.test:5432/postgres`,
+    ),
+  );
+  assert.ok(poolerShapeReason("postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres"));
+  assert.equal(isDirectDbHost("db.abcdefghijklmnop.supabase.co"), true);
+  assert.equal(isDirectDbHost("aws-1-us-east-2.pooler.supabase.com"), false);
+
+  assert.equal(
+    pickPoolerDbUrl({ DATABASE_URL: "postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres" }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler, SUPABASE_PROJECT_ID: prodRef }, null).key,
+    "SUPABASE_DB_URL",
+  );
+  assert.equal(
+    pickPoolerDbUrl({ DATABASE_URL: qaSession, SUPABASE_PROJECT_ID: prodRef }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: txPooler, SUPABASE_PROJECT_ID: prodRef }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler, SUPABASE_PROJECT_ID: prodRef }, qaRef),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler }, prodRef).key,
+    "SUPABASE_DB_URL",
+  );
+  assert.equal(
+    pickPoolerDbUrl(
+      { SUPABASE_DB_URL: sessionPooler, SUPABASE_PROJECT_ID: prodRef.toUpperCase() },
+      null,
+    ).key,
+    "SUPABASE_DB_URL",
+  );
+  assert.equal(
+    poolerRejectReason(txPooler, prodRef),
+    "transaction pooler :6543; need session :5432",
+  );
+  assert.equal(
+    poolerRejectReason(sessionPooler, null, { conflict: true }),
+    "SUPABASE_PROJECT_ID does not match supabase/.temp/project-ref",
+  );
+  assert.equal(
+    redactSecrets(`bad ${sessionPooler} parse`, [sessionPooler]).includes(sessionPooler),
+    false,
+  );
+  assert.deepEqual(
+    replaceLinkedWithDbUrl(["migration", "list", "--linked", "--output-format", "json"], "postgres://u:p@h/db"),
+    ["migration", "list", "--db-url", "postgres://u:p@h/db", "--output-format", "json"],
+  );
+  assert.throws(
+    () => replaceLinkedWithDbUrl(["migration", "list"], "postgres://u:p@h/db"),
+    /--linked/,
+  );
+  assert.throws(
+    () => assertReadOnlySupabaseArgs(["db", "push", "--linked", "--yes"]),
+    /read-only|dry-run/,
+  );
+  assert.doesNotThrow(() =>
+    assertReadOnlySupabaseArgs(["migration", "list", "--linked"]),
+  );
+  assert.doesNotThrow(() =>
+    assertReadOnlySupabaseArgs(["db", "push", "--linked", "--dry-run", "--yes"]),
+  );
+  assert.equal(IPV6_CLI_FAIL.test("LegacyDbConfigIpv6Error: cannot connect"), true);
+  assert.equal(IPV6_CLI_FAIL.test("Remote database is up to date"), false);
+
   console.log("ok: self-check");
   process.exit(0);
 }
@@ -466,7 +809,17 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 
 // Prefer the PATH `supabase` binary (CI: supabase/setup-cli pin). Do not use
 // `npx supabase` — that can download an unpinned npm package and bypass the pin.
-const listRaw = run("supabase", ["migration", "list", "--linked", "--output-format", "json"]);
+const pooler = pickPoolerDbUrl(process.env, readLinkedProjectRef(), {
+  logRejects: true,
+});
+const poolerSecretUrls = [pooler?.url].filter(Boolean);
+const listCmd = ["migration", "list", "--linked", "--output-format", "json"];
+const listAttempt = supabaseViaPoolerOrLinked(listCmd, { mergeStderr: false }, pooler);
+if (!listAttempt.ok) {
+  printRedactedCliFailure("migration list failed", listAttempt, poolerSecretUrls);
+  process.exit(listAttempt.status || 1);
+}
+const listRaw = listAttempt.out;
 const { remoteOnly, localOnly } = classify(parseMigrationListJson(listRaw));
 
 // Filter out IPI-924 and talent avatar remote-only exceptions
@@ -492,10 +845,13 @@ if (filteredRemoteOnly.length) {
   process.exit(1);
 }
 
-const dry = runCapture("supabase", ["db", "push", "--linked", "--dry-run", "--yes"]);
+const dry = supabaseViaPoolerOrLinked(
+  ["db", "push", "--linked", "--dry-run", "--yes"],
+  { mergeStderr: true },
+  pooler,
+);
 if (!dryRunIsUsable(dry)) {
-  console.error("db push --dry-run failed (non-zero exit):");
-  console.error(dry.out.trim() || `(exit ${dry.status})`);
+  printRedactedCliFailure("db push --dry-run failed", dry, poolerSecretUrls);
   process.exit(dry.status || 1);
 }
 const dryRaw = dry.out;
@@ -531,7 +887,7 @@ const surprisePending = pendingVersions.filter((v) => !introduced.has(v));
 if (surprisePending.length) {
   console.error("PR: dry-run pending migrations not introduced by this PR:");
   for (const v of surprisePending) console.error(`  - ${v}`);
-  console.error("dry-run output:\n", dryRaw.trim());
+  console.error("dry-run output:\n", redactSecrets(dryRaw, poolerSecretUrls).trim());
   process.exit(1);
 }
 
@@ -542,7 +898,7 @@ const missingPending = localOnly.filter((v) => introduced.has(v) && !pendingSet.
 if (missingPending.length) {
   console.error("PR: local-only introduced migrations missing from dry-run pending:");
   for (const v of missingPending) console.error(`  - ${v}`);
-  console.error("dry-run output:\n", dryRaw.trim());
+  console.error("dry-run output:\n", redactSecrets(dryRaw, poolerSecretUrls).trim());
   process.exit(1);
 }
 
