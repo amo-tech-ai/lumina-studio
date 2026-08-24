@@ -166,7 +166,8 @@
         "tab": "linear",
         "pages": [
           "untitled-page"
-        ]
+        ],
+        "hidden": true
       }
     ]
   }
