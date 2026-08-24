@@ -5,7 +5,9 @@
  * Compares local vs remote migration *timestamps* via
  * `supabase migration list --linked --output-format json`.
  * IPI-1032: prefer IPv4 session pooler `--db-url` (SUPABASE_DB_URL / DATABASE_URL
- * on *.pooler.supabase.com) so local machines without IPv6 to db.* still work.
+ * on *.pooler.supabase.com:5432) so local machines without IPv6 to db.* still work.
+ * Pooler URLs are used only when username `postgres.<ref>` matches the linked
+ * project (`SUPABASE_PROJECT_ID` or `supabase/.temp/project-ref`).
  * Does NOT prove SQL byte-equality with the live schema.
  *
  * Modes:
@@ -25,7 +27,7 @@
  *   node scripts/check-supabase-migration-drift.mjs --self-check
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -92,7 +94,11 @@ const IPV6_CLI_FAIL =
 
 function parsePgUrl(url) {
   try {
-    return new URL(String(url).replace(/^postgres(ql)?:/i, "http:"));
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -102,18 +108,53 @@ function isDirectDbHost(hostname) {
   return /^db\.[a-z0-9]+\.supabase\.co$/i.test(hostname || "");
 }
 
-/** Session/transaction pooler host — IPv4 ELB. Never db.*.supabase.co. */
+const PROJECT_REF_RE = /^[a-z0-9]{10,32}$/i;
+
+/** Session pooler only: postgres(ql) + *.pooler.supabase.com + :5432 (or default). */
 function isPoolerDbUrl(url) {
   const parsed = parsePgUrl(url);
   if (!parsed?.hostname) return false;
-  if (isDirectDbHost(parsed.hostname)) return false;
-  return parsed.hostname.includes("pooler.supabase.com");
+  if (!parsed.hostname.toLowerCase().endsWith(".pooler.supabase.com")) return false;
+  return parsed.port === "" || parsed.port === "5432";
 }
 
-function pickPoolerDbUrl(env = process.env) {
+function poolerUsernameProjectRef(url) {
+  const parsed = parsePgUrl(url);
+  if (!parsed) return null;
+  let user = parsed.username || "";
+  try {
+    user = decodeURIComponent(user);
+  } catch {
+    return null;
+  }
+  const m = /^postgres\.([a-z0-9]+)$/i.exec(user);
+  return m && PROJECT_REF_RE.test(m[1]) ? m[1] : null;
+}
+
+function readLinkedProjectRef() {
+  try {
+    const raw = readFileSync(join(root, "supabase", ".temp", "project-ref"), "utf8").trim();
+    return PROJECT_REF_RE.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Env and linked file must agree when both are set; otherwise either source. */
+function expectedProjectRef(env = process.env, linkedRef = readLinkedProjectRef()) {
+  const fromEnv = String(env.SUPABASE_PROJECT_ID ?? "").trim();
+  if (fromEnv && linkedRef && fromEnv !== linkedRef) return null;
+  const ref = fromEnv || linkedRef || "";
+  return PROJECT_REF_RE.test(ref) ? ref : null;
+}
+
+function pickPoolerDbUrl(env = process.env, linkedRef = readLinkedProjectRef()) {
+  const expected = expectedProjectRef(env, linkedRef);
+  if (!expected) return null;
   for (const key of ["SUPABASE_DB_URL", "DATABASE_URL", "POSTGRES_URL"]) {
     const value = env[key];
-    if (isPoolerDbUrl(value)) return { key, url: value };
+    if (!isPoolerDbUrl(value)) continue;
+    if (poolerUsernameProjectRef(value) === expected) return { key, url: value };
   }
   return null;
 }
@@ -540,9 +581,37 @@ if (args.includes("--self-check")) {
     true,
   );
 
+  const prodRef = "abcdefghijklmnopqr12";
+  const qaRef = "abcdefghijklmnopqr99";
+  const sessionPooler = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
+  const sessionNoPort = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com/postgres`;
+  const txPooler = `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:6543/postgres`;
+  const qaSession = `postgresql://postgres.${qaRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`;
+
+  assert.equal(isPoolerDbUrl(sessionPooler), true);
+  assert.equal(isPoolerDbUrl(sessionNoPort), true);
   assert.equal(
-    isPoolerDbUrl("postgresql://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"),
+    isPoolerDbUrl(`postgres://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres`),
     true,
+  );
+  assert.equal(isPoolerDbUrl(txPooler), false);
+  assert.equal(
+    isPoolerDbUrl("https://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"),
+    false,
+  );
+  assert.equal(
+    isPoolerDbUrl(`postgresql://postgres.${prodRef}:x@pooler.supabase.com:5432/postgres`),
+    false,
+  );
+  assert.equal(
+    isPoolerDbUrl(`postgresql://postgres.${prodRef}:x@evilpooler.supabase.com:5432/postgres`),
+    false,
+  );
+  assert.equal(
+    isPoolerDbUrl(
+      `postgresql://postgres.${prodRef}:x@aws-1-us-east-2.pooler.supabase.com.evil.test:5432/postgres`,
+    ),
+    false,
   );
   assert.equal(
     isPoolerDbUrl("postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres"),
@@ -550,14 +619,33 @@ if (args.includes("--self-check")) {
   );
   assert.equal(isDirectDbHost("db.abcdefghijklmnop.supabase.co"), true);
   assert.equal(isDirectDbHost("aws-1-us-east-2.pooler.supabase.com"), false);
+
   assert.equal(
-    pickPoolerDbUrl({ DATABASE_URL: "postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres" }),
+    pickPoolerDbUrl({ DATABASE_URL: "postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres" }, null),
     null,
   );
   assert.equal(
-    pickPoolerDbUrl({
-      SUPABASE_DB_URL: "postgresql://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres",
-    }).key,
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler, SUPABASE_PROJECT_ID: prodRef }, null).key,
+    "SUPABASE_DB_URL",
+  );
+  assert.equal(
+    pickPoolerDbUrl({ DATABASE_URL: qaSession, SUPABASE_PROJECT_ID: prodRef }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: txPooler, SUPABASE_PROJECT_ID: prodRef }, null),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler, SUPABASE_PROJECT_ID: prodRef }, qaRef),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({ SUPABASE_DB_URL: sessionPooler }, prodRef).key,
     "SUPABASE_DB_URL",
   );
   assert.deepEqual(
