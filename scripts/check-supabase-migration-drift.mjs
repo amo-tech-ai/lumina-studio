@@ -4,6 +4,8 @@
  *
  * Compares local vs remote migration *timestamps* via
  * `supabase migration list --linked --output-format json`.
+ * IPI-1032: prefer IPv4 session pooler `--db-url` (SUPABASE_DB_URL / DATABASE_URL
+ * on *.pooler.supabase.com) so local machines without IPv6 to db.* still work.
  * Does NOT prove SQL byte-equality with the live schema.
  *
  * Modes:
@@ -82,6 +84,86 @@ function runCapture(cmd, cmdArgs) {
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   const status = r.status ?? 1;
   return { ok: status === 0, out, status };
+}
+
+/** IPI-1032 · SB-CI-IPV4 — db.<ref>.supabase.co is AAAA-only on some workstations. */
+const IPV6_CLI_FAIL =
+  /LegacyDbConfigIpv6Error|ENETUNREACH|network is unreachable|dial tcp \[|no route to host|IPv6/i;
+
+function parsePgUrl(url) {
+  try {
+    return new URL(String(url).replace(/^postgres(ql)?:/i, "http:"));
+  } catch {
+    return null;
+  }
+}
+
+function isDirectDbHost(hostname) {
+  return /^db\.[a-z0-9]+\.supabase\.co$/i.test(hostname || "");
+}
+
+/** Session/transaction pooler host — IPv4 ELB. Never db.*.supabase.co. */
+function isPoolerDbUrl(url) {
+  const parsed = parsePgUrl(url);
+  if (!parsed?.hostname) return false;
+  if (isDirectDbHost(parsed.hostname)) return false;
+  return parsed.hostname.includes("pooler.supabase.com");
+}
+
+function pickPoolerDbUrl(env = process.env) {
+  for (const key of ["SUPABASE_DB_URL", "DATABASE_URL", "POSTGRES_URL"]) {
+    const value = env[key];
+    if (isPoolerDbUrl(value)) return { key, url: value };
+  }
+  return null;
+}
+
+function replaceLinkedWithDbUrl(cmdArgs, dbUrl) {
+  const out = [];
+  for (const arg of cmdArgs) {
+    if (arg === "--linked") {
+      out.push("--db-url", dbUrl);
+    } else {
+      out.push(arg);
+    }
+  }
+  return out;
+}
+
+/**
+ * Prefer IPv4 session pooler `--db-url` when env has one; else `--linked`.
+ * If `--linked` fails with IPv6/direct-host errors, retry pooler or fail closed
+ * with a hint. Never prints the URL.
+ */
+function supabaseViaPoolerOrLinked(cmdArgs) {
+  const pooler = pickPoolerDbUrl();
+  if (pooler) {
+    const viaPooler = runCapture(
+      "supabase",
+      replaceLinkedWithDbUrl(cmdArgs, pooler.url),
+    );
+    if (viaPooler.ok) {
+      console.log(
+        `check-supabase-migration-drift: using IPv4 pooler --db-url (${pooler.key})`,
+      );
+      return viaPooler;
+    }
+    console.error(
+      `session pooler --db-url failed (exit ${viaPooler.status}); trying --linked`,
+    );
+    const trimmed = viaPooler.out.trim();
+    if (trimmed) console.error(trimmed);
+  }
+
+  const linked = runCapture("supabase", cmdArgs);
+  if (linked.ok) return linked;
+
+  if (IPV6_CLI_FAIL.test(linked.out)) {
+    console.error(
+      "Direct db.* host is IPv6-only here. Set SUPABASE_DB_URL to the session pooler (*.pooler.supabase.com:5432), not db.<ref>.supabase.co.",
+    );
+  }
+  return linked;
 }
 
 function versionFromFilename(name) {
@@ -458,6 +540,33 @@ if (args.includes("--self-check")) {
     true,
   );
 
+  assert.equal(
+    isPoolerDbUrl("postgresql://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres"),
+    true,
+  );
+  assert.equal(
+    isPoolerDbUrl("postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres"),
+    false,
+  );
+  assert.equal(isDirectDbHost("db.abcdefghijklmnop.supabase.co"), true);
+  assert.equal(isDirectDbHost("aws-1-us-east-2.pooler.supabase.com"), false);
+  assert.equal(
+    pickPoolerDbUrl({ DATABASE_URL: "postgresql://postgres:x@db.abcdefghijklmnop.supabase.co:5432/postgres" }),
+    null,
+  );
+  assert.equal(
+    pickPoolerDbUrl({
+      SUPABASE_DB_URL: "postgresql://postgres.ref:x@aws-1-us-east-2.pooler.supabase.com:5432/postgres",
+    }).key,
+    "SUPABASE_DB_URL",
+  );
+  assert.deepEqual(
+    replaceLinkedWithDbUrl(["migration", "list", "--linked", "--output-format", "json"], "postgres://u:p@h/db"),
+    ["migration", "list", "--db-url", "postgres://u:p@h/db", "--output-format", "json"],
+  );
+  assert.equal(IPV6_CLI_FAIL.test("LegacyDbConfigIpv6Error: cannot connect"), true);
+  assert.equal(IPV6_CLI_FAIL.test("Remote database is up to date"), false);
+
   console.log("ok: self-check");
   process.exit(0);
 }
@@ -466,7 +575,13 @@ console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base
 
 // Prefer the PATH `supabase` binary (CI: supabase/setup-cli pin). Do not use
 // `npx supabase` — that can download an unpinned npm package and bypass the pin.
-const listRaw = run("supabase", ["migration", "list", "--linked", "--output-format", "json"]);
+const listCmd = ["migration", "list", "--linked", "--output-format", "json"];
+const listAttempt = supabaseViaPoolerOrLinked(listCmd);
+if (!listAttempt.ok) {
+  console.error(listAttempt.out.trim() || `(exit ${listAttempt.status})`);
+  process.exit(listAttempt.status || 1);
+}
+const listRaw = listAttempt.out;
 const { remoteOnly, localOnly } = classify(parseMigrationListJson(listRaw));
 
 // Filter out IPI-924 and talent avatar remote-only exceptions
@@ -492,7 +607,7 @@ if (filteredRemoteOnly.length) {
   process.exit(1);
 }
 
-const dry = runCapture("supabase", ["db", "push", "--linked", "--dry-run", "--yes"]);
+const dry = supabaseViaPoolerOrLinked(["db", "push", "--linked", "--dry-run", "--yes"]);
 if (!dryRunIsUsable(dry)) {
   console.error("db push --dry-run failed (non-zero exit):");
   console.error(dry.out.trim() || `(exit ${dry.status})`);
