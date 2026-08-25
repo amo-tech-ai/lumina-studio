@@ -1,0 +1,637 @@
+---
+title: "aug-21-report"
+---
+
+# iPix × CopilotKit — Current Implementation, Real-World Use Cases & Support Questions
+
+**Project:** iPix **Purpose:** Technical review for CopilotKit support **Current CopilotKit version:** `1.61.2` **Current AG-UI Mastra adapter:** `@ag-ui/mastra 1.1.1` **Frontend:** Next.js 16.2.11 / React 19.2.1 **Agent framework:** Mastra **Runtime target:** Cloudflare Workers / OpenNext **Database:** Supabase PostgreSQL
+
+---
+
+## 1. What is iPix?
+
+iPix is an AI-powered platform for managing fashion photography, ecommerce content, campaigns, talent bookings, CRM, assets, and production workflows.
+
+We use CopilotKit as the **human-facing AI interaction layer**.
+
+Our architecture is approximately:
+
+```text
+iPix Next.js UI
+      │
+      ├── Normal React application
+      │
+      └── CopilotKit
+            │
+            ├── Chat
+            ├── Agent context
+            ├── Frontend tools
+            ├── Generative UI
+            └── Human approval
+                   │
+                   ▼
+                 AG-UI
+                   │
+                   ▼
+                Mastra
+          Agents / Tools / Workflows
+                   │
+          ┌────────┼────────┐
+          ▼        ▼        ▼
+      Supabase  Cloudinary  Commerce
+```
+
+Our design principle is:
+
+> **CopilotKit handles the human ↔ AI experience. Mastra handles agent/workflow orchestration. Supabase remains the source of truth.**
+
+We do not want agents silently modifying important production data. Important writes require human approval.
+
+---
+
+# 2. Current CopilotKit Setup
+
+| Component | Current setup |
+| --- | --- |
+| CopilotKit Runtime | `@copilotkit/runtime 1.61.2` |
+| React integration | `@copilotkit/react-core 1.61.2` |
+| AG-UI | `0.0.57` |
+| Mastra adapter | `@ag-ui/mastra 1.1.1` |
+| Runtime API | `/api/copilotkit` |
+| Chat | Custom `OperatorChatDock` using `CopilotChat` |
+| Agent connection | `MastraAgent.getLocalAgents()` |
+| Agent selection | Route-based |
+| Frontend tools | 3 currently |
+| Generative UI | `useRenderTool`, currently limited |
+| HITL | Mastra/CopilotKit interrupt workflow |
+| Thread security | Organization/user scoped |
+| Runtime | Next.js → OpenNext → Cloudflare Workers |
+| Agent storage | Mastra memory with optional PostgreSQL/Hyperdrive path |
+
+---
+
+# 3. How We Use CopilotKit
+
+CopilotKit is not intended to be just a chatbot inside iPix.
+
+We want it to act as an **intelligence layer over the operator application**.
+
+### Example
+
+An operator is reviewing a fashion shoot.
+
+Instead of asking:
+
+> "What should I do?"
+
+the AI should already understand:
+
+```text
+Current brand
+Current shoot
+Selected assets
+Required channels
+Current shot list
+Missing deliverables
+Pending approvals
+Current operator
+Organization
+```
+
+The operator could then ask:
+
+> "What are we missing?"
+
+CopilotKit \+ Mastra could answer:
+
+> "Three Instagram Story shots and two Amazon product angles are still missing."
+
+The operator could then say:
+
+> "Add them."
+
+The system would:
+
+```text
+Agent proposes shots
+        ↓
+CopilotKit displays editable Shot List
+        ↓
+Operator reviews
+        ↓
+Operator approves
+        ↓
+Mastra continues workflow
+        ↓
+Approved state saved
+```
+
+---
+
+# 4. Current Real-World iPix Use Cases
+
+## Shoot Planning
+
+The Production Planner agent helps create:
+
+- deliverables
+- shot lists
+- budgets
+- channel requirements
+
+We currently use human approval gates for important decisions.
+
+Desired CopilotKit experience:
+
+```text
+AI creates Shot List
+       ↓
+Interactive Shot List appears
+       ↓
+Operator edits it
+       ↓
+Agent sees edits
+       ↓
+Operator approves
+       ↓
+Workflow continues
+```
+
+---
+
+## Asset DNA Review
+
+AI analyzes photography and media assets.
+
+Example:
+
+```text
+Asset
+  ↓
+AI analysis
+  ↓
+Brand/DNA score
+  ↓
+Reasons and recommendations
+  ↓
+Operator approves / overrides / requests reshoot
+```
+
+We would like CopilotKit Generative UI to present this as an interactive review card rather than primarily conversational output.
+
+---
+
+## Talent Booking
+
+The AI can help recommend talent and prepare booking information.
+
+Desired workflow:
+
+```text
+Agent recommends talent
+       ↓
+Booking Proposal UI
+       ↓
+Operator changes rate/date
+       ↓
+Approve
+       ↓
+Booking workflow continues
+```
+
+---
+
+## Campaign Planning
+
+Our Creative Director agent helps create campaign briefs and concepts.
+
+Desired workflow:
+
+```text
+Campaign Brief
+      ↕
+Operator
+      ↕
+CopilotKit shared state
+      ↕
+Creative Director agent
+```
+
+The human and agent should be able to work on the same campaign state without repeatedly copying information into chat.
+
+---
+
+## CRM
+
+CopilotKit can help operators:
+
+- navigate to customers
+- understand CRM context
+- draft follow-ups
+- recommend next actions
+
+We already have an early Generative UI implementation for CRM follow-up drafts.
+
+---
+
+# 5. Features Currently Working
+
+### AG-UI / Mastra connectivity
+
+Our Mastra agents are exposed to CopilotKit through:
+
+```text
+MastraAgent.getLocalAgents()
+```
+
+Streaming responses and tool calls are working.
+
+### Route-based agents
+
+Different application areas can use different agents.
+
+Examples include:
+
+```text
+Production Planner
+Creative Director
+CRM Assistant
+Booking
+Model Match
+Visual Identity
+```
+
+### Frontend tools
+
+We currently expose tools including:
+
+```text
+navigateTo
+navigateToCrm
+setActiveBrand
+```
+
+These allow the agent to interact with the application UI.
+
+### HITL
+
+Our Production Planner contains approval stages such as:
+
+```text
+Deliverables approval
+        ↓
+Shot List approval
+        ↓
+Budget approval
+```
+
+We deliberately keep important writes behind explicit operator approval.
+
+### Organization isolation
+
+Threads/resources are scoped to organization and user identity.
+
+Cross-organization thread access is designed to be rejected.
+
+---
+
+# 6. Problem Area #1 — Thread Persistence
+
+This is currently our biggest area of investigation.
+
+We need a clear understanding of the responsibilities of:
+
+```text
+CopilotKit threadId
+        ↓
+CopilotKit AgentRunner
+        ↓
+AG-UI
+        ↓
+Mastra thread/resource
+        ↓
+Mastra memory
+        ↓
+Postgres/Hyperdrive
+```
+
+Our audit suggested conversation state may not reliably survive all of:
+
+- page refresh
+- route navigation
+- browser restart
+- Next.js/runtime restart
+- Cloudflare Worker isolate changes
+
+However, our application already has both in-memory and PostgreSQL/Hyperdrive-related storage paths.
+
+Therefore, we are **not assuming persistence is broken**.
+
+We are running real-world tests to determine exactly which layer is responsible.
+
+### Question for CopilotKit
+
+What is the recommended production architecture for:
+
+> **CopilotKit \+ AG-UI \+ Mastra \+ Cloudflare Workers where a conversation must survive browser refreshes, runtime restarts and different Worker isolates?**
+
+Specifically:
+
+1. Should iPix provide and persist its own explicit `threadId`?
+2. What should persist CopilotKit/AG-UI run history?
+3. What should Mastra persist?
+4. Which layer should restore conversation history after reload?
+5. Is `InMemoryAgentRunner` appropriate when Mastra itself uses durable PostgreSQL storage?
+6. What is the recommended Cloudflare Workers configuration?
+
+---
+
+# 7. Problem Area #2 — HITL / Interrupt Compatibility
+
+We currently have a compatibility workaround involving:
+
+```text
+emitInterruptOutcome = false
+```
+
+It must currently be applied to the agent and its configuration because the Mastra adapter can clone/recreate the agent.
+
+Our HITL pattern is:
+
+```text
+Agent
+  ↓
+Interrupt
+  ↓
+CopilotKit approval UI
+  ↓
+Human decision
+  ↓
+Mastra resume
+  ↓
+Write
+```
+
+### Question for CopilotKit
+
+With:
+
+```text
+@copilotkit/runtime 1.61.2
+@copilotkit/react-core 1.61.2
+@ag-ui/mastra 1.1.1
+```
+
+what is the recommended current implementation for Mastra interrupts?
+
+In particular:
+
+> Is `emitInterruptOutcome=false` still required, and if not, what exact package combination and interrupt implementation should replace it?
+
+We do not want to remove the workaround without runtime proof.
+
+---
+
+# 8. Problem Area #3 — Shared State
+
+This is probably our most important advanced feature.
+
+Currently the operator UI and agent do not have comprehensive bidirectional shared state.
+
+Example problem:
+
+```text
+Operator edits Shot #12
+        ↓
+React state changes
+
+but
+
+Mastra agent may not automatically know
+about that new state.
+```
+
+Likewise:
+
+```text
+Agent adds recommended Shot #13
+        ↓
+UI should update automatically
+```
+
+We are investigating AG-UI:
+
+```text
+STATE_SNAPSHOT
+STATE_DELTA
+```
+
+### Question for CopilotKit
+
+What is the recommended **CopilotKit \+ Mastra pattern for shared state in 2026**?
+
+We particularly need it for:
+
+1. Shot Lists
+2. Campaign Briefs
+3. Booking Proposals
+4. Asset Review
+
+Should this state live primarily in:
+
+```text
+React
+CopilotKit agent state
+Mastra working memory
+Supabase
+```
+
+or should these layers have clearly separated responsibilities?
+
+---
+
+# 9. Problem Area #4 — Generative UI
+
+We currently use `useRenderTool`, but only on a limited basis.
+
+Our biggest opportunity is converting agent results into useful operator interfaces.
+
+Instead of:
+
+```text
+Agent → JSON/text
+```
+
+we want:
+
+```text
+Agent
+ ↓
+Typed data
+ ↓
+CopilotKit Generative UI
+ ↓
+Interactive React component
+ ↓
+Human edits/approves
+```
+
+Our priority components are:
+
+1. **Shot List**
+2. **Asset DNA Review**
+3. **Booking Proposal**
+4. **Campaign Brief**
+
+### Question for CopilotKit
+
+For these predictable business workflows, what approach do you recommend?
+
+- `useRenderTool`
+- shared state
+- HITL rendering
+- A2UI
+- another current CopilotKit pattern
+
+We prefer **typed, deterministic React components** rather than open-ended generated interfaces when business data is involved.
+
+---
+
+# 10. Problem Area #5 — Agent Context
+
+Current context includes information such as:
+
+```text
+route
+activeBrandId
+```
+
+We want to expand this to:
+
+```text
+organization
+brand
+shoot
+asset
+campaign
+CRM record
+selected records
+active tab
+filters
+current workflow state
+```
+
+### Question for CopilotKit
+
+What is the recommended pattern for giving agents **rich page context without sending excessive context on every turn**?
+
+We want agents to understand the operator's workspace while keeping token usage and latency controlled.
+
+---
+
+# 11. Problem Area #6 — Proactive Intelligence
+
+Our Intelligence Panel already displays information such as recommendations, DNA information and approval queues.
+
+We want to make this more context-aware.
+
+Examples:
+
+> "3 shots required for Amazon are missing."
+
+> "2 talent bookings require approval."
+
+> "14 assets failed DNA review."
+
+> "Campaign launch is blocked by 4 deliverables."
+
+These should primarily come from deterministic business data, with the AI helping explain and recommend actions.
+
+### Question for CopilotKit
+
+What current CopilotKit pattern is best for **proactive contextual intelligence that is not initiated by a chat message**?
+
+---
+
+# 12. What We Do NOT Want
+
+We deliberately want to avoid unnecessary complexity.
+
+We do **not** currently want:
+
+- agent swarms
+- another orchestration framework
+- AI-generated UI everywhere
+- autonomous database writes
+- duplicate memory systems
+- unnecessary MCP integrations
+
+Our target architecture is:
+
+```text
+Deterministic React application
+          +
+CopilotKit intelligence layer
+          +
+Mastra orchestration
+          +
+Supabase canonical business state
+          +
+Explicit human approval
+```
+
+---
+
+# 13. Main Questions for CopilotKit Support
+
+The five questions where guidance would help us most are:
+
+### 1. Thread persistence
+
+What is the recommended production persistence architecture for:
+
+**CopilotKit \+ Mastra \+ Cloudflare Workers \+ PostgreSQL?**
+
+### 2. HITL
+
+What is the current recommended Mastra interrupt/resume implementation, and is our `emitInterruptOutcome=false` workaround still necessary?
+
+### 3. Shared state
+
+What is the recommended architecture for synchronizing interactive React state with a Mastra agent?
+
+### 4. Generative UI
+
+For Shot Lists, Booking Proposals and Campaign Briefs, should we primarily use `useRenderTool`, shared state, HITL rendering, or another current API?
+
+### 5. Context engineering
+
+What is the recommended way to expose rich application context to route-specific agents without sending excessive context every turn?
+
+---
+
+# 14. Our Priority
+
+We are not looking to add every CopilotKit feature.
+
+Our priority is to make this workflow excellent:
+
+```text
+Operator works normally in iPix
+          ↓
+AI understands current context
+          ↓
+AI proactively identifies useful actions
+          ↓
+AI creates interactive proposals
+          ↓
+Human edits/reviews
+          ↓
+Human explicitly approves
+          ↓
+Mastra performs workflow
+          ↓
+Supabase records canonical result
+```
+
+We would appreciate guidance on whether our current architecture is aligned with CopilotKit best practices and, especially, which changes you would prioritize before we expand the implementation.

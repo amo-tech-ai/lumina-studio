@@ -67,12 +67,14 @@
         "tab": "CopilotKit",
         "pages": [
           "copilotkit/overview",
-          "copilotkit/runtime",
           "copilotkit/generative-ui",
           "copilotkit/hitl",
           "copilotkit/integration",
           "copilotkit/master-prd-roadmap",
-          "copilotkit/audit-review"
+          "copilotkit/audit-review",
+          "untitled-page",
+          "untitled-page-2",
+          "untitled-page-3"
         ]
       },
       {
@@ -111,19 +113,6 @@
         ]
       },
       {
-        "tab": "Product",
-        "pages": [
-          "product/brands",
-          "product/shoots",
-          "product/talent",
-          "product/bookings",
-          "product/crm",
-          "product/campaigns",
-          "product/ecommerce",
-          "product/intelligence"
-        ]
-      },
-      {
         "tab": "Data",
         "pages": [
           "data/schemas",
@@ -140,17 +129,6 @@
           "design/user-journeys",
           "design/wireframes",
           "design/diagrams"
-        ]
-      },
-      {
-        "tab": "Engineering",
-        "pages": [
-          "engineering/local-development",
-          "engineering/api",
-          "engineering/testing",
-          "engineering/github",
-          "engineering/ci-cd",
-          "engineering/deployment"
         ]
       },
       {
