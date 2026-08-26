@@ -428,10 +428,11 @@ function TaskScheduleShift({
         setProposedDelta(null);
         try {
           await onShifted();
-          router.refresh();
         } catch {
           setShiftRecovery(mapRefreshAfterCommitFailure());
         }
+        // Write committed — refresh Timeline/Kanban even if detail refetch threw.
+        router.refresh();
       } catch {
         setShiftRecovery(mapThrownPlannerFailure());
       }
@@ -558,6 +559,12 @@ export function PlannerTaskDetail({
   onRefreshSelection,
 }: PlannerTaskDetailProps) {
   const router = useRouter();
+  function handleDismissSelection() {
+    // Next 16.2 action queue: ACTION_NAVIGATE (deselect → router.push) discards
+    // a pending ACTION_REFRESH. Close first, then refresh the resulting route.
+    onClose();
+    router.refresh();
+  }
   const formId = useId();
   const [draft, setDraft] = useState(() => draftFromTask(task));
   const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(task.updatedAt ?? "");
@@ -721,11 +728,11 @@ export function PlannerTaskDetail({
         setExpectedUpdatedAt(result.data.updatedAt);
         try {
           if (onRefreshSelection) await onRefreshSelection();
-          // revalidatePath alone does not update mounted client views — refresh RSC props.
-          router.refresh();
         } catch {
           setActionRecovery(mapRefreshAfterCommitFailure());
         }
+        // Write committed — refresh board RSC even if selection refetch threw.
+        router.refresh();
       } catch {
         // Transport / server-action rejection — keep idempotency key for retry.
         setActionRecovery(mapThrownPlannerFailure());
@@ -887,7 +894,7 @@ export function PlannerTaskDetail({
             testId="planner-task-action-error"
             id={fieldError ? undefined : errorId}
             onRetry={actionRecovery.retrySafe ? () => handleSubmit() : undefined}
-            onDismiss={actionRecovery.dismissSelection ? onClose : undefined}
+            onDismiss={actionRecovery.dismissSelection ? handleDismissSelection : undefined}
             onReview={actionRecovery.reviewLatest ? handleReviewLatest : undefined}
             onReload={actionRecovery.reloadLatest ? handleReloadLatest : undefined}
           />
@@ -910,7 +917,7 @@ export function PlannerTaskDetail({
       <TaskScheduleShift
         task={task}
         disabled={isPending}
-        onDismissSelection={onClose}
+        onDismissSelection={handleDismissSelection}
         onShifted={async () => {
           if (onRefreshSelection) await onRefreshSelection();
         }}
