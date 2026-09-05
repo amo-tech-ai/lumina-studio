@@ -68,7 +68,7 @@ export function canBack(screen: number): boolean {
   return screen > FIRST_SCREEN && screen !== ANALYSIS_SCREEN;
 }
 
-/** DC line 590 — Skip is offered on the question run only, excluding screen 4 (website is required). */
+/** DC line 590 — Skip is offered on the question run only, excluding screen 4 (brand name is required). */
 export function canSkip(screen: number): boolean {
   return screen >= 5 && screen <= 7;
 }
@@ -103,7 +103,7 @@ export function ctaDisabled(screen: number, answers: OnboardingAnswers): boolean
       return answers.build === null;
     case 4:
       if (answers.brandName.trim() === "") return true;
-      return answers.websiteUrl.trim() === "" || validateUrl(answers.websiteUrl) !== null;
+      return answers.websiteUrl.trim() !== "" && validateUrl(answers.websiteUrl) !== null;
     case 5:
       return Object.keys(answers.listed).length === 0;
     case 7:

@@ -6,12 +6,14 @@ import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { validateUrl } from "@/lib/onboarding/validate-url";
 
 /**
- * IPI-833 / IPI-989 — screen 4. Brand name (required) and website (required).
+ * IPI-833 / IPI-989 / IPI-1089 — screen 4. Brand name (required); website
+ * optional for tenancy.
  *
- * The website URL is required because Brand DNA analysis is crawl-backed:
- * without a URL to crawl, the analysis pipeline has no input. The previous
- * "optional" labeling created a dead-end where users completed 8 more screens
- * only to be sent backward at analysis time (ONB2-WEB-REQ-001).
+ * IPI-1089 makes the website optional for tenancy: materialization only needs
+ * a brand name. A supplied URL is still validated, and Brand DNA analysis
+ * (crawl-backed) remains downstream — the analysis screen surfaces a clear
+ * "add a URL" message if analysis is attempted without one, so there is no
+ * dead-end (the IPI-989 required-URL rule is relaxed, not the crawl).
  *
  * The design comp renders a fabricated crawl summary under the URL field:
  *
@@ -37,8 +39,9 @@ export function BrandDetailsQuestion({
   const urlId = useId();
   const urlErrorId = `${urlId}-error`;
 
-  // Validate immediately — the field is required, not optional.
-  const urlError = validateUrl(websiteUrl);
+  // Validate immediately — blank is fine (optional for tenancy), but a
+  // non-blank value that fails validation must block (IPI-1089).
+  const urlError = websiteUrl.trim() ? validateUrl(websiteUrl) : null;
   const host = websiteUrl.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
 
   return (
@@ -68,7 +71,7 @@ export function BrandDetailsQuestion({
 
         <div className="grid gap-1.5">
           <label htmlFor={urlId} className="text-xs font-semibold text-[var(--onboarding-sub)]">
-            Website <span className="font-normal text-[var(--onboarding-muted)]">(required for Brand DNA crawl)</span>
+            Website <span className="font-normal text-[var(--onboarding-muted)]">(optional — add later for Brand DNA)</span>
           </label>
           <input
             id={urlId}

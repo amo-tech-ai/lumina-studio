@@ -136,7 +136,7 @@ export const createOrgAndBrand = async (
   const { data, error } = await supabase.rpc("materialize_onboarding_session", {
     p_idempotency_key: options.idempotencyKey,
     p_brand_name: form.brandName,
-    p_brand_url: form.websiteUrl.trim(),
+    p_brand_url: form.websiteUrl.trim() || null,
   });
 
   if (error) {

@@ -271,6 +271,8 @@ describe("routing contract — /app/page.tsx", () => {
     );
     expect(src).toMatch(/createSupabaseServerClient/);
     expect(src).toMatch(/redirect.*\/onboarding/);
-    expect(src).toMatch(/count.*===.*0/);
+    // IPI-1089: org_members is the tenancy authority — zero memberships routes to onboarding.
+    expect(src).toMatch(/org_members/);
+    expect(src).toMatch(/Count.*===.*0/);
   });
 });

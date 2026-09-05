@@ -98,12 +98,13 @@ describe("ctaDisabled", () => {
     expect(ctaDisabled(4, withAnswers({ brandName: "   " }))).toBe(true);
   });
 
-  // The website field is required for crawl-backed Brand DNA. Blank and
-  // malformed URLs both block Continue; a valid URL releases it.
-  it("requires a website — blocks blank and malformed URLs", () => {
+  // The website is optional for tenancy (IPI-1089): blank releases Continue,
+  // but a non-blank malformed URL still blocks so an error is never carried
+  // forward. A valid URL releases it.
+  it("treats the website as optional — blank releases, malformed blocks", () => {
     const named = { brandName: "Maison Noir" };
-    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "" }))).toBe(true);
-    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "   " }))).toBe(true);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "" }))).toBe(false);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "   " }))).toBe(false);
     expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "not-a-url" }))).toBe(true);
     expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "maisonnoir" }))).toBe(true);
     expect(

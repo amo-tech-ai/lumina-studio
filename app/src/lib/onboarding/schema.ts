@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Legacy /app/onboarding form (IPI-46). */
 export const onboardingFormSchema = z.object({
   brandName: z.string().min(1),
-  websiteUrl: z.string().url(),
+  websiteUrl: z.string().url().or(z.literal("")),
   instagramHandle: z.string(),
   industry: z.string().min(1),
   goal: z.string().min(1),

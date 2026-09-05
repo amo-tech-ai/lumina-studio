@@ -9,7 +9,8 @@ import {
 } from "@/lib/command-center/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-// IPI-11 / IPI-945: first-time users (0 brands) go to standalone /onboarding (v2).
+// IPI-11 / IPI-945 / IPI-1089: first-time users (0 org memberships + 0 brands)
+// go to standalone /onboarding (v2).
 // IPI-17: returning users see portfolio-first Command Center with live KPI reads.
 const CommandCenterPage = async ({
   searchParams,
@@ -43,7 +44,7 @@ const CommandCenterPage = async ({
     );
   }
 
-  let zeroBrands = false;
+  let needsOnboarding = false;
   let kpiData = EMPTY_COMMAND_CENTER_DATA;
 
   try {
@@ -53,18 +54,27 @@ const CommandCenterPage = async ({
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { count, error: brandCountError } = await supabase
+      // IPI-1089 · ONBOARD-001: org_members is the tenancy authority (AUTH-002).
+      // Zero memberships + zero brands → first-user onboarding. One+ memberships
+      // → workspace (multi-org org-selection is a later slice). Lookup failure
+      // fails closed to a stale dashboard — never route a member to onboarding
+      // on a transient error, and never guess an organization.
+      const { count: membershipCount, error: membershipError } = await supabase
+        .from("org_members")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      const { count: brandCount, error: brandCountError } = await supabase
         .from("brands")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
-      if (brandCountError) {
+      if (membershipError || brandCountError) {
         kpiData = {
           ...EMPTY_COMMAND_CENTER_DATA,
           fetchError: "Unable to load dashboard data",
           realtimeStatus: "stale",
         };
-      } else if (count === 0) {
-        zeroBrands = true;
+      } else if (membershipCount === 0 && brandCount === 0) {
+        needsOnboarding = true;
       } else {
         kpiData = await fetchCommandCenterKpis(supabase, user.id);
       }
@@ -77,7 +87,7 @@ const CommandCenterPage = async ({
     };
   }
 
-  if (zeroBrands) redirect("/onboarding");
+  if (needsOnboarding) redirect("/onboarding");
 
   return (
     <>
