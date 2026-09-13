@@ -8,6 +8,51 @@ Voice rules: [`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
 
 ---
 
+## Week of 2026-08-17
+
+<!-- SCAFFOLD — NOT PUBLISHABLE.
+Rewrite each line as a user outcome, then delete this block.
+  ❌ 'validate-brand now checks is_org_editor_or_above()'
+  ✅ 'Editors can now run brand analysis — previously only the creator could.'
+Drop anything with no user-visible effect (refactors, CI, dep bumps);
+those live in changelog.md only. Rules: CHANGELOG_STYLE.md
+
+  #963 IPI-297 · DESIGN-091 — Compare campaign results with a working ?c= drill-down
+  #961 IPI-191 · MI-03a — Pick a platform first, then its verified placements
+  #960 IPI-1018 · MASTRA-DEV-002 — Uncouple Mastra bundler from next/server so local agent dev starts
+  #959 IPI-1017 · MASTRA-DEV-001 — Fix Mastra Package Version Mismatch So Local Agent Dev Starts
+  #957 IPI-585: Implement SCR-24 Talent Onboarding Wizard
+  #956 IPI-1014 · CF-DB-014 — Include Real Mastra PG Scope in Preview Canary Builds and Wrap CopilotKit /info
+  #955 IPI-1015 · CF-DB-015 — Keep Shoot Wizard and Brand Intelligence Workflows Alive on Cloudflare Postgres
+  #954 IPI-801 · MASTRA-PG-011 — Remove the 33 Old public.mastra_* Shadow Tables After Soak + Backup Gates Pass
+  #952 IPI-1011 · MASTRA-PG-015 — Stop Local Mastra Chat Before It Starts If the Database Schema Is Missing
+  #951 IPI-1011 · MASTRA-PG-015 — Clarify the Emergency Mastra Rollback: Set MASTRA_SCHEMA=public Before Rollback
+  #949 IPI-1011 · MASTRA-PG-015 — Stop Mastra From Writing to public.* When MASTRA_SCHEMA Is Missing
+  #947 IPI-1012 · UI-TYPE-001 — Fix Talent Onboarding Step Styles So React Typecheck and Completion State Work
+  #946 IPI-756 · CF-MIG-230-W6 — Finish Native AI Routing for Every Remaining Agent
+  #945 IPI-755 · CF-MIG-230-W5 — Let CRM Assistant Use Cloudflare AI Without Risking Customer Data
+  #944 IPI-754 · CF-MIG-230-W4 — Move Brand Intelligence to Cloudflare AI Safely
+  #943 IPI-297 · DESIGN-091 — Compare Campaign Results Using Verified Data
+  #942 Docs · Move Cloudflare tracker to docs/cloudflare (Aug 15 evidence)
+  #941 CI · Stop Feature PRs from Silently Deleting the iPix Docs Navigation
+  #940 docs(shipped): week of 2026-08-10
+  #939 IPI-XXX · COPILOT-UPGRADE-001 — Upgrade CopilotKit 1.61.0 to 1.61.2 Safely
+  #931 IPI-XXX · DOCS-EXPLAIN-001 — Always Explain Changes with Real iPix Examples
+  #922 DOCS-MINTLIFY-001 — Restore the Full iPix Mintlify Navigation
+  #919 IPI-750 · CF-MIG-230-W0-HARDEN — Make Shared Cloudflare Model Resolution Resume-Safe
+  #918 IPI-752 · CF-MIG-230-W3 — Move Production Planner to Cloudflare AI
+-->
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+---
+
+
 ## Week of 2026-08-10
 
 <!-- SCAFFOLD — NOT PUBLISHABLE.
